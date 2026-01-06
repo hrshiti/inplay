@@ -172,6 +172,20 @@ function App() {
             )}
           </AnimatePresence>
 
+          {activeTab === 'Home' && !selectedMovie && (
+            <div className="category-tabs-container hide-scrollbar">
+              {['Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV'].map(cat => (
+                <div
+                  key={cat}
+                  className={`category-tab ${activeFilter === cat ? 'active' : ''}`}
+                  onClick={() => setActiveFilter(cat)}
+                >
+                  {cat}
+                </div>
+              ))}
+            </div>
+          )}
+
           <AnimatePresence mode='wait'>
             {activeTab === 'Home' && (
               <motion.div
@@ -181,20 +195,7 @@ function App() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {/* Category Tabs Header */}
-                {!selectedMovie && (
-                  <div className="category-tabs-container hide-scrollbar">
-                    {['Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV'].map(cat => (
-                      <div
-                        key={cat}
-                        className={`category-tab ${activeFilter === cat ? 'active' : ''}`}
-                        onClick={() => setActiveFilter(cat)}
-                      >
-                        {cat}
-                      </div>
-                    ))}
-                  </div>
-                )}
+
 
                 {/* Content Switching based on Filter */}
                 {activeFilter === 'Popular' || activeFilter === 'All' ? (
