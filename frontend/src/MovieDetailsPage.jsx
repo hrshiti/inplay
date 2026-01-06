@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { MOVIES } from './data';
 
-export default function MovieDetailsPage({ movie, onClose }) {
+export default function MovieDetailsPage({ movie, onClose, onPlay, myList, likedVideos, onToggleMyList, onToggleLike }) {
     if (!movie) return null;
 
     const isSeries = movie.type === 'series' || !!movie.seasons;
@@ -12,7 +12,6 @@ export default function MovieDetailsPage({ movie, onClose }) {
     const [isSeasonOpen, setIsSeasonOpen] = useState(false);
 
     // Filter "More Like This" based on genre (mock logic)
-    // In a real app, this would query backend.
     const moreLikeThis = [1, 2, 3, 4, 5, 6];
 
     return (
@@ -34,29 +33,32 @@ export default function MovieDetailsPage({ movie, onClose }) {
                 color: 'white'
             }}
         >
-            {/* Back Button */}
-            <button
-                onClick={onClose}
-                style={{
-                    position: 'fixed',
-                    top: '24px',
-                    left: '24px',
-                    zIndex: 20,
-                    background: 'rgba(0,0,0,0.5)',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '44px',
-                    height: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    cursor: 'pointer',
-                    backdropFilter: 'blur(10px)'
-                }}
-            >
-                <ArrowLeft size={24} />
-            </button>
+            {/* Transparent Header Bar */}
+            <div style={{
+                position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 100,
+                display: 'flex', alignItems: 'center', padding: '16px 20px',
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)'
+            }}>
+                <button
+                    onClick={onClose}
+                    style={{
+                        background: 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        cursor: 'pointer',
+                        backdropFilter: 'blur(10px)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                    }}
+                >
+                    <ArrowLeft size={24} strokeWidth={2.5} />
+                </button>
+            </div>
 
             {/* Hero Backdrop */}
             <div style={{ position: 'relative', height: '50vh', width: '100%' }}>
@@ -97,7 +99,10 @@ export default function MovieDetailsPage({ movie, onClose }) {
                 {/* Action Buttons */}
                 <motion.button
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => alert(`Playing ${movie.title}`)}
+                    onClick={() => {
+                        console.log("Play clicked for:", movie.title);
+                        if (onPlay) onPlay(movie);
+                    }}
                     style={{
                         width: '100%',
                         background: 'white',
@@ -147,9 +152,23 @@ export default function MovieDetailsPage({ movie, onClose }) {
 
                 {/* Menu Actions */}
                 <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '40px' }}>
-                    <ActionButton icon={<Plus size={24} />} label="My List" onClick={() => alert('Added to My List')} />
-                    <ActionButton icon={<ThumbsUp size={24} />} label="Rate" onClick={() => alert('Rated!')} />
-                    <ActionButton icon={<Share2 size={24} />} label="Share" onClick={() => alert('Sharing...')} />
+                    <ActionButton
+                        icon={myList && myList.find(m => m.id == movie.id) ? <Check size={24} color="#46d369" /> : <Plus size={24} />}
+                        label={myList && myList.find(m => m.id == movie.id) ? "Saved" : "My List"}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onToggleMyList) onToggleMyList(movie);
+                        }}
+                    />
+                    <ActionButton
+                        icon={<ThumbsUp size={24} fill={likedVideos && likedVideos.find(m => m.id == movie.id) ? "white" : "none"} color={likedVideos && likedVideos.find(m => m.id == movie.id) ? "#46d369" : "currentColor"} />}
+                        label={likedVideos && likedVideos.find(m => m.id == movie.id) ? "Liked" : "Like"}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onToggleLike) onToggleLike(movie);
+                        }}
+                    />
+                    <ActionButton icon={<Share2 size={24} />} label="Share" onClick={(e) => { e.stopPropagation(); alert('Sharing...'); }} />
                 </div>
 
                 {/* Tabs */}
@@ -210,14 +229,14 @@ export default function MovieDetailsPage({ movie, onClose }) {
 
                                 {/* Episodes List */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {selectedSeason ? selectedSeason.episodes.map(ep => (
+                                    {(selectedSeason ? selectedSeason.episodes : (movie.episodes || [])).map((ep, index) => (
                                         <div
-                                            key={ep.id}
+                                            key={ep.id || index}
                                             onClick={() => alert(`Playing ${ep.title}`)}
                                             style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
                                         >
                                             <div style={{ position: 'relative', width: '120px', height: '68px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-                                                <img src={ep.image} alt={ep.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <img src={ep.image || movie.image} alt={ep.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     <Play size={20} fill="white" style={{ opacity: 0.8 }} />
                                                 </div>
@@ -227,9 +246,7 @@ export default function MovieDetailsPage({ movie, onClose }) {
                                                 <span style={{ fontSize: '0.85rem', color: '#aaa' }}>{ep.duration}</span>
                                             </div>
                                         </div>
-                                    )) : (
-                                        <div style={{ padding: '20px', color: '#aaa' }}>No episodes available.</div>
-                                    )}
+                                    ))}
                                 </div>
                             </motion.div>
                         )}

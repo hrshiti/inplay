@@ -1,9 +1,9 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Download, ChevronRight, Settings, User } from 'lucide-react';
+import { Clock, Download, ChevronRight, Settings, User, Plus, ThumbsUp, Play } from 'lucide-react';
 import { MY_SPACE_DATA } from './data';
 
-export default function MySpacePage({ onMovieClick }) {
+export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
     const containerRef = useRef(null);
 
     return (
@@ -58,14 +58,27 @@ export default function MySpacePage({ onMovieClick }) {
                 </motion.button>
             </motion.div>
 
-            {/* Watch Later Section */}
-            <Section title="Watch Later" icon={<Clock size={16} />}>
-                <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
-                    {MY_SPACE_DATA.watch_later.map((movie) => (
-                        <SpaceCard key={movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
-                    ))}
-                </div>
-            </Section>
+            {/* My List Section */}
+            {myList && myList.length > 0 && (
+                <Section title="My List" icon={<Plus size={16} />}>
+                    <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
+                        {myList.map((movie) => (
+                            <SpaceCard key={movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
+                        ))}
+                    </div>
+                </Section>
+            )}
+
+            {/* Liked Videos Section */}
+            {likedVideos && likedVideos.length > 0 && (
+                <Section title="Liked Videos" icon={<ThumbsUp size={16} />}>
+                    <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
+                        {likedVideos.map((movie) => (
+                            <SpaceCard key={movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
+                        ))}
+                    </div>
+                </Section>
+            )}
 
             {/* Downloads Section */}
             <Section title="Downloads" icon={<Download size={16} />}>
@@ -116,31 +129,43 @@ function SpaceCard({ item, type, onClick }) {
             whileTap={{ scale: 0.95 }}
             onClick={onClick}
             style={{
-                flex: isPoster ? '0 0 110px' : '0 0 200px',
+                flex: isPoster ? '0 0 110px' : '0 0 220px',
                 position: 'relative',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                marginRight: '12px'
             }}
         >
             <div style={{
-                height: isPoster ? '160px' : '110px',
+                height: isPoster ? '160px' : '125px',
                 borderRadius: '12px', overflow: 'hidden', marginBottom: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                background: '#222'
+                background: '#222',
+                position: 'relative'
             }}>
-                <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={item.backdrop || item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isPoster ? 1 : 0.8 }} />
+
+                {/* Play Overlay for Backdrop items */}
+                {!isPoster && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '50%', padding: '10px', backdropFilter: 'blur(5px)' }}>
+                            <Play size={20} fill="white" />
+                        </div>
+                    </div>
+                )}
+
                 {item.progress && (
-                    <div style={{ position: 'absolute', bottom: '34px', left: 0, right: 0, height: '3px', background: 'rgba(255,255,255,0.2)' }}>
-                        <div style={{ width: `${item.progress}%`, height: '100%', background: 'var(--accent)' }} />
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '3px', background: 'rgba(255,255,255,0.2)' }}>
+                        <div style={{ width: `${item.progress}%`, height: '100%', background: '#ff0000' }} />
                     </div>
                 )}
             </div>
             <h4 style={{
                 fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                color: '#ddd'
+                color: '#ececec', fontWeight: '500'
             }}>
                 {item.title}
             </h4>
-            {item.watched_date && <span style={{ fontSize: '0.75rem', color: '#777' }}>Watched {item.watched_date}</span>}
+            {item.watched_date && <span style={{ fontSize: '0.75rem', color: '#888' }}>Watched {item.watched_date}</span>}
         </motion.div>
     )
 }

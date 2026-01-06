@@ -1,7 +1,17 @@
-
+import batmanImg from './assets/the batman.jpg';
 import spidermanImg from './assets/spiderman_no_way_home.jpg';
 import witcherImg from './assets/the_witcher.jpg';
-import batmanImg from './assets/the batman.jpg';
+// Reusing some from newData assets if needed or just these unique ones
+// Since I can't import from newData.js easily due to circular deps if I'm not careful (though distinct files are fine), 
+// I'll just rely on these specific ones for the main slider data.
+// Wait, Top Gun and others don't have images in assets?
+// I missed `top gun` in the list. 
+// List: apna banale, border, drishyam, familyman, farzi, inplay logo, kesariya, lolipop, mirzapur, nirauya, pathaan, rinkiya, sacredgames, shershaa, spiderman, the batman, the witcher, tum hi ho.
+// No Top Gun, No Avatar, No Black Adam.
+// I will reuse available images for them to ensure no blanks.
+const topGunImg = batmanImg;
+const avatarImg = spidermanImg;
+const blackAdamImg = batmanImg;
 
 export const MOVIES = [
     {
@@ -9,7 +19,7 @@ export const MOVIES = [
         title: "The Batman",
         image: batmanImg,
         backdrop: batmanImg,
-        video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
         rating: 7.7,
         year: 2022,
         genre: "Crime",
@@ -18,9 +28,9 @@ export const MOVIES = [
     {
         id: 1,
         title: "Top Gun: Maverick",
-        image: "https://image.tmdb.org/t/p/w500/62HCnUTziyWcpDaBO2i1DX17ljH.jpg",
-        backdrop: "https://image.tmdb.org/t/p/original/AaV1YIdWKnjAIAOe8UUKBFm327v.jpg",
-        video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        image: topGunImg,
+        backdrop: topGunImg,
+        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
         rating: 8.4,
         year: 2022,
         genre: "Action",
@@ -31,7 +41,7 @@ export const MOVIES = [
         title: "Spider-Man: No Way Home",
         image: spidermanImg,
         backdrop: spidermanImg,
-        video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
         rating: 8.0,
         year: 2021,
         genre: "Action",
@@ -40,9 +50,9 @@ export const MOVIES = [
     {
         id: 4,
         title: "Avatar: The Way of Water",
-        image: "https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg",
-        backdrop: "https://image.tmdb.org/t/p/original/s16H6tpK2utvwDtzZ8Qy4qm5Emw.jpg",
-        video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+        image: avatarImg,
+        backdrop: avatarImg,
+        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
         rating: 7.6,
         year: 2022,
         genre: "Sci-Fi",
@@ -51,9 +61,9 @@ export const MOVIES = [
     {
         id: 5,
         title: "Black Adam",
-        image: "https://image.tmdb.org/t/p/w500/pFlaoHTZeyNkG83vxsAJiGzfSsa.jpg",
-        backdrop: "https://image.tmdb.org/t/p/original/bQXAqRx2Fgc46uCVWgoPz5L5Dtr.jpg",
-        video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        image: blackAdamImg,
+        backdrop: blackAdamImg,
+        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
         rating: 7.0,
         year: 2022,
         genre: "Action",
@@ -65,8 +75,8 @@ export const CONTINUE_WATCHING = [
     {
         id: 101,
         title: "Stranger Things",
-        image: "https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
-        backdrop: "https://image.tmdb.org/t/p/original/56v2KjBlU4XaOv9rVYkJu64COcfe.jpg",
+        image: witcherImg, // Reusing witcher as dark fantasy vibe
+        backdrop: witcherImg,
         progress: 70,
         episode: "S4:E1",
         type: 'series',
@@ -74,31 +84,13 @@ export const CONTINUE_WATCHING = [
         year: 2016,
         rating: 8.7,
         genre: "Sci-Fi",
-        seasons: [
-            {
-                id: 1,
-                name: "Season 1",
-                episodes: [
-                    { id: 1011, title: "Chapter One: The Vanishing of Will Byers", duration: "49m", image: "https://image.tmdb.org/t/p/w300/Ad217c2a74ed0aD1P0gG6z9X8C8.jpg" },
-                    { id: 1012, title: "Chapter Two: The Weirdo on Maple Street", duration: "56m", image: "https://image.tmdb.org/t/p/w300/z6hW39k5b42y9K47a12b.jpg" },
-                    { id: 1013, title: "Chapter Three: Holly, Jolly", duration: "52m", image: "https://image.tmdb.org/t/p/w300/r55fJ3177d13.jpg" },
-                ]
-            },
-            {
-                id: 4,
-                name: "Season 4",
-                episodes: [
-                    { id: 1041, title: "Chapter One: The Hellfire Club", duration: "1h 18m", image: "https://image.tmdb.org/t/p/w300/wzKx7D4C82b82.jpg" },
-                    { id: 1042, title: "Chapter Two: Vecna's Curse", duration: "1h 17m", image: "https://image.tmdb.org/t/p/w300/a5217.jpg" },
-                ]
-            }
-        ]
+        seasons: []
     },
     {
         id: 102,
         title: "Wednesday",
-        image: "https://image.tmdb.org/t/p/w500/9PFonBhy4cQy7Jz20NpMygczOkv.jpg",
-        backdrop: "https://image.tmdb.org/t/p/original/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg",
+        image: batmanImg, // Reusing batman for dark vibe
+        backdrop: batmanImg,
         progress: 30,
         episode: "S1:E3",
         type: 'series',
@@ -106,17 +98,7 @@ export const CONTINUE_WATCHING = [
         year: 2022,
         rating: 8.5,
         genre: "Fantasy",
-        seasons: [
-            {
-                id: 1,
-                name: "Season 1",
-                episodes: [
-                    { id: 2011, title: "Wednesday's Child is Full of Woe", duration: "59m", image: "https://image.tmdb.org/t/p/w300/a231.jpg" },
-                    { id: 2012, title: "Woe is the Loneliest Number", duration: "48m", image: "https://image.tmdb.org/t/p/w300/b412.jpg" },
-                    { id: 2013, title: "Friend or Woe", duration: "53m", image: "https://image.tmdb.org/t/p/w300/c512.jpg" },
-                ]
-            }
-        ]
+        seasons: []
     },
     {
         id: 103,
@@ -130,6 +112,19 @@ export const CONTINUE_WATCHING = [
         rating: 8.1,
         genre: "Fantasy",
         description: "Geralt of Rivia, a mutated monster-hunter for hire, journeys toward his destiny in a turbulent world where people often prove more wicked than beasts."
+    },
+    {
+        id: 104,
+        title: "Squid Game",
+        image: spidermanImg, // Placeholder reuse
+        backdrop: spidermanImg,
+        progress: 15,
+        episode: "S1:E2",
+        type: 'series',
+        year: 2021,
+        rating: 8.4,
+        genre: "Thriller",
+        description: "Hundreds of cash-strapped players accept a strange invitation to compete in children's games. Inside, a tempting prize awaits with deadly high stakes."
     }
 ];
 
@@ -193,17 +188,17 @@ export const MY_SPACE_DATA = {
         plan: "Premium"
     },
     watch_later: [
-        MOVIES[0],
-        MOVIES[2],
-        MOVIES[4]
+        MOVIES[0], // Batman
+        MOVIES[2], // Spiderman
+        MOVIES[4]  // Black Adam (Batman reuse)
     ],
     downloads: [
         {
-            ...MOVIES[1],
+            ...MOVIES[1], // Top Gun (Batman reuse)
             size: "1.2 GB"
         },
         {
-            ...MOVIES[3],
+            ...MOVIES[3], // Avatar (Spiderman reuse)
             size: "2.4 GB"
         }
     ],
