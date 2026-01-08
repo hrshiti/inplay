@@ -36,6 +36,8 @@ export const HINDI_SERIES = [
         year: 2018,
         genre: "Crime",
         description: "A shocking incident at a wedding procession ignites a series of events entangling the lives of two families in the lawless city of Mirzapur.",
+        isPaid: true,
+        price: 299,
         type: 'series',
         episodes: [
             { id: 1, title: "Part 1: The Beginning", video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", duration: "12:00" },
@@ -65,6 +67,8 @@ export const HINDI_SERIES = [
         year: 2018,
         genre: "Thriller",
         description: "A link in their pasts leads an honest cop to a fugitive gang boss.",
+        isPaid: true,
+        price: 199,
         type: 'series',
         episodes: [
             { id: 1, title: "Part 1", video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4", duration: "20:00" }
@@ -115,7 +119,9 @@ export const BHOJPURI_CONTENT = [
         rating: 7.5,
         year: 2014,
         genre: "Romance",
-        description: "Nirahua, a simple villager, comes to Mumbai in search of his dream girl."
+        description: "Nirahua, a simple villager, comes to Mumbai in search of his dream girl.",
+        isPaid: true,
+        price: 99
     },
     {
         id: 'b3',
@@ -124,7 +130,9 @@ export const BHOJPURI_CONTENT = [
         rating: 8.0,
         year: 2018,
         genre: "War",
-        description: "The story of prolonged war between India and Pakistan."
+        description: "The story of prolonged war between India and Pakistan.",
+        isPaid: true,
+        price: 49
     },
     {
         id: 'b4',

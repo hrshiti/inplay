@@ -1,14 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2 } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List } from 'lucide-react';
 
 export default function VideoPlayer({ movie, onClose }) {
-    const isSeries = movie.type === 'series' && movie.episodes && movie.episodes.length > 0;
+    // User logic: Special "Vertical" section forces vertical player.
+    // Otherwise, everything (Movies & Series) is Horizontal.
+    const isVerticalMode = movie.isVertical;
 
-    if (isSeries) {
-        return <SeriesPlayer movie={movie} onClose={onClose} />;
+    if (isVerticalMode) {
+        return <VerticalPlayer movie={movie} onClose={onClose} />;
     }
 
-    // STANDARD MOVIE PLAYER (Landscape)
+    // STANDARD LANDSCAPE PLAYER
+    // Handle Series in Landscape: Play first episode if main video is missing
+    const videoSrc = movie.video || (movie.episodes && movie.episodes.length > 0 ? movie.episodes[0].video : null);
+
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'black', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <button
@@ -18,25 +23,37 @@ export default function VideoPlayer({ movie, onClose }) {
                 <X size={24} />
             </button>
 
-            <video
-                src={movie.video}
-                controls
-                autoPlay
-                style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: 'contain' }}
-            />
+            {videoSrc ? (
+                <video
+                    src={videoSrc}
+                    controls
+                    autoPlay
+                    style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: 'contain' }}
+                />
+            ) : (
+                <div style={{ color: 'white', textAlign: 'center' }}>
+                    <h2>Content Unavailable</h2>
+                    <p>Video source not found.</p>
+                </div>
+            )}
         </div>
     );
 }
 
-// SERIES PLAYER (Vertical Reel Style)
-function SeriesPlayer({ movie, onClose }) {
+// VERTICAL PLAYER (Reel Style)
+// Supports both Series (Episodes) and Movies (Single)
+function VerticalPlayer({ movie, onClose }) {
+    // If series, use episodes. If movie, wrap it as a single "episode".
+    const episodes = movie.episodes && movie.episodes.length > 0
+        ? movie.episodes
+        : [{ ...movie, title: movie.title, video: movie.video }];
+
     const [currentEpIndex, setCurrentEpIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
     const videoRef = useRef(null);
     const containerRef = useRef(null);
 
-    const episodes = movie.episodes;
     const currentEp = episodes[currentEpIndex];
 
     // Reset state on episode change
@@ -61,9 +78,6 @@ function SeriesPlayer({ movie, onClose }) {
     const handleEnded = () => {
         if (currentEpIndex < episodes.length - 1) {
             setCurrentEpIndex(prev => prev + 1);
-        } else {
-            // Series ended, maybe close or loop? For now, nothing or close.
-            // onClose(); 
         }
     };
 
@@ -74,16 +88,6 @@ function SeriesPlayer({ movie, onClose }) {
             else videoRef.current.play();
             setIsPlaying(!isPlaying);
         }
-    };
-
-    // Scroll/Snap Handler for Manual Navigation
-    const handleScroll = () => {
-        // For now, simpler implementation: Button based navigation or swipe gesture logic could replace native scroll if we want controlled "snap".
-        // Native snap with dynamic video source is tricky because we only have ONE video element changing src.
-        // So reel-style usually implies rendering ALL videos in a list.
-        // BUT user asked for "horizontal line complete hogi and uske baad dusra episode play hoga".
-        // Let's implement a single video player that FEELS like a reel but changes source.
-        // We can add "Swipe Up/Down" gestures to change episodes like shorts.
     };
 
     return (
@@ -101,7 +105,7 @@ function SeriesPlayer({ movie, onClose }) {
                     src={currentEp.video}
                     autoPlay
                     playsInline
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} // "vertical pure page pe play hone chaiye"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onTimeUpdate={handleTimeUpdate}
                     onEnded={handleEnded}
                 />
@@ -120,7 +124,9 @@ function SeriesPlayer({ movie, onClose }) {
                 <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white' }}>
                     <X size={28} />
                 </button>
-                <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>{movie.title}</span>
+                <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
+                    {movie.title} {episodes.length > 1 && <span style={{ opacity: 0.7, fontSize: '12px' }}>• Ep {currentEpIndex + 1}</span>}
+                </span>
                 <div style={{ width: 28 }}></div> {/* Spacer */}
             </div>
 
@@ -135,27 +141,29 @@ function SeriesPlayer({ movie, onClose }) {
             {/* Bottom Info Overlay */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', padding: '20px 16px 30px' }}>
                 <div style={{ marginBottom: '12px', paddingRight: '60px' }}>
-                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginBottom: '4px' }}>{currentEp.title}</h3>
-                    <p style={{ color: '#ccc', fontSize: '13px' }}>Episode {currentEpIndex + 1} of {episodes.length}</p>
+                    <h3 style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginBottom: '4px' }}>{currentEp.title || movie.title}</h3>
+                    {episodes.length > 1 && <p style={{ color: '#ccc', fontSize: '13px' }}>Episode {currentEpIndex + 1} of {episodes.length}</p>}
                 </div>
 
-                {/* Navigation Buttons */}
-                <div style={{ display: 'flex', gap: 16, marginBottom: '16px', opacity: 0.8 }}>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); if (currentEpIndex > 0) setCurrentEpIndex(p => p - 1); }}
-                        disabled={currentEpIndex === 0}
-                        style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', cursor: 'pointer', opacity: currentEpIndex === 0 ? 0.3 : 1 }}
-                    >
-                        <SkipBack size={20} fill="white" />
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); if (currentEpIndex < episodes.length - 1) setCurrentEpIndex(p => p + 1); }}
-                        disabled={currentEpIndex === episodes.length - 1}
-                        style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', cursor: 'pointer', opacity: currentEpIndex === episodes.length - 1 ? 0.3 : 1 }}
-                    >
-                        <SkipForward size={20} fill="white" />
-                    </button>
-                </div>
+                {/* Navigation Buttons (Only if multiple episodes) */}
+                {episodes.length > 1 && (
+                    <div style={{ display: 'flex', gap: 16, marginBottom: '16px', opacity: 0.8 }}>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); if (currentEpIndex > 0) setCurrentEpIndex(p => p - 1); }}
+                            disabled={currentEpIndex === 0}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', cursor: 'pointer', opacity: currentEpIndex === 0 ? 0.3 : 1 }}
+                        >
+                            <SkipBack size={20} fill="white" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); if (currentEpIndex < episodes.length - 1) setCurrentEpIndex(p => p + 1); }}
+                            disabled={currentEpIndex === episodes.length - 1}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', cursor: 'pointer', opacity: currentEpIndex === episodes.length - 1 ? 0.3 : 1 }}
+                        >
+                            <SkipForward size={20} fill="white" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Bottom Progress Line */}
                 <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>

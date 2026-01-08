@@ -11,7 +11,7 @@ gsap.registerPlugin(ScrollTrigger);
 // Mock Data
 import { MOVIES, CONTINUE_WATCHING } from './data';
 import { HINDI_SERIES, BHOJPURI_CONTENT, SONGS, TRENDING_NOW, ACTION_MOVIES, ORIGINALS } from './newData';
-import SubscriptionPage from './SubscriptionPage';
+// import SubscriptionPage from './SubscriptionPage'; // Removed
 import MySpacePage from './MySpacePage';
 import MovieDetailsPage from './MovieDetailsPage';
 import ForYouPage from './ForYouPage';
@@ -30,6 +30,7 @@ function App() {
   const [playingMovie, setPlayingMovie] = useState(null);
   const [myList, setMyList] = useState([MOVIES[0]]); // Pre-populate for demo
   const [likedVideos, setLikedVideos] = useState([]);
+  const [purchasedContent, setPurchasedContent] = useState([]); // Track paid content IDs
   const [toast, setToast] = useState(null);
   const heroRef = useRef(null);
 
@@ -60,6 +61,15 @@ function App() {
       showToast(`Added to Liked Videos`);
       return [...prev, movie];
     });
+  };
+
+  const handlePurchase = (movie) => {
+    // Simulate payment process
+    showToast(`Processing payment for ${movie.title}...`);
+    setTimeout(() => {
+      setPurchasedContent(prev => [...prev, movie.id]);
+      showToast(`Purchase Successful! You can now watch ${movie.title}`);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -167,7 +177,11 @@ function App() {
                 myList={myList}
                 likedVideos={likedVideos}
                 onToggleMyList={toggleMyList}
+                likedVideos={likedVideos}
+                onToggleMyList={toggleMyList}
                 onToggleLike={toggleLike}
+                isPurchased={purchasedContent.includes(selectedMovie.id)}
+                onPurchase={handlePurchase}
               />
             )}
           </AnimatePresence>
@@ -310,6 +324,19 @@ function App() {
                                       <Sparkles size={12} fill="#46d369" /> #{index + 1} Trending
                                     </div>
 
+                                    {movie.isPaid && (
+                                      <div style={{
+                                        position: 'absolute', top: '20px', right: '20px',
+                                        padding: '6px 12px', background: '#eab308', color: 'black',
+                                        fontWeight: '800', borderRadius: '4px', fontSize: '0.8rem',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                                      }}>
+                                        PAID
+                                      </div>
+                                    )}
+
+
+
                                     <h2 className="hero-title" style={{
                                       fontSize: '1.8rem',
                                       fontWeight: '900',
@@ -338,7 +365,14 @@ function App() {
                                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
                                       <motion.button
                                         whileTap={{ scale: 0.95 }}
-                                        onClick={(e) => { e.stopPropagation(); setPlayingMovie(movie); }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (movie.isPaid && !purchasedContent.includes(movie.id)) {
+                                            setSelectedMovie(movie); // Open details to buy
+                                          } else {
+                                            setPlayingMovie(movie);
+                                          }
+                                        }}
                                         style={{
                                           flex: 1, height: '40px', borderRadius: '12px', border: 'none',
                                           background: 'white', color: 'black', fontSize: '1rem', fontWeight: '700',
@@ -346,7 +380,8 @@ function App() {
                                           cursor: 'pointer', boxShadow: '0 4px 20px rgba(255,255,255,0.2)'
                                         }}
                                       >
-                                        <Play size={20} fill="black" /> Watch Now
+                                        {movie.isPaid && !purchasedContent.includes(movie.id) ? <Crown size={20} fill="#eab308" stroke="none" /> : <Play size={20} fill="black" />}
+                                        {movie.isPaid && !purchasedContent.includes(movie.id) ? "Unlock Now" : "Watch Now"}
                                       </motion.button>
 
                                       <motion.button
@@ -370,6 +405,7 @@ function App() {
                         })}
                       </div>
                     </div>
+
 
 
                     {/* Continue Watching Section */}
@@ -427,6 +463,63 @@ function App() {
                       </div>
                     </section>
 
+                    {/* Quick Bites (Vertical Content) Section */}
+                    {/* This section contains ONLY vertical content as requested */}
+                    <section className="section" style={{ marginBottom: '40px' }}>
+                      <div className="section-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h2 className="section-title" style={{ color: '#ff4d4d' }}>Quick Bites</h2>
+                          <span style={{ fontSize: '0.7rem', background: '#333', padding: '2px 6px', borderRadius: '4px', color: '#aaa' }}>VERTICAL</span>
+                        </div>
+                      </div>
+                      <div className="horizontal-list hide-scrollbar" style={{ gap: '16px' }}>
+                        {/* We use TRENDING_NOW and mixed content but force isVertical flag */}
+                        {[...TRENDING_NOW, ...HINDI_SERIES].slice(0, 10).map((item, index) => {
+                          const verticalItem = { ...item, isVertical: true, id: `vb-${item.id}-${index}` };
+                          return (
+                            <motion.div
+                              key={verticalItem.id}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => setSelectedMovie(verticalItem)}
+                              style={{
+                                minWidth: '100px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              <div style={{
+                                width: '100px',
+                                height: '178px', // 9:16 approx aspect ratio for vertical feel
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                position: 'relative',
+                                border: '2px solid transparent',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                              }}>
+                                <img
+                                  src={verticalItem.image}
+                                  alt={verticalItem.title}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <div style={{ background: 'rgba(255,40,40,0.8)', padding: '8px', borderRadius: '50%' }}>
+                                    <Play size={12} fill="white" stroke="none" />
+                                  </div>
+                                </div>
+                              </div>
+                              <span style={{ fontSize: '11px', color: '#ccc', textAlign: 'center', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {verticalItem.title}
+                              </span>
+                            </motion.div>
+                          )
+                        })}
+                      </div>
+                    </section>
+
+
                     {/* Hindi Series Section */}
                     <section className="section">
                       <div className="section-header">
@@ -449,6 +542,15 @@ function App() {
                                 alt={movie.title}
                                 className="poster-img"
                               />
+                              {movie.isPaid && (
+                                <div style={{
+                                  position: 'absolute', top: '8px', right: '8px',
+                                  background: '#eab308', color: 'black', fontSize: '10px',
+                                  padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
+                                }}>
+                                  PAID
+                                </div>
+                              )}
                             </div>
                             <h3 className="movie-title">{movie.title}</h3>
                           </motion.div>
@@ -478,6 +580,15 @@ function App() {
                                 alt={movie.title}
                                 className="poster-img"
                               />
+                              {movie.isPaid && (
+                                <div style={{
+                                  position: 'absolute', top: '8px', right: '8px',
+                                  background: '#eab308', color: 'black', fontSize: '10px',
+                                  padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
+                                }}>
+                                  PAID
+                                </div>
+                              )}
                             </div>
                             <h3 className="movie-title">{movie.title}</h3>
                           </motion.div>
@@ -548,6 +659,15 @@ function App() {
                                 alt={movie.title}
                                 className="poster-img"
                               />
+                              {movie.isPaid && (
+                                <div style={{
+                                  position: 'absolute', top: '8px', right: '8px',
+                                  background: '#eab308', color: 'black', fontSize: '10px',
+                                  padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
+                                }}>
+                                  PAID
+                                </div>
+                              )}
                             </div>
                             <h3 className="movie-title">{movie.title}</h3>
                           </motion.div>
@@ -577,6 +697,15 @@ function App() {
                                 alt={movie.title}
                                 className="poster-img"
                               />
+                              {movie.isPaid && (
+                                <div style={{
+                                  position: 'absolute', top: '8px', right: '8px',
+                                  background: '#eab308', color: 'black', fontSize: '10px',
+                                  padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
+                                }}>
+                                  PAID
+                                </div>
+                              )}
                             </div>
                             <h3 className="movie-title">{movie.title}</h3>
                           </motion.div>
@@ -586,7 +715,7 @@ function App() {
                   </>
                 ) : (
                   /* Category Grid View (New & Hot, etc.) */
-                  <CategoryGridView activeFilter={activeFilter} setSelectedMovie={setSelectedMovie} />
+                  <CategoryGridView activeFilter={activeFilter} setSelectedMovie={setSelectedMovie} purchasedContent={purchasedContent} />
                 )}
               </motion.div>
             )}
@@ -606,17 +735,7 @@ function App() {
               </motion.div>
             )}
 
-            {activeTab === 'Premium' && (
-              <motion.div
-                key="premium"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <SubscriptionPage onSubscribe={() => alert("Subscription flow starting...")} />
-              </motion.div>
-            )}
+            {/* Premium Tab Removed */}
 
             {activeTab === 'My Space' && (
               <motion.div
@@ -677,7 +796,7 @@ function App() {
                 isPill
               />
               <NavItem icon={<Sparkles size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => setActiveTab('For You')} />
-              <NavItem icon={<Crown size={24} />} label="Premium" active={activeTab === 'Premium'} onClick={() => setActiveTab('Premium')} />
+              {/* <NavItem icon={<Crown size={24} />} label="Premium" active={activeTab === 'Premium'} onClick={() => setActiveTab('Premium')} /> */}
               <NavItem icon={<Layout size={24} />} label="My Space" active={activeTab === 'My Space'} onClick={() => setActiveTab('My Space')} />
             </nav>
           )}
@@ -863,7 +982,7 @@ function HeroSlide({ movie, onClick }) {
 export default App;
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -895,6 +1014,17 @@ function CategoryGridView({ activeFilter, setSelectedMovie }) {
                 />
                 {/* New Badge */}
                 <div className="badge-new">New Release</div>
+
+                {item.isPaid && (
+                  <div style={{
+                    position: 'absolute', top: '35px', left: '0px',
+                    background: '#eab308', color: 'black', fontSize: '10px',
+                    padding: '2px 6px', fontWeight: 'bold', borderRadius: '0 4px 4px 0',
+                    zIndex: 20
+                  }}>
+                    PAID
+                  </div>
+                )}
 
                 {/* Bookmark */}
                 <div style={{ position: 'absolute', top: 8, right: 8 }}>
@@ -951,6 +1081,16 @@ function CategoryGridView({ activeFilter, setSelectedMovie }) {
                 onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${item.title}` }}
               />
               <div className="rank-number">{index + 1}</div>
+
+              {item.isPaid && (
+                <div style={{
+                  position: 'absolute', top: '8px', right: '8px',
+                  background: '#eab308', color: 'black', fontSize: '10px',
+                  padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
+                }}>
+                  PAID
+                </div>
+              )}
             </div>
             <div className="hottest-info">
               {/* Bookmark & Flame row */}

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { MOVIES } from './data';
 
-export default function MovieDetailsPage({ movie, onClose, onPlay, myList, likedVideos, onToggleMyList, onToggleLike }) {
+export default function MovieDetailsPage({ movie, onClose, onPlay, myList, likedVideos, onToggleMyList, onToggleLike, isPurchased, onPurchase }) {
     if (!movie) return null;
 
     const isSeries = movie.type === 'series' || !!movie.seasons;
@@ -61,7 +61,7 @@ export default function MovieDetailsPage({ movie, onClose, onPlay, myList, liked
             </div>
 
             {/* Hero Backdrop */}
-            <div style={{ position: 'relative', height: '50vh', width: '100%' }}>
+            <div style={{ position: 'relative', height: '35vh', width: '100%' }}>
                 <img
                     src={movie.backdrop || movie.image}
                     alt={movie.title}
@@ -78,18 +78,18 @@ export default function MovieDetailsPage({ movie, onClose, onPlay, myList, liked
             </div>
 
             {/* Content */}
-            <div style={{ padding: '24px', position: 'relative', top: '-60px' }}>
+            <div style={{ padding: '0 20px 20px', position: 'relative', top: '-20px' }}>
                 <h1 style={{
-                    fontSize: '2.5rem',
+                    fontSize: '1.75rem',
                     fontWeight: '800',
                     lineHeight: '1.1',
-                    marginBottom: '12px',
+                    marginBottom: '8px',
                     fontFamily: 'var(--font-display)'
                 }}>
                     {movie.title}
                 </h1>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#aaa', fontSize: '0.9rem', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#aaa', fontSize: '0.85rem', marginBottom: '16px' }}>
                     <span style={{ color: '#46d369', fontWeight: 'bold' }}>{movie.rating ? Math.round(movie.rating * 10) : 95}% Match</span>
                     <span>{movie.year || '2022'}</span>
                     <span>{movie.genre}</span>
@@ -97,61 +97,75 @@ export default function MovieDetailsPage({ movie, onClose, onPlay, myList, liked
                 </div>
 
                 {/* Action Buttons */}
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                        console.log("Play clicked for:", movie.title);
-                        if (onPlay) onPlay(movie);
-                    }}
-                    style={{
-                        width: '100%',
-                        background: 'white',
-                        color: 'black',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        fontSize: '1.1rem',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        marginBottom: '12px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <Play size={24} fill="black" /> Play
-                </motion.button>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                            if (movie.isPaid && !isPurchased) {
+                                // Trigger purchase flow
+                                if (onPurchase) onPurchase(movie);
+                            } else {
+                                console.log("Play clicked for:", movie.title);
+                                if (onPlay) onPlay(movie);
+                            }
+                        }}
+                        style={{
+                            flex: 1,
+                            background: movie.isPaid && !isPurchased ? '#eab308' : 'white',
+                            color: 'black',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {movie.isPaid && !isPurchased ? (
+                            <>
+                                <span style={{ fontSize: '1.2em' }}>₹</span> Buy for ₹{movie.price}
+                            </>
+                        ) : (
+                            <>
+                                <Play size={20} fill="black" /> Play
+                            </>
+                        )}
+                    </motion.button>
 
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => alert(`Download started for ${movie.title}`)}
-                    style={{
-                        width: '100%',
-                        background: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        fontSize: '1.1rem',
-                        fontWeight: '600',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        marginBottom: '32px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <Download size={24} /> Download
-                </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => alert(movie.isPaid && !isPurchased ? "Please purchase to download." : `Download started for ${movie.title}`)}
+                        style={{
+                            flex: 1,
+                            background: 'rgba(255,255,255,0.2)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            opacity: movie.isPaid && !isPurchased ? 0.5 : 1
+                        }}
+                    >
+                        <Download size={20} /> Download
+                    </motion.button>
+                </div>
 
-                <p style={{ fontSize: '1rem', lineHeight: '1.6', color: '#ddd', marginBottom: '32px' }}>
+                <p style={{ fontSize: '0.9rem', lineHeight: '1.5', color: '#ddd', marginBottom: '20px' }}>
                     {movie.description || "Experience the thrill and excitement of this blockbuster hit. A story that will keep you on the edge of your seat from start to finish."}
                 </p>
 
                 {/* Menu Actions */}
-                <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '40px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '24px' }}>
                     <ActionButton
                         icon={myList && myList.find(m => m.id == movie.id) ? <Check size={24} color="#46d369" /> : <Plus size={24} />}
                         label={myList && myList.find(m => m.id == movie.id) ? "Saved" : "My List"}
@@ -173,7 +187,7 @@ export default function MovieDetailsPage({ movie, onClose, onPlay, myList, liked
 
                 {/* Tabs */}
                 <div style={{ borderTop: '1px solid #333', paddingTop: '0px' }}>
-                    <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid #333' }}>
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', borderBottom: '1px solid #333' }}>
                         {isSeries && (
                             <TabButton
                                 label="Episodes"

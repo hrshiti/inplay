@@ -23,7 +23,9 @@ export const MOVIES = [
         rating: 7.7,
         year: 2022,
         genre: "Crime",
-        description: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler."
+        description: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler.",
+        isPaid: true,
+        price: 199
     },
     {
         id: 1,
@@ -56,7 +58,9 @@ export const MOVIES = [
         rating: 7.6,
         year: 2022,
         genre: "Sci-Fi",
-        description: "Jake Sully lives with his newfound family formed on the extrasolar moon Pandora. Once a familiar threat returns to finish what was previously started, Jake must work with Neytiri and the army of the Na'vi race to protect their home."
+        description: "Jake Sully lives with his newfound family formed on the extrasolar moon Pandora. Once a familiar threat returns to finish what was previously started, Jake must work with Neytiri and the army of the Na'vi race to protect their home.",
+        isPaid: true,
+        price: 249
     },
     {
         id: 5,
