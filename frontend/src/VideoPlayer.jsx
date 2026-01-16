@@ -1,23 +1,96 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX } from 'lucide-react';
+import contentService from './services/api/contentService';
 
-export default function VideoPlayer({ movie, onClose }) {
-    // User logic: Special "Vertical" section forces vertical player.
-    // Otherwise, everything (Movies & Series) is Horizontal.
-    const isVerticalMode = movie.isVertical;
-
-    if (isVerticalMode) {
-        return <VerticalPlayer movie={movie} onClose={onClose} />;
-    }
+export default function VideoPlayer({ movie, episode, onClose }) {
+    // User logic: Playing all content as movie content (Standard Landscape Player)
+    // as per user request to play quick byte as movie content.
+    const isVerticalMode = false; // Forced to false to use standard player
 
     // STANDARD LANDSCAPE PLAYER
-    // Handle Series in Landscape: Play first episode if main video is missing
-    const videoSrc = movie.video || (movie.episodes && movie.episodes.length > 0 ? movie.episodes[0].video : null);
+    const videoRef = useRef(null);
+    const lastSyncTime = useRef(0);
+    // Unified logic to extract video source
+    let videoObj = episode?.video || movie.video;
+
+    // If it's a series and no direct video/episode, find the first available episode
+    if (!videoObj) {
+        if (movie.episodes && movie.episodes.length > 0) {
+            videoObj = movie.episodes[0].video;
+        } else if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
+            videoObj = movie.seasons[0].episodes[0].video;
+        }
+    }
+
+    const videoSrc = videoObj?.url || videoObj;
+
+    if (!videoSrc) {
+        return (
+            <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 9999, color: 'white' }}>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Content Unavailable</h2>
+                <p style={{ color: '#aaa' }}>Video source not found for: {movie.title}</p>
+                <button
+                    onClick={onClose}
+                    style={{ marginTop: '20px', background: 'var(--accent)', border: 'none', padding: '10px 24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                    Go Back
+                </button>
+            </div>
+        );
+    }
+    // Resume Logic
+    useEffect(() => {
+        if (videoRef.current && movie.watchedSeconds) {
+            videoRef.current.currentTime = movie.watchedSeconds;
+        }
+    }, [movie.watchedSeconds]);
+
+    // Progress Sync Logic
+    const syncProgress = async (isClosing = false) => {
+        if (!videoRef.current) return;
+
+        const currentTime = videoRef.current.currentTime;
+        const duration = videoRef.current.duration;
+        if (!duration) return;
+
+        const progress = (currentTime / duration) * 100;
+        const contentId = movie._id || movie.id;
+
+        try {
+            await contentService.updateWatchHistory({
+                contentId,
+                progress,
+                watchedSeconds: currentTime,
+                totalDuration: duration,
+                completed: progress > 95
+            });
+            lastSyncTime.current = currentTime;
+        } catch (e) {
+            console.error("Failed to sync progress", e);
+        }
+    };
+
+    // Auto-sync every 10 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (videoRef.current && !videoRef.current.paused) {
+                syncProgress();
+            }
+        }, 10000);
+
+        return () => {
+            clearInterval(interval);
+            syncProgress(true); // Final sync on unmount
+        };
+    }, []);
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'black', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <button
-                onClick={onClose}
+                onClick={async () => {
+                    await syncProgress();
+                    onClose();
+                }}
                 style={{ position: 'absolute', top: 20, right: 20, zIndex: 100, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer', color: 'white' }}
             >
                 <X size={24} />
@@ -25,9 +98,11 @@ export default function VideoPlayer({ movie, onClose }) {
 
             {videoSrc ? (
                 <video
+                    ref={videoRef}
                     src={videoSrc}
                     controls
                     autoPlay
+                    onPause={() => syncProgress()}
                     style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: 'contain' }}
                 />
             ) : (
@@ -42,29 +117,85 @@ export default function VideoPlayer({ movie, onClose }) {
 
 // VERTICAL PLAYER (Reel Style)
 // Supports both Series (Episodes) and Movies (Single)
-function VerticalPlayer({ movie, onClose }) {
+// VERTICAL PLAYER (Reel Style)
+// Supports both Series (Episodes) and Movies (Single)
+function VerticalPlayer({ movie, initialEpisode, onClose }) {
     // If series, use episodes. If movie, wrap it as a single "episode".
     const episodes = movie.episodes && movie.episodes.length > 0
         ? movie.episodes
         : [{ ...movie, title: movie.title, video: movie.video }];
 
-    const [currentEpIndex, setCurrentEpIndex] = useState(0);
+    // Determine start index
+    const startIndex = initialEpisode
+        ? episodes.findIndex(e => (e._id || e.id) === (initialEpisode._id || initialEpisode.id))
+        : 0;
+
+    const [currentEpIndex, setCurrentEpIndex] = useState(startIndex !== -1 ? startIndex : 0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
     const videoRef = useRef(null);
     const containerRef = useRef(null);
+    const lastSyncTime = useRef(0);
 
     const currentEp = episodes[currentEpIndex];
+    // Extract URL safely
+    const currentVideoUrl = currentEp.video?.url || currentEp.video;
+
+    // Progress Sync Logic
+    const syncProgress = async () => {
+        if (!videoRef.current) return;
+
+        const currentTime = videoRef.current.currentTime;
+        const duration = videoRef.current.duration;
+        if (!duration) return;
+
+        const progress = (currentTime / duration) * 100;
+        // For vertical/reels, they might not have separate contentId if part of series,
+        // but here movie is the main container.
+        const contentId = movie._id || movie.id;
+
+        try {
+            await contentService.updateWatchHistory({
+                contentId,
+                progress,
+                watchedSeconds: currentTime,
+                totalDuration: duration,
+                completed: progress > 95
+            });
+            lastSyncTime.current = currentTime;
+        } catch (e) {
+            console.error("Failed to sync vertical progress", e);
+        }
+    };
+
+    // Auto-sync every 10 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (videoRef.current && !videoRef.current.paused) {
+                syncProgress();
+            }
+        }, 10000);
+
+        return () => {
+            clearInterval(interval);
+            syncProgress(); // Final sync on unmount
+        };
+    }, [currentEpIndex]); // Reset interval if episode changes
 
     // Reset state on episode change
     useEffect(() => {
         setProgress(0);
         setIsPlaying(true);
         if (videoRef.current) {
-            videoRef.current.currentTime = 0;
+            // Check if this specific movie was being watched
+            if (currentEpIndex === 0 && movie.watchedSeconds) {
+                videoRef.current.currentTime = movie.watchedSeconds;
+            } else {
+                videoRef.current.currentTime = 0;
+            }
             videoRef.current.play().catch(() => { });
         }
-    }, [currentEpIndex]);
+    }, [currentEpIndex, movie.watchedSeconds]);
 
     // Handle Video Progress
     const handleTimeUpdate = () => {
@@ -84,7 +215,10 @@ function VerticalPlayer({ movie, onClose }) {
     // Play/Pause Toggle
     const togglePlay = () => {
         if (videoRef.current) {
-            if (isPlaying) videoRef.current.pause();
+            if (isPlaying) {
+                videoRef.current.pause();
+                syncProgress();
+            }
             else videoRef.current.play();
             setIsPlaying(!isPlaying);
         }
@@ -102,7 +236,7 @@ function VerticalPlayer({ movie, onClose }) {
             >
                 <video
                     ref={videoRef}
-                    src={currentEp.video}
+                    src={currentVideoUrl}
                     autoPlay
                     playsInline
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -121,7 +255,13 @@ function VerticalPlayer({ movie, onClose }) {
 
             {/* Top Controls */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '16px', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white' }}>
+                <button
+                    onClick={async () => {
+                        await syncProgress();
+                        onClose();
+                    }}
+                    style={{ background: 'transparent', border: 'none', color: 'white' }}
+                >
                     <X size={28} />
                 </button>
                 <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>
@@ -130,13 +270,7 @@ function VerticalPlayer({ movie, onClose }) {
                 <div style={{ width: 28 }}></div> {/* Spacer */}
             </div>
 
-            {/* Right Side Actions (Reels Style) */}
-            <div style={{ position: 'absolute', right: '12px', bottom: '100px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', zIndex: 10 }}>
-                <ActionButton icon={<Heart size={24} />} label="1.2k" />
-                <ActionButton icon={<MessageCircle size={24} />} label="234" />
-                <ActionButton icon={<Share2 size={24} />} label="Share" />
-                <ActionButton icon={<MoreVertical size={24} />} label="More" />
-            </div>
+            {/* Removed Right Side Actions (Reels Style) as per user request */}
 
             {/* Bottom Info Overlay */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', padding: '20px 16px 30px' }}>

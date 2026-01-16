@@ -1,0 +1,364 @@
+/* Admin Panel Styles */
+
+.admin-layout {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  display: flex;
+}
+
+.admin-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  background-color: #1a1a1a;
+  color: white;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 0;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-nav li {
+  margin-bottom: 4px;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  color: #ccc;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.sidebar-nav a:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav a.active {
+  color: #46d369;
+  background-color: rgba(70, 211, 105, 0.1);
+  border-right: 3px solid #46d369;
+  font-weight: 600;
+}
+
+.sidebar-nav a.active:hover {
+  background-color: rgba(70, 211, 105, 0.15);
+}
+
+.sidebar-nav a svg {
+  margin-right: 12px;
+}
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid #333;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s ease;
+}
+
+.admin-topbar {
+  background-color: white;
+  border-bottom: 1px solid #e1e5e9;
+  padding: 0 24px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-container input {
+  padding: 8px 12px 8px 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 250px;
+  background-color: #f8f9fa;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.search-container input:focus {
+  border-color: #46d369;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.user-profile:hover {
+  background-color: #f8f9fa;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #46d369;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #666;
+  width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* =========================================
+   Add New Plan Modal Fixes
+   ========================================= */
+
+/* 1. Modal Overlay & Container */
+div[style*="z-index: 1000"] {
+  overscroll-behavior: contain;
+}
+
+/* Modal Content Box (specifically the one with flex layout used in Plan Modal) */
+div[style*="z-index: 1000"]>div[style*="display: flex"] {
+  width: 90% !important;
+  max-width: 600px !important;
+  max-height: 90vh !important;
+  overflow: hidden !important;
+  /* prevent outer scrolling */
+  display: flex !important;
+  flex-direction: column !important;
+  margin: auto;
+}
+
+/* 2. Form Layout & Scrolling */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  /* allow shrinking */
+  overflow: hidden !important;
+}
+
+/* scrollable content area inside form */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+}
+
+/* 3. Input Fields Sizing */
+div[style*="z-index: 1000"] input,
+div[style*="z-index: 1000"] select,
+div[style*="z-index: 1000"] textarea {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+div[style*="z-index: 1000"] textarea {
+  min-height: 100px;
+}
+
+/* 4. Responsive Grid */
+@media (max-width: 640px) {
+
+  /* Target the grid container inside the modal */
+  div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div>div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* 5. Sticky Button */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div>button[type="submit"] {
+  position: sticky !important;
+  bottom: 0 !important;
+  background-color: #46d369 !important;
+  margin-top: 16px !important;
+  margin-bottom: -24px !important;
+  /* Touch the edge */
+  z-index: 10 !important;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  width: calc(100% + 48px) !important;
+  margin-left: -24px !important;
+  margin-right: -24px !important;
+  border-radius: 0 0 14px 14px !important;
+  /* Slightly less than modal's 16px to prevent clipping issues if any */
+  padding: 16px !important;
+}
+
+/* =========================================
+   Add New Plan Modal Fixes
+   ========================================= */
+
+/* 1. Modal Overlay & Container */
+div[style*="z-index: 1000"] {
+  overscroll-behavior: contain;
+}
+
+/* Modal Content Box */
+div[style*="z-index: 1000"]>div[style*="display: flex"] {
+  width: 90% !important;
+  max-width: 600px !important;
+  max-height: 85vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: auto;
+  position: relative !important;
+  /* Context for absolute button */
+  padding-bottom: 0 !important;
+  border-radius: 16px !important;
+}
+
+/* 2. Form Layout */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  padding-bottom: 70px !important;
+  /* Space for the absolute button */
+}
+
+/* 3. Scrollable Content Area */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  padding: 24px !important;
+  padding-bottom: 20px !important;
+  /* Extra breathing room at bottom of scroll */
+  box-sizing: border-box !important;
+}
+
+/* Custom Scrollbar for the form */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div::-webkit-scrollbar {
+  width: 6px;
+}
+
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}
+
+/* 4. Input Fields Sizing */
+div[style*="z-index: 1000"] input,
+div[style*="z-index: 1000"] select,
+div[style*="z-index: 1000"] textarea {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+div[style*="z-index: 1000"] textarea {
+  min-height: 100px;
+}
+
+/* 5. Responsive Grid */
+@media (max-width: 640px) {
+  div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div>div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* 6. Absolute Fixed Button */
+div[style*="z-index: 1000"]>div[style*="display: flex"]>form>div>button[type="submit"] {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 0 16px 16px !important;
+  /* Match modal corners */
+  padding: 16px !important;
+  background-color: #46d369 !important;
+  z-index: 50 !important;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+}

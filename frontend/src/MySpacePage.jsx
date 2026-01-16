@@ -1,10 +1,17 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Download, ChevronRight, Settings, User, Plus, ThumbsUp, Play } from 'lucide-react';
 import { MY_SPACE_DATA } from './data';
 
-export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
+export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHistory, continueWatching, currentUser }) {
     const containerRef = useRef(null);
+    const navigate = useNavigate();
+
+    // Use actual user data or fallback to mock data
+    const userName = currentUser?.name || MY_SPACE_DATA.user.name;
+    const userAvatar = currentUser?.avatar || MY_SPACE_DATA.user.avatar;
+    const userPlan = currentUser?.subscription?.plan?.name || MY_SPACE_DATA.user.plan;
 
     return (
         <div ref={containerRef} className="my-space-container" style={{ padding: '24px', paddingBottom: '100px', color: 'white' }}>
@@ -19,14 +26,14 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
             >
                 <motion.div
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => alert("Profile Settings Coming Soon!")}
+                    onClick={() => navigate('/settings')}
                     style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, cursor: 'pointer' }}
                 >
                     <div style={{ position: 'relative' }}>
                         <img
-                            src={MY_SPACE_DATA.user.avatar}
+                            src={userAvatar}
                             alt="Profile"
-                            style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)' }}
+                            style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)', objectFit: 'cover' }}
                         />
                         <div style={{
                             position: 'absolute', bottom: 0, right: 0,
@@ -37,13 +44,13 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
                         </div>
                     </div>
                     <div>
-                        <h2 style={{ fontSize: '1.25rem', marginBottom: '4px' }}>{MY_SPACE_DATA.user.name}</h2>
+                        <h2 style={{ fontSize: '1.25rem', marginBottom: '4px' }}>{userName}</h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{
                                 fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)',
                                 padding: '2px 8px', borderRadius: '4px', color: '#ffd700'
                             }}>
-                                {MY_SPACE_DATA.user.plan} Member
+                                {userPlan} Member
                             </span>
                         </div>
                     </div>
@@ -51,7 +58,7 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
 
                 <motion.button
                     whileTap={{ scale: 0.9, rotate: 90 }}
-                    onClick={() => alert("App Settings Coming Soon!")}
+                    onClick={() => navigate('/settings')}
                     style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', padding: '8px' }}
                 >
                     <Settings size={24} />
@@ -60,10 +67,14 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
 
             {/* My List Section */}
             {myList && myList.length > 0 && (
-                <Section title="My List" icon={<Plus size={16} />}>
+                <Section
+                    title="My List"
+                    icon={<Plus size={16} />}
+                    onHeaderClick={() => navigate('/my-list')}
+                >
                     <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
                         {myList.map((movie) => (
-                            <SpaceCard key={movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
+                            <SpaceCard key={movie._id || movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
                         ))}
                     </div>
                 </Section>
@@ -74,35 +85,33 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos }) {
                 <Section title="Liked Videos" icon={<ThumbsUp size={16} />}>
                     <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
                         {likedVideos.map((movie) => (
-                            <SpaceCard key={movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
+                            <SpaceCard key={movie._id || movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />
                         ))}
                     </div>
                 </Section>
             )}
 
-            {/* Downloads Section */}
-            <Section title="Downloads" icon={<Download size={16} />}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {MY_SPACE_DATA.downloads.map((item) => (
-                        <DownloadRow key={item.id} item={item} onClick={() => onMovieClick(item)} />
-                    ))}
-                </div>
-            </Section>
 
             {/* Watch History */}
-            <Section title="History" icon={<Clock size={16} />}>
-                <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
-                    {MY_SPACE_DATA.history.map((show) => (
-                        <SpaceCard key={show.id} item={show} type="backdrop" onClick={() => onMovieClick(show)} />
-                    ))}
-                </div>
-            </Section>
+            {watchHistory && watchHistory.length > 0 && (
+                <Section
+                    title="History"
+                    icon={<Clock size={16} />}
+                    onHeaderClick={() => navigate('/history')}
+                >
+                    <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
+                        {watchHistory.map((show) => (
+                            <SpaceCard key={show._id || show.id} item={show} type="backdrop" onClick={() => onMovieClick(show)} />
+                        ))}
+                    </div>
+                </Section>
+            )}
 
         </div>
     );
 }
 
-function Section({ title, icon, children }) {
+function Section({ title, icon, children, onHeaderClick }) {
     return (
         <motion.section
             initial={{ opacity: 0, y: 20 }}
@@ -111,7 +120,16 @@ function Section({ title, icon, children }) {
             transition={{ duration: 0.5 }}
             style={{ marginBottom: '32px' }}
         >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div
+                onClick={onHeaderClick}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '16px',
+                    cursor: onHeaderClick ? 'pointer' : 'default'
+                }}
+            >
                 <h3 style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px', color: '#eee' }}>
                     {icon} {title}
                 </h3>
@@ -142,7 +160,12 @@ function SpaceCard({ item, type, onClick }) {
                 background: '#222',
                 position: 'relative'
             }}>
-                <img src={item.backdrop || item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isPoster ? 1 : 0.8 }} />
+                <img
+                    src={item.thumbnail?.url || item.poster?.url || item.backdrop || item.image}
+                    onError={(e) => { e.target.src = "https://placehold.co/110x160/222/FFF?text=No+Image" }}
+                    alt={item.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isPoster ? 1 : 0.8 }}
+                />
 
                 {/* Play Overlay for Backdrop items */}
                 {!isPoster && (
