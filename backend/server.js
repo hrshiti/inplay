@@ -44,8 +44,32 @@ app.use(helmet());
 app.use(compression());
 
 // CORS configuration (MUST BE BEFORE LIMITER)
+const allowedOrigins = [
+  'https://inplay-two.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
+if (process.env.FRONTEND_URL) {
+  // Clean up the env variable to ensure no trailing slash
+  const url = process.env.FRONTEND_URL.replace(/\/$/, '');
+  if (!allowedOrigins.includes(url)) {
+    allowedOrigins.push(url);
+  }
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://inplay-two.vercel.app',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin); // Log for debugging
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -204,7 +228,7 @@ const startServer = async () => {
   const { Server } = require('socket.io');
   const io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true
     }
