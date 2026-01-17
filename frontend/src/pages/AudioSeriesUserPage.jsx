@@ -12,8 +12,7 @@ export default function AudioSeriesUserPage({ onBack }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [loading, setLoading] = useState(true);
     const [duration, setDuration] = useState(0);
-    const [currentTime, setCurrentTime] = useState(0);
-
+    const [currentTime, setCurrentTime] = useState(0)
     // Audio Ref
     const audioRef = useRef(null);
 
