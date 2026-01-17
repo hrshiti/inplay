@@ -17,6 +17,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     useEffect(() => {
         const fetchReels = async () => {
             const data = await contentService.getForYouReels();
+            console.log("ForYouPage Fetch Result:", data); // Debug Log
             setReels(data);
         };
         fetchReels();
@@ -29,7 +30,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     }, []);
 
     return (
-        <div className="reels-container" style={{ background: 'black', height: '100vh', width: '100%', overflowY: 'scroll', scrollSnapType: 'y mandatory' }}>
+        <div className="reels-container" data-lenis-prevent style={{ background: 'black', height: '100vh', width: '100%', overflowY: 'scroll', scrollSnapType: 'y mandatory', zIndex: 20000, position: 'relative' }}>
             {/* Top Back Navigation Overlay */}
             <div style={{
                 position: 'fixed', top: 0, left: 0, width: '100%', padding: '20px 16px',

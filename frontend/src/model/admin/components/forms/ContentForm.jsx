@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Upload, X, Save, ArrowLeft, Plus, Trash, ChevronDown, ChevronUp } from 'lucide-react';
-import metadataService from '../../../services/api/metadataService';
 
 export default function ContentForm({ content = null, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     title: content?.title || '',
     description: content?.description || '',
-    genre: content?.genre || '',
+    genre: content?.genre ? (Array.isArray(content.genre) ? content.genre.join(', ') : content.genre) : '',
     year: content?.year || new Date().getFullYear(),
     rating: content?.rating || '',
     isPaid: content?.isPaid || false,
@@ -22,17 +21,53 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     isRanking: content?.isRanking || false,
     isMovie: content?.isMovie || false,
     isTV: content?.isTV || false,
+
     isPopular: content?.isPopular || false,
-    dynamicTabs: content?.dynamicTabs || []
+    isBroadcast: content?.isBroadcast || false,
+    isMms: content?.isMms || false,
+    isShortFilm: content?.isShortFilm || false
   });
 
-  const [metadata, setMetadata] = useState({ tabs: [], categories: [] });
-
+  // Sync state with content prop changes
   useEffect(() => {
-    metadataService.getMetadata().then(data => {
-      setMetadata(data);
-    });
-  }, []);
+    // Helper to safely get url from possible object structure
+    const getUrl = (field) => {
+      if (!content) return '';
+      const val = content[field];
+      if (!val) return '';
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object' && val.url) return val.url;
+      return '';
+    };
+
+    if (content) {
+      setFormData(prev => ({
+        ...prev,
+        title: content.title || '',
+        description: content.description || '',
+        genre: Array.isArray(content.genre) ? content.genre.join(', ') : (content.genre || ''),
+        year: content.year || new Date().getFullYear(),
+        rating: content.rating || '',
+        isPaid: content.isPaid || false,
+        price: content.price || '',
+        status: content.status || 'draft',
+        type: content.type || 'bhojpuri',
+        image: getUrl('image') || getUrl('poster') || '',
+        backdrop: getUrl('backdrop') || '',
+        video: getUrl('video') || '',
+        seasons: content.seasons || [],
+        isNewAndHot: content.isNewAndHot || false,
+        isOriginal: content.isOriginal || false,
+        isRanking: content.isRanking || false,
+        isMovie: content.isMovie || false,
+        isTV: content.isTV || false,
+        isPopular: content.isPopular || false,
+        isBroadcast: content.isBroadcast || false,
+        isMms: content.isMms || false,
+        isShortFilm: content.isShortFilm || false
+      }));
+    }
+  }, [content]);
 
   const [errors, setErrors] = useState({});
   const [expandedSeason, setExpandedSeason] = useState(0); // Index of expanded season
@@ -41,23 +76,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-
-    // Handle dynamic tabs separately if needed, but here we can just map them
-    // Actually, for dynamicTabs array, we need special handling
-    if (metadata.tabs.includes(name)) {
-      setFormData(prev => {
-        const currentTabs = prev.dynamicTabs || [];
-        if (checked) {
-          return { ...prev, dynamicTabs: [...currentTabs, name] };
-        } else {
-          return { ...prev, dynamicTabs: currentTabs.filter(t => t !== name) };
-        }
-      });
-    }
-
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -67,7 +87,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
-    if (!formData.genre.trim()) newErrors.genre = 'Genre is required';
+    if (!String(formData.genre).trim()) newErrors.genre = 'Genre is required';
     if (!formData.rating || formData.rating < 0 || formData.rating > 10) {
       newErrors.rating = 'Rating must be between 0 and 10';
     }
@@ -77,6 +97,14 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const getFileDisplay = (fileInfo) => {
+    if (!fileInfo) return '';
+    if (typeof fileInfo === 'string') return fileInfo.split('/').pop();
+    if (fileInfo instanceof File) return fileInfo.name;
+    if (typeof fileInfo === 'object' && fileInfo.url && typeof fileInfo.url === 'string') return fileInfo.url.split('/').pop();
+    return 'File selected';
   };
 
   const handleSubmit = (e) => {
@@ -137,9 +165,6 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         submissionData.totalSeasons = formData.seasons.length;
         submissionData.totalEpisodes = formData.seasons.reduce((acc, s) => acc + s.episodes.length, 0);
       }
-
-      // Ensure dynamicTabs are sent
-      submissionData.dynamicTabs = formData.dynamicTabs;
 
       fd.append('data', JSON.stringify(submissionData));
 
@@ -316,9 +341,6 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               <option value="new_release">New Release</option>
               <option value="reel">Short Reel</option>
               <option value="for_tab">For Tab</option>
-              {metadata.categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
             </select>
           </div>
         </div>
@@ -510,7 +532,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', background: '#f9fafb' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>Display Categories</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px' }}>
-            {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular'].map(key => (
+            {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular', 'isBroadcast', 'isMms', 'isShortFilm'].map(key => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -520,19 +542,6 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                   style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#46d369' }}
                 />
                 {key.replace('is', '').replace(/([A-Z])/g, ' $1').trim()}
-              </label>
-            ))}
-            {/* Dynamic Tabs */}
-            {metadata.tabs.map(tab => (
-              <label key={tab} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  name={tab}
-                  checked={formData.dynamicTabs?.includes(tab)}
-                  onChange={handleInputChange}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#46d369' }}
-                />
-                {tab}
               </label>
             ))}
           </div>
@@ -557,7 +566,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                     {formData.image ? 'Change Poster' : 'Upload Poster'}
                   </label>
                 </div>
-                {formData.image && <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ {formData.image.split('/').pop()}</p>}
+                {formData.image && <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ {getFileDisplay(formData.image)}</p>}
               </div>
 
               {/* Backdrop */}
@@ -573,7 +582,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                     {formData.backdrop ? 'Change Backdrop' : 'Upload Backdrop'}
                   </label>
                 </div>
-                {formData.backdrop && <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ {formData.backdrop.split('/').pop()}</p>}
+                {formData.backdrop && <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ {getFileDisplay(formData.backdrop)}</p>}
               </div>
             </div>
 
@@ -662,9 +671,9 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                                     display: 'block', padding: '6px 8px', border: '1px dashed #cbd5e1',
                                     borderRadius: '4px', textAlign: 'center', cursor: 'pointer', fontSize: '0.8rem', color: '#64748b', background: 'white'
                                   }}>
-                                    {episode.video?.url ? 'Change Video' : 'Upload Video'}
+                                    {getFileDisplay(episode.video) ? 'Change Video' : 'Upload Video'}
                                   </label>
-                                  {episode.video?.url && <div style={{ fontSize: '0.7rem', color: '#46d369', marginTop: '2px', textAlign: 'center' }}>✓ Uploaded</div>}
+                                  {getFileDisplay(episode.video) && <div style={{ fontSize: '0.7rem', color: '#46d369', marginTop: '2px', textAlign: 'center' }}>✓ Uploaded</div>}
                                 </div>
 
                                 <button
@@ -738,7 +747,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                   </label>
                 </div>
                 {formData.video && (
-                  <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ Video uploaded: {formData.video.split('/').pop()}</p>
+                  <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ Video uploaded: {getFileDisplay(formData.video)}</p>
                 )}
               </div>
             )}

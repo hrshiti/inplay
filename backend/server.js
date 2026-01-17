@@ -36,6 +36,8 @@ const contentRoutes = require('./routes/contentRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const quickByteRoutes = require('./routes/quickByteRoutes');
 const forYouRoutes = require('./routes/forYouRoutes');
+const audioSeriesRoutes = require('./routes/audioSeriesRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Security middleware
 app.use(helmet());
@@ -77,8 +79,9 @@ app.use('/api/content', contentRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/quickbytes', quickByteRoutes);
 app.use('/api/foryou', forYouRoutes);
-const metadataRoutes = require('./routes/metadataRoutes');
-app.use('/api/metadata', metadataRoutes);
+app.use('/api/audio-series', audioSeriesRoutes);
+app.use('/api/upload', uploadRoutes);
+
 
 // 404 handler
 app.use('*', (req, res) => {

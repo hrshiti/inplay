@@ -496,8 +496,8 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 48px);
-  max-width: 400px;
+  width: 95%;
+  max-width: 600px;
   height: 72px;
   background: rgba(10, 10, 10, 0.8);
   backdrop-filter: blur(24px);

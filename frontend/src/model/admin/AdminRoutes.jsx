@@ -10,10 +10,10 @@ import adminUserService from '../../services/api/adminUserService';
 import adminSubscriptionService from '../../services/api/adminSubscriptionService';
 import adminDashboardService from '../../services/api/adminDashboardService';
 import adminQuickByteService from '../../services/api/adminQuickByteService';
-import metadataService from '../../services/api/metadataService';
 import adminContentService from '../../services/api/adminContentService';
 import adminMonetizationService from '../../services/api/adminMonetizationService';
 import ForYouReels from './ForYouReels';
+import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -174,12 +174,6 @@ const ContentLibrary = () => {
   const [viewMode, setViewMode] = useState('list'); // 'list', 'edit', 'view'
   const [selectedContent, setSelectedContent] = useState(null);
 
-  // Metadata Modal State
-  const [showMetaModal, setShowMetaModal] = useState(false);
-  const [metaModalType, setMetaModalType] = useState(''); // 'tab' or 'category'
-  const [newMetaValue, setNewMetaValue] = useState('');
-
-
   useEffect(() => {
     fetchContent();
   }, []);
@@ -263,61 +257,6 @@ const ContentLibrary = () => {
     }
   };
 
-  const handeAddMeta = async () => {
-    if (!newMetaValue.trim()) return;
-    try {
-      if (metaModalType === 'tab') {
-        await metadataService.addTab(newMetaValue.trim());
-        alert('New Tab added! It will appear in Content Forms.');
-      } else {
-        await metadataService.addCategory(newMetaValue.trim());
-        alert('New Category added! It will appear in Content Forms.');
-      }
-      setShowMetaModal(false);
-      setNewMetaValue('');
-    } catch (e) {
-      alert('Failed to add ' + metaModalType);
-    }
-  };
-
-  if (viewMode === 'edit' && selectedContent) {
-    return (
-      <ContentForm
-        content={selectedContent}
-        onSave={handleUpdateContent}
-        onCancel={() => {
-          setViewMode('list');
-          setSelectedContent(null);
-        }}
-      />
-    );
-  }
-
-  // Meta Modal
-  if (showMetaModal) {
-    return (
-      <div style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', minWidth: '350px' }}>
-          <h2 style={{ marginBottom: '16px' }}>Add New {metaModalType === 'tab' ? 'Tab' : 'Category'}</h2>
-          <input
-            type="text"
-            value={newMetaValue}
-            onChange={(e) => setNewMetaValue(e.target.value)}
-            placeholder={`Enter ${metaModalType} name...`}
-            style={{ width: '100%', padding: '10px', marginBottom: '16px', border: '1px solid #ccc', borderRadius: '6px' }}
-          />
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-            <button onClick={() => setShowMetaModal(false)} style={{ padding: '8px 16px', border: '1px solid #ccc', borderRadius: '4px', background: 'transparent' }}>Cancel</button>
-            <button onClick={handeAddMeta} style={{ padding: '8px 16px', border: 'none', borderRadius: '4px', background: '#46d369', color: 'white' }}>Add</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div style={{ padding: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
@@ -346,11 +285,6 @@ const ContentLibrary = () => {
         >
           Add New Content
         </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-        <button onClick={() => { setMetaModalType('tab'); setShowMetaModal(true); }} style={{ padding: '8px 16px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>+ Add New Tab</button>
-        <button onClick={() => { setMetaModalType('category'); setShowMetaModal(true); }} style={{ padding: '8px 16px', background: 'white', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>+ Add New Category</button>
       </div>
 
       {/* Tabs */}
@@ -394,7 +328,7 @@ const ContentLibrary = () => {
 
       {/* Edit Mode */}
       {viewMode === 'edit' && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 50, overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 5000, overflowY: 'auto' }}>
           <ContentForm
             content={selectedContent}
             onSave={handleUpdateContent}
@@ -1710,6 +1644,7 @@ export default function AdminRoutes() {
         <Route path="quick-bytes/add" element={<AddQuickBite />} />
         <Route path="for-you" element={<ForYouReels />} />
         <Route path="users" element={<Users />} />
+        <Route path="audio-series" element={<AudioSeriesPage />} />
         <Route path="monetization/plans" element={<Monetization />} />
         <Route path="settings/app" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />

@@ -61,6 +61,14 @@ const uploadPresets = {
       { width: 200, height: 200, crop: 'thumb', gravity: 'face' },
       { quality: 'auto' }
     ]
+  },
+  audio: {
+    folder: 'inplay/music',
+    resource_type: 'video', // Cloudinary treats audio as 'video' resource type often, or 'raw'/'auto', but 'video' usually works for mp3/wav with duration
+    allowed_formats: ['mp3', 'wav', 'aac'],
+    transformation: [
+      { quality: 'auto' } // Audio doesn't need resize
+    ]
   }
 };
 

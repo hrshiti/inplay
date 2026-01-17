@@ -8,6 +8,7 @@ const contentService = {
         if (filters.category) queryParams.append('category', filters.category);
         if (filters.limit) queryParams.append('limit', filters.limit);
         if (filters.page) queryParams.append('page', filters.page);
+        if (filters.search) queryParams.append('search', filters.search);
 
         const response = await fetch(`${API_URL}/content/all?${queryParams.toString()}`, {
             method: 'GET',

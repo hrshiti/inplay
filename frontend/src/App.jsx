@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 gsap.registerPlugin(ScrollTrigger);
+// Prevent removeChild error by disabling 100vh fix script
+ScrollTrigger.config({ ignoreMobileResize: true });
 
 // Mock Data
 import { MOVIES, CONTINUE_WATCHING } from './data';
@@ -21,7 +23,9 @@ import SplashScreen from './SplashScreen';
 import HistoryPage from './HistoryPage';
 import MyListPage from './MyListPage';
 import DownloadsPage from './DownloadsPage';
+import SearchPage from './SearchPage';
 import SettingsPage from './SettingsPage';
+import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
 
 import VideoPlayer from './VideoPlayer';
 import { AdminRoutes } from './model/admin';
@@ -32,7 +36,7 @@ import Signup from './Signup';
 import authService from './services/api/authService';
 import contentService from './services/api/contentService';
 import paymentService from './services/api/paymentService';
-import metadataService from './services/api/metadataService';
+
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -63,7 +67,6 @@ function App() {
     originals: []
   });
   const [allContent, setAllContent] = useState([]);
-  const [dynamicFilters, setDynamicFilters] = useState([]); // Store dynamic tabs
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -125,11 +128,6 @@ function App() {
       }
     };
     fetchData();
-
-    // Fetch dynamic tabs
-    metadataService.getMetadata().then(data => {
-      setDynamicFilters(data.tabs || []);
-    });
   }, []);
 
   // Route mapping
@@ -139,16 +137,24 @@ function App() {
     'originals': 'Originals',
     'rankings': 'Rankings',
     'movies': 'Movies',
-    'tv': 'TV'
+    'tv': 'TV',
+    'broadcast': 'Broadcast',
+    'mms': 'Mms',
+    'audio-series': 'Audio Series',
+    'short-film': 'Short Film'
   };
 
   const reverseFilterMap = {
-    'Popular': 'popular',
+    'Popular': '',
     'New & Hot': 'new-and-hot',
     'Originals': 'originals',
     'Rankings': 'rankings',
     'Movies': 'movies',
-    'TV': 'tv'
+    'TV': 'tv',
+    'Broadcast': 'broadcast',
+    'Mms': 'mms',
+    'Audio Series': 'audio-series',
+    'Short Film': 'short-film'
   };
 
   // Sync state with URL on mount and location change
@@ -169,6 +175,8 @@ function App() {
       setActiveTab('For You');
     } else if (path === 'my-space') {
       setActiveTab('My Space');
+    } else if (path === 'search') {
+      setActiveTab('Search');
     } else if (['history', 'my-list', 'downloads', 'settings'].includes(path)) {
       setActiveTab('My Space');
     }
@@ -179,6 +187,7 @@ function App() {
     if (tab === 'Home') navigate('/');
     else if (tab === 'For You') navigate('/for-you');
     else if (tab === 'My Space') navigate('/my-space');
+    else if (tab === 'Search') navigate('/search');
   };
 
   const handleFilterChange = (cat) => {
@@ -395,7 +404,7 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Smooth Scroll Setup
+  // Smooth Scroll Setup with GSAP Sync
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -408,14 +417,19 @@ function App() {
       touchMultiplier: 2,
     });
 
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
+    // Synchronize Lenis scroll with ScrollTrigger
+    lenis.on('scroll', ScrollTrigger.update);
 
-    requestAnimationFrame(raf);
+    // Use GSAP Ticker for Lenis animation loop to prevent conflicts
+    const update = (time) => {
+      lenis.raf(time * 1000);
+    };
+
+    gsap.ticker.add(update);
+    gsap.ticker.lagSmoothing(0); // Disable lag smoothing for smooth scrolling
 
     return () => {
+      gsap.ticker.remove(update);
       lenis.destroy();
     };
   }, []);
@@ -519,11 +533,11 @@ function App() {
               </AnimatePresence>
 
               {activeTab === 'Home' && !selectedMovie && (
-                <div className="filters-container hide-scrollbar">
-                  {['All', 'Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', ...dynamicFilters].map((filter) => (
-                    <button
+                <div className="category-tabs-container hide-scrollbar">
+                  {['Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Broadcast', 'Mms', 'Audio Series', 'Short Film'].map((filter) => (
+                    <div
                       key={filter}
-                      className={`filter-btn ${activeFilter === filter ? 'active' : ''}`}
+                      className={`category-tab ${activeFilter === filter ? 'active' : ''}`}
                       onClick={() => handleFilterChange(filter)}
                     >
                       {filter}
@@ -543,7 +557,7 @@ function App() {
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
                         />
                       )}
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -560,7 +574,9 @@ function App() {
 
 
                     {/* Content Switching based on Filter */}
-                    {activeFilter === 'Popular' || activeFilter === 'All' ? (
+                    {activeFilter === 'Audio Series' ? (
+                      <AudioSeriesUserPage onBack={() => setActiveFilter('Popular')} />
+                    ) : activeFilter === 'Popular' || activeFilter === 'All' ? (
                       /* Standard Home View */
                       <>
                         {/* Hero Section Slider */}
@@ -824,86 +840,100 @@ function App() {
                             </div>
                           </div>
                           <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 20px' }}>
-                            {quickBites.filter(item => item.status === 'published').map((item, index) => {
-                              const verticalItem = {
-                                ...item,
-                                isVertical: true,
-                                image: item.thumbnail?.url || item.poster?.url || "https://placehold.co/150x267/333/FFF?text=No+Image",
-                                video: item.video?.secure_url || item.video?.url,
-                                type: 'reel'
-                              };
-                              return (
-                                <motion.div
-                                  key={verticalItem._id || verticalItem.id || index}
-                                  whileHover={{ scale: 1.05, y: -5 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => setSelectedMovie(verticalItem)}
-                                  style={{
-                                    flex: '0 0 120px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '10px'
-                                  }}
-                                >
-                                  <div style={{
-                                    width: '120px',
-                                    height: '210px',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                  }}>
-                                    <img
-                                      src={verticalItem.image}
-                                      alt={verticalItem.title}
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    />
-                                    <div style={{
-                                      position: 'absolute',
-                                      inset: 0,
-                                      background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)',
+                            {quickBites
+                              .filter(item => item.status === 'published')
+                              .filter(item => {
+                                if (activeFilter === 'All') {
+                                  return true;
+                                }
+                                if (activeFilter === 'Movies') {
+                                  return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'bhojpuri' || item.type === 'new_release';
+                                }
+                                if (activeFilter === 'TV') {
+                                  return item.isTV || item.type === 'series' || item.type === 'hindi_series';
+                                }
+                                return true;
+                              })
+                              .map((item, index) => {
+                                const verticalItem = {
+                                  ...item,
+                                  isVertical: true,
+                                  image: item.thumbnail?.url || item.poster?.url || "https://placehold.co/150x267/333/FFF?text=No+Image",
+                                  video: item.video?.secure_url || item.video?.url,
+                                  type: 'reel'
+                                };
+                                return (
+                                  <motion.div
+                                    key={verticalItem._id || verticalItem.id || index}
+                                    whileHover={{ scale: 1.05, y: -5 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setSelectedMovie(verticalItem)}
+                                    style={{
+                                      flex: '0 0 120px',
+                                      cursor: 'pointer',
                                       display: 'flex',
                                       flexDirection: 'column',
-                                      justifyContent: 'flex-end',
-                                      padding: '10px'
-                                    }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                          <Play size={10} fill="white" stroke="none" />
-                                        </div>
-                                        {verticalItem.rating && (
-                                          <span style={{ fontSize: '10px', fontWeight: 'bold' }}>★ {verticalItem.rating}</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {verticalItem.isPaid && (
-                                      <div style={{ position: 'absolute', top: '8px', right: '8px', background: '#FFD700', color: '#000', fontSize: '9px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>
-                                        PAID
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{
-                                      fontSize: '12px',
-                                      fontWeight: '700',
-                                      color: '#fff',
-                                      textAlign: 'left',
-                                      maxWidth: '100%',
-                                      whiteSpace: 'nowrap',
+                                      gap: '10px'
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: '120px',
+                                      height: '210px',
+                                      borderRadius: '16px',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis'
+                                      position: 'relative',
+                                      boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
+                                      border: '1px solid rgba(255,255,255,0.1)'
                                     }}>
-                                      {verticalItem.title}
-                                    </span>
-                                    <span style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
-                                      {verticalItem.genre || 'Short'} • {verticalItem.year || '2024'}
-                                    </span>
-                                  </div>
-                                </motion.div>
-                              )
-                            })}
+                                      <img
+                                        src={verticalItem.image}
+                                        alt={verticalItem.title}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      />
+                                      <div style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'flex-end',
+                                        padding: '10px'
+                                      }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Play size={10} fill="white" stroke="none" />
+                                          </div>
+                                          {verticalItem.rating && (
+                                            <span style={{ fontSize: '10px', fontWeight: 'bold' }}>★ {verticalItem.rating}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {verticalItem.isPaid && (
+                                        <div style={{ position: 'absolute', top: '8px', right: '8px', background: '#FFD700', color: '#000', fontSize: '9px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>
+                                          PAID
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        color: '#fff',
+                                        textAlign: 'left',
+                                        maxWidth: '100%',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                      }}>
+                                        {verticalItem.title}
+                                      </span>
+                                      <span style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
+                                        {verticalItem.genre || 'Short'} • {verticalItem.year || '2024'}
+                                      </span>
+                                    </div>
+                                  </motion.div>
+                                )
+                              })}
                           </div>
                         </section>
 
@@ -1202,6 +1232,21 @@ function App() {
                   </motion.div>
                 )}
 
+                {location.pathname === '/search' && (
+                  <motion.div
+                    key="search"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <SearchPage
+                      allContent={allContent}
+                      onMovieClick={(movie) => setSelectedMovie(movie)}
+                    />
+                  </motion.div>
+                )}
+
                 {location.pathname === '/settings' && (
                   <motion.div
                     key="settings"
@@ -1275,13 +1320,14 @@ function App() {
               {activeTab !== 'For You' && (
                 <nav className="bottom-nav" style={{ justifyContent: 'space-around' }}>
                   <NavItem
-                    icon={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><HomeIcon /> Home</div>}
+                    icon={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
                     label="Home"
                     active={activeTab === 'Home'}
                     onClick={() => handleTabChange('Home')}
                     isPill
                   />
                   <NavItem icon={<Sparkles size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
+                  <NavItem icon={<Search size={24} />} label="Search" active={activeTab === 'Search'} onClick={() => handleTabChange('Search')} />
                   {/* <NavItem icon={<Crown size={24} />} label="Premium" active={activeTab === 'Premium'} onClick={() => setActiveTab('Premium')} /> */}
                   <NavItem icon={<Layout size={24} />} label="My Space" active={activeTab === 'My Space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
@@ -1566,12 +1612,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
     )
   }
 
-  // --------------------------------------------------------
-  // LAYOUT 2: HOTTEST SHOWS (Ranked, Side Info)
-  // --------------------------------------------------------
-  // --------------------------------------------------------
-  // LAYOUT 2: HOTTEST SHOWS (Ranked, Side Info)
-  // --------------------------------------------------------
   let hotData = trendingData || [];
 
   // Filter content based on the active tab (User Request: Isolation)
@@ -1581,8 +1621,18 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
     hotData = hotData.filter(item => item.isRanking);
   } else if (activeFilter === 'Movies') {
     hotData = hotData.filter(item => item.isMovie || item.type === 'movie');
-  } else if (activeFilter === 'TV Shows') {
+  } else if (activeFilter === 'TV') {
     hotData = hotData.filter(item => item.isTV || item.type === 'series' || item.type === 'hindi_series');
+  } else if (activeFilter === 'Originals') {
+    hotData = originalsData || [];
+  } else if (activeFilter === 'Broadcast') {
+    hotData = hotData.filter(item => item.isBroadcast);
+  } else if (activeFilter === 'Mms') {
+    hotData = hotData.filter(item => item.isMms);
+  } else if (activeFilter === 'Audio Series') {
+    hotData = hotData.filter(item => item.isAudioSeries);
+  } else if (activeFilter === 'Short Film') {
+    hotData = hotData.filter(item => item.isShortFilm);
   } else {
     // Default 'Popular' shows popular items
     hotData = hotData.filter(item => item.isPopular);
@@ -1671,3 +1721,4 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
     </motion.div>
   );
 }
+

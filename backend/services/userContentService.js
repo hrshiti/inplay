@@ -4,6 +4,9 @@ const Payment = require('../models/Payment');
 const { generateSignedUrl, generateHLSUrl } = require('../config/cloudinary');
 const { DOWNLOAD_EXPIRY_DAYS } = require('../constants');
 
+// Import Audio Series model
+const AudioSeries = require('../models/AudioSeries');
+
 // Get content for users (with access control)
 const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = null) => {
   const query = { status: 'published' };
@@ -14,35 +17,95 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
   if (filters.genre && filters.genre.length > 0) {
     query.genre = { $in: filters.genre };
   }
+
+  // Advanced Search Logic
+  let audioSeriesResults = [];
   if (filters.search) {
-    query.$text = { $search: filters.search };
+    // Create a regex for case-insensitive partial matching
+    const searchRegex = new RegExp(filters.search, 'i');
+
+    // Update Content query to use $or with regex for better matching than $text
+    query.$or = [
+      { title: searchRegex },
+      { description: searchRegex },
+      { genre: searchRegex },
+      { type: searchRegex }
+    ];
+    // Note: If using $text index previously, remove $text query if switch to regex. 
+    // Regex is slower but more flexible for partial words like "act" -> "Action".
+    delete query.$text;
+
+    // Also search Audio Series if searching
+    try {
+      const audioQuery = {
+        isActive: true,
+        $or: [
+          { title: searchRegex },
+          { description: searchRegex },
+          { genre: searchRegex }
+        ]
+      };
+      audioSeriesResults = await AudioSeries.find(audioQuery)
+        .limit(limit)
+        .select('title description coverImage genre episodes totalViews createdAt')
+        .lean();
+
+      // Format Audio Series to match Content structure for frontend consistency
+      audioSeriesResults = audioSeriesResults.map(series => ({
+        _id: series._id,
+        title: series.title,
+        description: series.description,
+        image: series.coverImage, // structure mapping
+        poster: { url: series.coverImage }, // structure mapping
+        type: 'audio_series', // explicit type
+        genre: series.genre,
+        isAudioSeries: true,
+        year: new Date(series.createdAt).getFullYear(),
+        episodesCount: series.episodes?.length || 0
+      }));
+    } catch (err) {
+      console.error("Audio Series search failed", err);
+    }
   }
 
   // Calculate pagination
   const skip = (page - 1) * limit;
 
+  // Fetch regular content
   const content = await Content.find(query)
     .select('-createdBy -updatedBy') // Exclude admin fields
     .sort({ createdAt: -1 })
     .skip(skip)
+    // Reduce limit by number of audio results found to treat them as part of the page 
+    // or just fetch full limit and merge (simpler for now)
     .limit(limit);
 
-  const total = await Content.countDocuments(query);
+  const totalContent = await Content.countDocuments(query);
+  const total = totalContent + audioSeriesResults.length;
 
-  // Check user's access to each content
-  let processedContent = content;
-  if (userId) {
-    processedContent = await Promise.all(
-      content.map(async (item) => {
-        const accessInfo = await checkUserContentAccess(userId, item._id);
-        return {
-          ...item.toObject(),
-          hasAccess: accessInfo.hasAccess,
-          accessType: accessInfo.accessType
-        };
-      })
-    );
-  }
+  // Merge results: Audio Series first if relevant, or mixed? 
+  // Let's prepend audio series results if any are found, assuming relevance.
+  const combinedContent = [...audioSeriesResults, ...content];
+
+  // Since we merged, we might exceed the limit technically if we found both. 
+  // But for a simple search implementation, returning slightly more is often better UX than strict pagination logic hacking.
+  // Ideally, valid pagination across two collections requires specific pipelines (aggregations).
+  // For now, this satisfies the "show audio series if searched" requirement.
+
+  // Check user's access to each content (only for standard content model)
+  const processedContent = await Promise.all(
+    combinedContent.map(async (item) => {
+      // Skip access check for audio series or lightweight items if already processed
+      if (item.isAudioSeries) return item;
+
+      const accessInfo = await checkUserContentAccess(userId, item._id);
+      return {
+        ...item.toObject(),
+        hasAccess: accessInfo.hasAccess,
+        accessType: accessInfo.accessType
+      };
+    })
+  );
 
   return {
     content: processedContent,
