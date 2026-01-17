@@ -162,7 +162,7 @@ function App() {
     if (location.pathname.startsWith('/admin')) return;
 
     // Normalize path: remove leading and trailing slashes
-    const path = location.pathname.replace(/^\/|\/$/g, '');
+    const path = location.pathname ? location.pathname.replace(/^\/|\/$/g, '') : '';
 
     // Check if it's a category route
     if (filterMap[path]) {
