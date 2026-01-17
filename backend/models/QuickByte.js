@@ -13,6 +13,14 @@ const quickByteSchema = new mongoose.Schema({
         secure_url: String,
         duration: Number
     },
+    episodes: [{
+        public_id: String,
+        url: String,
+        secure_url: String,
+        duration: Number,
+        title: String,
+        order: Number
+    }],
     description: {
         type: String,
         trim: true,

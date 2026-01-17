@@ -189,17 +189,55 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
         }
     };
 
+    const [currentEpIndex, setCurrentEpIndex] = useState(0);
+    const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
+    const currentVideoSrc = episodes[currentEpIndex]?.url || '';
+
+    // Reset episode index when reel changes or comes into view? 
+    // Usually standard reels just play from start.
+    // If we want to remember position, we need more complex state.
+    // Let's stick to start from 0 for now.
+
+    const handleVideoEnd = () => {
+        syncProgress(true); // Mark current episode/part as done
+
+        if (currentEpIndex < episodes.length - 1) {
+            // Next episode
+            setCurrentEpIndex(prev => prev + 1);
+        } else {
+            // Loop back to first episode
+            setCurrentEpIndex(0);
+        }
+    };
+
+    // Auto-play when episode changes if we are already playing
+    useEffect(() => {
+        if (isPlaying && videoRef.current) {
+            // Small delay to ensure src is updated
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(e => {
+                    // Auto-play was prevented
+                    console.log("Auto-play prevented on episode change");
+                });
+            }
+        }
+    }, [currentEpIndex]);
+
+    // ... existing hooks ...
+    // Note: I will keep existing hooks but ensure they work with dynamic src.
+
     return (
         <div className="reel-item" style={{ height: '100vh', scrollSnapAlign: 'start', position: 'relative', width: '100%', overflow: 'hidden' }}>
             <div className="reel-video-wrapper" onClick={handlePlayPause} style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <video
                     ref={videoRef}
-                    src={reel.video?.url}
+                    src={currentVideoSrc}
                     className="reel-video"
-                    loop
+                    loop={episodes.length === 1} // Only native loop if single video. Multi-video loops via state.
                     playsInline
                     muted={muted}
-                    onEnded={() => syncProgress(true)}
+                    onEnded={handleVideoEnd}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
                 {!isPlaying && (

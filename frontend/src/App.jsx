@@ -430,6 +430,7 @@ function App() {
 
     return () => {
       gsap.ticker.remove(update);
+      ScrollTrigger.getAll().forEach(t => t.kill()); // Kill all ScrollTriggers to prevent removeChild errors
       lenis.destroy();
     };
   }, []);

@@ -119,7 +119,28 @@ export default function MovieDetailsPage({
                                 if (onPurchase) onPurchase(movie);
                             } else {
                                 console.log("Play clicked for:", movie.title);
-                                if (onPlay) onPlay(movie);
+                                if (onPlay) {
+                                    // Special handling for Series (Hindi Series) which might not have a direct video URL
+                                    // but have episodes/seasons.
+                                    if ((movie.type === 'hindi_series' || movie.category === 'Hindi Series') && (!movie.video || movie.video === '')) {
+                                        // Find first episode
+                                        let firstEpisode = null;
+                                        if (movie.episodes && movie.episodes.length > 0) {
+                                            firstEpisode = movie.episodes[0];
+                                        } else if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
+                                            firstEpisode = movie.seasons[0].episodes[0];
+                                        }
+
+                                        if (firstEpisode) {
+                                            onPlay(movie, firstEpisode);
+                                        } else {
+                                            // Fallback if no episodes found
+                                            onPlay(movie);
+                                        }
+                                    } else {
+                                        onPlay(movie);
+                                    }
+                                }
                             }
                         }}
                         style={{

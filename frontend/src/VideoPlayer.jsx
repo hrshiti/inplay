@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import contentService from './services/api/contentService';
 
 export default function VideoPlayer({ movie, episode, onClose }) {
@@ -7,22 +7,46 @@ export default function VideoPlayer({ movie, episode, onClose }) {
     // as per user request to play quick byte as movie content.
     const isVerticalMode = false; // Forced to false to use standard player
 
-    // STANDARD LANDSCAPE PLAYER
-    const videoRef = useRef(null);
-    const lastSyncTime = useRef(0);
-    // Unified logic to extract video source
-    let videoObj = episode?.video || movie.video;
-
-    // If it's a series and no direct video/episode, find the first available episode
-    if (!videoObj) {
-        if (movie.episodes && movie.episodes.length > 0) {
-            videoObj = movie.episodes[0].video;
-        } else if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
-            videoObj = movie.seasons[0].episodes[0].video;
-        }
+    // PLAYLIST LOGIC
+    // Determine the list of videos to play
+    let playlist = [];
+    if (movie.episodes && movie.episodes.length > 0) {
+        playlist = movie.episodes; // Quick Byte episodes
+    } else if (movie.seasons && movie.seasons.length > 0) {
+        // Handle Series with Seasons - Flatten all episodes
+        playlist = movie.seasons.flatMap(s => s.episodes || []);
+    } else if (episode) {
+        playlist = [episode]; // Single TV episode passed but no parent list found
+    } else {
+        playlist = [movie]; // Single Movie
     }
 
-    const videoSrc = videoObj?.url || videoObj;
+    // Correctly initialize currentIndex based on passed episode
+    const [currentIndex, setCurrentIndex] = useState(() => {
+        if (episode && playlist.length > 0) {
+            const foundIndex = playlist.findIndex(p => (p._id || p.id) === (episode._id || episode.id));
+            if (foundIndex !== -1) return foundIndex;
+        }
+        return 0;
+    });
+
+    const videoRef = useRef(null);
+    const lastSyncTime = useRef(0);
+
+    const currentItem = playlist[currentIndex];
+
+    // Helper to get URL dynamically
+    const getVideoUrl = (item) => {
+        if (!item) return '';
+        // QuickByte episode (direct url field)
+        if (item.url && !item.video) return item.url;
+        // Standard video object structure
+        if (typeof item.video === 'string') return item.video;
+        if (item.video?.url) return item.video.url;
+        return '';
+    };
+
+    const videoSrc = getVideoUrl(currentItem);
 
     if (!videoSrc) {
         return (
@@ -38,12 +62,71 @@ export default function VideoPlayer({ movie, episode, onClose }) {
             </div>
         );
     }
-    // Resume Logic
+
+    // Resume Logic (Only for first item/movie context)
     useEffect(() => {
-        if (videoRef.current && movie.watchedSeconds) {
+        // Reset time if switching items
+        if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+            videoRef.current.play().catch(() => { });
+        }
+
+        // If it's the main movie (index 0) and we have resume time
+        if (currentIndex === 0 && movie.watchedSeconds && videoRef.current) {
+            // Only resume if playlist is 1 item or it's checking strictly
+            // Since we don't track episode index in resume yet, this is best effort
             videoRef.current.currentTime = movie.watchedSeconds;
         }
-    }, [movie.watchedSeconds]);
+    }, [currentIndex, movie.watchedSeconds, videoSrc]);
+
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [progress, setProgress] = useState(0);
+
+    const togglePlay = (e) => {
+        e.stopPropagation();
+        if (videoRef.current) {
+            if (isPlaying) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+            } else {
+                videoRef.current.play();
+                setIsPlaying(true);
+            }
+        }
+    };
+
+    const skipTime = (seconds) => {
+        if (videoRef.current) {
+            videoRef.current.currentTime += seconds;
+        }
+    };
+
+    // Handle Video Progress
+    const handleTimeUpdate = () => {
+        if (videoRef.current && videoRef.current.duration) {
+            const percentage = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+            setProgress(percentage);
+        }
+    };
+
+    // Auto-update isPlaying state on external pause/play events
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const onPlay = () => setIsPlaying(true);
+        const onPause = () => setIsPlaying(false);
+        video.addEventListener('play', onPlay);
+        video.addEventListener('pause', onPause);
+        return () => {
+            video.removeEventListener('play', onPlay);
+            video.removeEventListener('pause', onPause);
+        };
+    }, []);
+
+    // Reset progress on item change
+    useEffect(() => {
+        setProgress(0);
+    }, [currentIndex]);
 
     // Progress Sync Logic
     const syncProgress = async (isClosing = false) => {
@@ -84,25 +167,328 @@ export default function VideoPlayer({ movie, episode, onClose }) {
         };
     }, []);
 
+    const handleVideoEnd = () => {
+        syncProgress(true);
+        if (currentIndex < playlist.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+        }
+    };
+
+    const handleNext = (e) => {
+        e.stopPropagation();
+        if (currentIndex < playlist.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+        }
+    };
+
+    const handlePrev = (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) {
+            setCurrentIndex(prev => prev - 1);
+        }
+    };
+
+    const [showControls, setShowControls] = useState(true);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [videoQuality, setVideoQuality] = useState('Auto');
+    const controlsTimeoutRef = useRef(null);
+
+    // Auto-hide controls
+    useEffect(() => {
+        if (isPlaying && showControls) {
+            resetControlsTimeout();
+        } else if (!isPlaying) {
+            clearTimeout(controlsTimeoutRef.current);
+            setShowControls(true);
+        }
+        return () => clearTimeout(controlsTimeoutRef.current);
+    }, [isPlaying, showControls]);
+
+    const resetControlsTimeout = () => {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = setTimeout(() => {
+            setShowControls(false);
+        }, 3000);
+    };
+
+    const handleScreenTap = () => {
+        setShowControls(prev => !prev);
+    };
+
+    const changeSpeed = (e) => {
+        e.stopPropagation();
+        const speeds = [0.5, 1, 1.25, 1.5, 2];
+        const nextIndex = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
+        const newSpeed = speeds[nextIndex];
+        setPlaybackSpeed(newSpeed);
+        if (videoRef.current) {
+            videoRef.current.playbackRate = newSpeed;
+        }
+    };
+
+    const changeQuality = (e) => {
+        e.stopPropagation();
+        const qualities = ['Auto', '1080p', '720p', '480p'];
+        const nextIndex = (qualities.indexOf(videoQuality) + 1) % qualities.length;
+        setVideoQuality(qualities[nextIndex]);
+    };
+
+    // Helper check for series/episodic content
+    const isEpisodic = movie.type === 'hindi_series' || movie.category === 'Hindi Series' ||
+        movie.type === 'quick_byte' || movie.category === 'Quick Bites' ||
+        playlist.length > 1;
+
+    const mainContainerRef = useRef(null);
+    const [showEpisodeList, setShowEpisodeList] = useState(false);
+
+    const toggleFullScreen = (e) => {
+        e.stopPropagation();
+        if (!document.fullscreenElement) {
+            if (mainContainerRef.current) {
+                mainContainerRef.current.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            }
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'black', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <button
-                onClick={async () => {
-                    await syncProgress();
-                    onClose();
-                }}
-                style={{ position: 'absolute', top: 20, right: 20, zIndex: 100, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer', color: 'white' }}
-            >
-                <X size={24} />
-            </button>
+        <div
+            ref={mainContainerRef}
+            onClick={handleScreenTap}
+            style={{ position: 'fixed', inset: 0, background: 'black', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+            {/* Top Controls (Title, Speed, Quality, Close) */}
+            {showControls && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, padding: '20px',
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 100
+                }}>
+                    <div style={{ color: 'white' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', lineHeight: 1.2 }}>
+                            {movie.title}
+                        </h2>
+                        {playlist.length > 1 && (
+                            <span style={{ fontSize: '0.8rem', opacity: 0.8, fontWeight: '500' }}>
+                                Episode {currentIndex + 1} / {playlist.length}
+                            </span>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {/* Speed Control */}
+                        <button
+                            onClick={changeSpeed}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                        >
+                            {playbackSpeed}x
+                        </button>
+
+                        {/* Quality Control */}
+                        <button
+                            onClick={changeQuality}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                        >
+                            {videoQuality}
+                        </button>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                await syncProgress();
+                                onClose();
+                            }}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Central Play/Pause, Skip, and Navigation Controls (Visible Only on Tap) */}
+            {showControls && (
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px',
+                    zIndex: 90, background: 'rgba(0,0,0,0.3)'
+                }}>
+                    {/* Previous Episode */}
+                    {isEpisodic && (
+                        <button
+                            onClick={handlePrev}
+                            disabled={currentIndex === 0}
+                            style={{
+                                background: 'transparent', border: 'none', color: 'white', cursor: currentIndex === 0 ? 'default' : 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: currentIndex === 0 ? 0.3 : 1,
+                                transition: 'opacity 0.2s'
+                            }}
+                        >
+                            <ChevronLeft size={48} />
+                        </button>
+                    )}
+
+                    {/* Skip Backward (All Content) */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); skipTime(-5); resetControlsTimeout(); }}
+                        style={{
+                            background: 'transparent', border: 'none', color: 'white', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: 0.8
+                        }}
+                    >
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <RotateCcw size={40} />
+                            <span style={{ position: 'absolute', fontSize: '10px', fontWeight: 'bold', paddingTop: '4px' }}>5</span>
+                        </div>
+                    </button>
+
+                    {/* Play/Pause Button */}
+                    <button
+                        onClick={togglePlay}
+                        style={{
+                            background: 'transparent', border: 'none', color: 'white', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                    >
+                        {isPlaying ? (
+                            <Pause size={64} fill="white" />
+                        ) : (
+                            <Play size={64} fill="white" />
+                        )}
+                    </button>
+
+                    {/* Skip Forward (All Content) */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); skipTime(5); resetControlsTimeout(); }}
+                        style={{
+                            background: 'transparent', border: 'none', color: 'white', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: 0.8
+                        }}
+                    >
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <RotateCw size={40} />
+                            <span style={{ position: 'absolute', fontSize: '10px', fontWeight: 'bold', paddingTop: '4px' }}>5</span>
+                        </div>
+                    </button>
+
+                    {/* Next Episode */}
+                    {isEpisodic && (
+                        <button
+                            onClick={handleNext}
+                            disabled={currentIndex >= playlist.length - 1}
+                            style={{
+                                background: 'transparent', border: 'none', color: 'white', cursor: currentIndex >= playlist.length - 1 ? 'default' : 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: currentIndex >= playlist.length - 1 ? 0.3 : 1,
+                                transition: 'opacity 0.2s'
+                            }}
+                        >
+                            <ChevronRight size={48} />
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Bottom Controls Bar (Episodes & Fullscreen) */}
+            {showControls && (
+                <div style={{
+                    position: 'absolute', bottom: '20px', left: 0, right: 0, padding: '0 20px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100
+                }}>
+                    {/* Left Side: Episode List Button (Only if Episodic) */}
+                    {isEpisodic ? (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowEpisodeList(true); }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px',
+                                padding: '8px 12px', color: 'white', cursor: 'pointer', backdropFilter: 'blur(4px)'
+                            }}
+                        >
+                            <List size={20} />
+                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Episodes</span>
+                        </button>
+                    ) : <div></div>}
+
+                    {/* Right Side: Full Screen Button */}
+                    <button
+                        onClick={toggleFullScreen}
+                        style={{
+                            background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: '8px'
+                        }}
+                    >
+                        <Maximize2 size={24} />
+                    </button>
+                </div>
+            )}
+
+            {/* Episode List Overlay */}
+            {showEpisodeList && (
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1000,
+                        display: 'flex', flexDirection: 'column'
+                    }}
+                >
+                    <div style={{ padding: '20px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ color: 'white', margin: 0 }}>Episodes</h3>
+                        <button onClick={() => setShowEpisodeList(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                        {playlist.map((ep, index) => (
+                            <div
+                                key={ep._id || index}
+                                onClick={() => {
+                                    setCurrentIndex(index);
+                                    setShowEpisodeList(false);
+                                }}
+                                style={{
+                                    display: 'flex', gap: '16px', padding: '12px', marginBottom: '8px', borderRadius: '8px',
+                                    background: currentIndex === index ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                    cursor: 'pointer', border: currentIndex === index ? '1px solid var(--accent)' : '1px solid transparent'
+                                }}
+                            >
+                                <div style={{ width: '120px', height: '68px', background: '#333', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+                                    <img
+                                        src={ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image}
+                                        alt={ep.title}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        onError={(e) => e.target.style.display = 'none'}
+                                    />
+                                    {currentIndex === index && (
+                                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <div style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', boxShadow: '0 0 8px var(--accent)' }}></div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
+                                    <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
+                                    {ep.duration && <span style={{ color: '#666', fontSize: '0.75rem', marginTop: '4px' }}>{Math.floor(ep.duration / 60)}m</span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {videoSrc ? (
                 <video
                     ref={videoRef}
                     src={videoSrc}
-                    controls
                     autoPlay
+                    playsInline
                     onPause={() => syncProgress()}
+                    onEnded={handleVideoEnd}
+                    onTimeUpdate={handleTimeUpdate}
                     style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: 'contain' }}
                 />
             ) : (
@@ -111,12 +497,19 @@ export default function VideoPlayer({ movie, episode, onClose }) {
                     <p>Video source not found.</p>
                 </div>
             )}
+
+            {/* Bottom Progress Bar */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', background: 'rgba(255,255,255,0.3)', zIndex: 101 }}>
+                <div style={{ width: `${progress}%`, height: '100%', background: '#ff0000', transition: 'width 0.1s linear' }}></div>
+            </div>
+
+            <style>{`
+                .nav-btn:hover { background: rgba(0,0,0,0.8) !important; transform: translateY(-50%) scale(1.1) !important; }
+            `}</style>
         </div>
     );
 }
 
-// VERTICAL PLAYER (Reel Style)
-// Supports both Series (Episodes) and Movies (Single)
 // VERTICAL PLAYER (Reel Style)
 // Supports both Series (Episodes) and Movies (Single)
 function VerticalPlayer({ movie, initialEpisode, onClose }) {
@@ -270,7 +663,7 @@ function VerticalPlayer({ movie, initialEpisode, onClose }) {
                 <div style={{ width: 28 }}></div> {/* Spacer */}
             </div>
 
-            {/* Removed Right Side Actions (Reels Style) as per user request */}
+            {/* Remove Right Side Actions */}
 
             {/* Bottom Info Overlay */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', padding: '20px 16px 30px' }}>

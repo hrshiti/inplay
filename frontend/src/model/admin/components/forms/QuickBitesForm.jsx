@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, X, Save, ArrowLeft, Play } from 'lucide-react';
+import { Upload, X, Save, ArrowLeft, Play, Plus, Trash2 } from 'lucide-react';
 
 export default function QuickBitesForm({ content = null, onSave, onCancel }) {
     const [formData, setFormData] = useState({
@@ -21,12 +21,14 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
     });
 
     const [files, setFiles] = useState({
-        video: null,
+        videos: [],
         thumbnail: null
     });
 
     const [previews, setPreviews] = useState({
-        video: content?.video?.url || '',
+        videos: content?.episodes?.length
+            ? content.episodes.map(e => ({ url: e.url, type: 'url' }))
+            : (content?.video?.url ? [{ url: content.video.url, type: 'url' }] : []),
         thumbnail: content?.thumbnail?.url || content?.poster?.url || ''
     });
 
@@ -36,8 +38,10 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
     // Cleanup object URLs on unmount
     useEffect(() => {
         return () => {
-            if (previews.video && typeof previews.video === 'string' && previews.video.startsWith('blob:')) {
-                URL.revokeObjectURL(previews.video);
+            if (previews.videos) {
+                previews.videos.forEach(v => {
+                    if (v.type === 'blob') URL.revokeObjectURL(v.url);
+                });
             }
             if (previews.thumbnail && typeof previews.thumbnail === 'string' && previews.thumbnail.startsWith('blob:')) {
                 URL.revokeObjectURL(previews.thumbnail);
@@ -60,7 +64,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = 'Title is required';
         if (!formData.description.trim()) newErrors.description = 'Description is required';
-        if (!files.video && !previews.video) newErrors.video = 'Video file is required';
+        if (previews.videos.length === 0) newErrors.video = 'At least one video part is required';
         if (!files.thumbnail && !previews.thumbnail) newErrors.thumbnail = 'Thumbnail is required';
 
         setErrors(newErrors);
@@ -89,8 +93,10 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 submissionData.append('type', 'reel');
                 submissionData.append('status', formData.status);
 
-                if (files.video) {
-                    submissionData.append('video', files.video);
+                if (files.videos && files.videos.length > 0) {
+                    files.videos.forEach(file => {
+                        submissionData.append('videos', file);
+                    });
                 }
                 if (files.thumbnail) {
                     submissionData.append('poster', files.thumbnail);
@@ -106,25 +112,54 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         }
     };
 
-    const handleFileUpload = (field, e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // Store actual file
+    const handleVideoAdd = (e) => {
+        const selectedFiles = Array.from(e.target.files);
+        if (selectedFiles.length > 0) {
             setFiles(prev => ({
                 ...prev,
-                [field === 'videoUrl' ? 'video' : 'thumbnail']: file
+                videos: [...prev.videos, ...selectedFiles]
             }));
 
-            // Create preview URL
-            const previewUrl = URL.createObjectURL(file);
+            const newPreviews = selectedFiles.map(file => ({
+                url: URL.createObjectURL(file),
+                type: 'blob',
+                name: file.name
+            }));
+
             setPreviews(prev => ({
                 ...prev,
-                [field === 'videoUrl' ? 'video' : 'thumbnail']: previewUrl
+                videos: [...prev.videos, ...newPreviews]
             }));
 
-            // Clear errors
-            if (field === 'videoUrl' && errors.video) setErrors(prev => ({ ...prev, video: '' }));
-            if (field === 'thumbnailUrl' && errors.thumbnail) setErrors(prev => ({ ...prev, thumbnail: '' }));
+            if (errors.video) setErrors(prev => ({ ...prev, video: '' }));
+        }
+    };
+
+    const handleRemoveVideo = (index) => {
+        setPreviews(prev => {
+            const newVs = [...prev.videos];
+            const item = newVs[index];
+
+            if (item.type === 'blob') {
+                URL.revokeObjectURL(item.url);
+                setFiles(f => ({
+                    ...f,
+                    videos: f.videos.filter(v => v.name !== item.name) // Remove by name
+                }));
+            }
+
+            newVs.splice(index, 1);
+            return { ...prev, videos: newVs };
+        });
+    };
+
+    const handleThumbnailUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFiles(prev => ({ ...prev, thumbnail: file }));
+            const previewUrl = URL.createObjectURL(file);
+            setPreviews(prev => ({ ...prev, thumbnail: previewUrl }));
+            if (errors.thumbnail) setErrors(prev => ({ ...prev, thumbnail: '' }));
         }
     };
 
@@ -277,39 +312,65 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 {/* Video Upload */}
                 <div>
                     <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                        Video File (Vertical) *
+                        Video Episodes (Order matters) *
                     </label>
                     <div style={{
                         border: `2px dashed ${errors.video ? '#ef4444' : '#e5e7eb'}`,
                         borderRadius: '8px',
-                        padding: '24px',
-                        textAlign: 'center',
+                        padding: '16px',
                         backgroundColor: '#f9fafb'
                     }}>
-                        <input
-                            type="file"
-                            accept="video/*"
-                            onChange={(e) => handleFileUpload('videoUrl', e)}
-                            style={{ display: 'none' }}
-                            id="video-upload"
-                        />
-
-                        {!previews.video ? (
-                            <label htmlFor="video-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <div style={{ width: '40px', height: '40px', background: '#e0f2fe', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', color: '#0284c7' }}>
-                                    <Play size={20} fill="currentColor" />
-                                </div>
-                                <span style={{ fontSize: '0.95rem', fontWeight: '500', color: '#374151' }}>Click to upload video</span>
-                                <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>MP4, MOV (Max 30 min)</span>
-                            </label>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                <video src={previews.video} controls style={{ maxHeight: '200px', borderRadius: '8px' }} />
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                    <label htmlFor="video-upload" style={{ fontSize: '0.9rem', color: '#2563eb', fontWeight: '500', cursor: 'pointer' }}>Change Video</label>
-                                </div>
+                        {/* List of Videos */}
+                        {previews.videos.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                                {previews.videos.map((vid, idx) => (
+                                    <div key={idx} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '8px 12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{
+                                                width: '24px', height: '24px', background: '#e0f2fe', color: '#0284c7',
+                                                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold'
+                                            }}>
+                                                {idx + 1}
+                                            </div>
+                                            <span style={{ fontSize: '0.9rem', color: '#374151', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {vid.name || `Episode ${idx + 1}`}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                            <button type="button" onClick={() => handleRemoveVideo(idx)} style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer' }}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
+
+                        {/* Add Button */}
+                        <div style={{ textAlign: 'center' }}>
+                            <input
+                                type="file"
+                                accept="video/*"
+                                multiple
+                                onChange={handleVideoAdd}
+                                style={{ display: 'none' }}
+                                id="video-upload"
+                            />
+                            <label htmlFor="video-upload" style={{
+                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                padding: '8px 16px', background: 'white', border: '1px solid #d1d5db', borderRadius: '6px',
+                                fontSize: '0.9rem', fontWeight: '500', color: '#374151'
+                            }}>
+                                <Plus size={18} />
+                                Add Video Parts
+                            </label>
+                            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '8px' }}>
+                                Upload multiple clips. They will play in sequence.
+                            </p>
+                        </div>
                     </div>
                     {errors.video && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.video}</p>}
                 </div>
@@ -335,7 +396,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                             <input
                                 type="file"
                                 accept="image/*"
-                                onChange={(e) => handleFileUpload('thumbnailUrl', e)}
+                                onChange={handleThumbnailUpload}
                                 style={{ display: 'none' }}
                                 id="thumbnail-upload"
                             />

@@ -188,9 +188,10 @@ export default function AudioSeriesUserPage({ onBack }) {
                                     color="#ccc"
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => {
-                                        if (selectedSeries?.episodes) {
-                                            const idx = selectedSeries.episodes.findIndex(e => e._id === currentEpisode._id);
-                                            if (idx > 0) playEpisode(selectedSeries.episodes[idx - 1], selectedSeries);
+                                        if (audioRef.current) {
+                                            const newTime = Math.max(0, audioRef.current.currentTime - 5);
+                                            audioRef.current.currentTime = newTime;
+                                            setCurrentTime(newTime);
                                         }
                                     }}
                                 />
@@ -205,9 +206,10 @@ export default function AudioSeriesUserPage({ onBack }) {
                                     color="#ccc"
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => {
-                                        if (selectedSeries?.episodes) {
-                                            const idx = selectedSeries.episodes.findIndex(e => e._id === currentEpisode._id);
-                                            if (idx < selectedSeries.episodes.length - 1) playEpisode(selectedSeries.episodes[idx + 1], selectedSeries);
+                                        if (audioRef.current) {
+                                            const newTime = Math.min(duration, audioRef.current.currentTime + 5);
+                                            audioRef.current.currentTime = newTime;
+                                            setCurrentTime(newTime);
                                         }
                                     }}
                                 />

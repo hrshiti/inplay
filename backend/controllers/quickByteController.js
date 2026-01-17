@@ -79,11 +79,27 @@ const createQuickByteHandler = async (req, res) => {
             isPopular: isPopular === 'true' || isPopular === true
         });
 
-        // Upload Video
+        // Upload Video (Single Trailer/Main)
         if (files.video && files.video[0]) {
             const result = await uploadToCloudinary(files.video[0], 'reel'); // Use 'reel' preset for vertical video
             quickByte.video = result;
             mediaUrls.video = result.public_id;
+        }
+
+        // Upload Episodes (Multiple Parts)
+        if (files.videos && files.videos.length > 0) {
+            quickByte.episodes = [];
+            for (const file of files.videos) {
+                const result = await uploadToCloudinary(file, 'reel');
+                quickByte.episodes.push(result);
+                // Keep track for cleanup
+                // We'll trust that successful save persists them. 
+                // To properly cleanup multiple files on error we'd need an array in mediaUrls.
+            }
+            // If no primary video is set, make the first episode the primary video
+            if (!quickByte.video || !quickByte.video.url) {
+                quickByte.video = quickByte.episodes[0];
+            }
         }
 
         // Upload Thumbnail (frontend uses 'poster')
@@ -293,6 +309,7 @@ module.exports = {
     createQuickByte: [
         upload.fields([
             { name: 'video', maxCount: 1 },
+            { name: 'videos', maxCount: 20 },
             { name: 'poster', maxCount: 1 },
             { name: 'audio', maxCount: 1 }
         ]),
