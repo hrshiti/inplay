@@ -63,6 +63,49 @@ const adminQuickByteService = {
         }
 
         return true;
+    },
+
+    // Get a specific Quick Bite by ID
+    async getReelById(id) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/quickbytes/${id}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to fetch Quick Bite details');
+        }
+
+        const data = await response.json();
+        return data.data; // Assuming response structure { success: true, data: { ... } }
+    },
+
+    // Update an existing Quick Bite
+    async updateReel(id, formData) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/quickbytes/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to update Quick Bite');
+        }
+
+        const data = await response.json();
+        return data.data;
     }
 };
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check } from 'lucide-react';
+import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 gsap.registerPlugin(ScrollTrigger);
-// Prevent removeChild error by disabling 100vh fix script
-ScrollTrigger.config({ ignoreMobileResize: true });
+// Prevent removeChild error by disabling 100vh fix script and limiting refresh events
+ScrollTrigger.config({ ignoreMobileResize: true, autoRefreshEvents: "DOMContentLoaded,load,visibilitychange" });
 
 // Mock Data
 import { MOVIES, CONTINUE_WATCHING } from './data';
@@ -503,19 +503,7 @@ function App() {
 
           {!loading && (
             <>
-              {/* Static Search Bar */}
-              {activeTab !== 'For You' &&
-                location.pathname !== '/history' &&
-                location.pathname !== '/my-list' &&
-                location.pathname !== '/downloads' &&
-                location.pathname !== '/settings' &&
-                !selectedMovie && (
-                  <div className="sticky-search-bar">
-                    <Search size={20} color="#777" />
-                    <input type="text" placeholder="Search movies, shows..." className="search-input" />
 
-                  </div>
-                )}
 
               <AnimatePresence>
                 {selectedMovie && (
@@ -868,7 +856,7 @@ function App() {
                                     key={verticalItem._id || verticalItem.id || index}
                                     whileHover={{ scale: 1.05, y: -5 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => setSelectedMovie(verticalItem)}
+                                    onClick={() => handlePlay(verticalItem)}
                                     style={{
                                       flex: '0 0 120px',
                                       cursor: 'pointer',
@@ -1323,12 +1311,13 @@ function App() {
                   <NavItem
                     icon={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
                     label="Home"
-                    active={activeTab === 'Home'}
+                    active={activeTab === 'Home' && activeFilter !== 'Audio Series'}
                     onClick={() => handleTabChange('Home')}
                     isPill
                   />
                   <NavItem icon={<Sparkles size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
                   <NavItem icon={<Search size={24} />} label="Search" active={activeTab === 'Search'} onClick={() => handleTabChange('Search')} />
+                  <NavItem icon={<Headphones size={24} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => navigate('/audio-series')} />
                   {/* <NavItem icon={<Crown size={24} />} label="Premium" active={activeTab === 'Premium'} onClick={() => setActiveTab('Premium')} /> */}
                   <NavItem icon={<Layout size={24} />} label="My Space" active={activeTab === 'My Space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
@@ -1346,6 +1335,10 @@ function App() {
                   setPlayingEpisode(null);
                   loadUserProfile();
                 }}
+                onToggleMyList={handleToggleMyList}
+                onToggleLike={handleToggleLike}
+                myList={myList}
+                likedVideos={likedVideos}
               />
             )}
           </AnimatePresence>

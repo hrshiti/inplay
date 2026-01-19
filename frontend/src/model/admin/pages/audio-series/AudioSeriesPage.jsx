@@ -73,7 +73,7 @@ const AudioSeriesPage = () => {
     return (
         <div style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Audio Series Library</h1>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>Audio Series Library</h1>
                 <button
                     onClick={handleAddNew}
                     style={{

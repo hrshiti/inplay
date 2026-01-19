@@ -25,7 +25,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     isPopular: content?.isPopular || false,
     isBroadcast: content?.isBroadcast || false,
     isMms: content?.isMms || false,
-    isShortFilm: content?.isShortFilm || false
+    isShortFilm: content?.isShortFilm || false,
+    cast: content?.cast || '',
+    producer: content?.producer || '',
+    production: content?.production || '',
+    releaseDate: content?.releaseDate || ''
   });
 
   // Sync state with content prop changes
@@ -64,7 +68,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         isPopular: content.isPopular || false,
         isBroadcast: content.isBroadcast || false,
         isMms: content.isMms || false,
-        isShortFilm: content.isShortFilm || false
+        isShortFilm: content.isShortFilm || false,
+        cast: content.cast || '',
+        producer: content.producer || '',
+        production: content.production || '',
+        releaseDate: content.releaseDate || ''
       }));
     }
   }, [content]);
@@ -463,6 +471,92 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
           </div>
         </div>
 
+        {/* New Fields: Cast, Producer, Production, Release Date */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Cast
+            </label>
+            <input
+              type="text"
+              name="cast"
+              value={formData.cast}
+              onChange={handleInputChange}
+              placeholder="Star Cast names"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Producer
+            </label>
+            <input
+              type="text"
+              name="producer"
+              value={formData.producer}
+              onChange={handleInputChange}
+              placeholder="Producer name"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Production
+            </label>
+            <input
+              type="text"
+              name="production"
+              value={formData.production}
+              onChange={handleInputChange}
+              placeholder="Production House"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Release Date
+            </label>
+            <input
+              type="date"
+              name="releaseDate"
+              value={formData.releaseDate}
+              onChange={handleInputChange}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
+          </div>
+        </div>
+
         {/* Improved Monetization Section */}
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
           <div style={{ padding: '16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
@@ -791,7 +885,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
             {content ? 'Update Content' : 'Save Content'}
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 };

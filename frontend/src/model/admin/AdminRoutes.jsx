@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
@@ -66,7 +66,7 @@ const Dashboard = () => {
         <p style={{ color: '#666', fontSize: '0.85rem' }}>Welcome back! Here's what's happening with your platform.</p>
         <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '8px', marginTop: '10px' }}>
           <p style={{ color: '#064e3b', fontSize: '0.8rem', margin: 0, fontWeight: '600' }}>
-            <strong>Real-time Data Active:</strong> {users.totalUsers} users, {content.overview.totalContent} content items, {recentActivity.length} recent activities
+            <strong style={{ color: '#064e3b' }}>Real-time Data Active:</strong> <span style={{ color: '#065f46' }}>{users.totalUsers} users, {content.overview.totalContent} content items, {recentActivity.length} recent activities</span>
           </p>
         </div>
       </div>
@@ -190,7 +190,7 @@ const ContentLibrary = () => {
     }
   };
 
-  const tabs = ['All', 'Popular', 'New & Hot', 'Original', 'Ranking', 'Movies', 'TV'];
+  const tabs = ['All', 'Popular', 'New & Hot', 'Original', 'Ranking', 'Movies', 'TV', 'Broadcast', 'Mms', 'Short Film'];
 
   const filteredContent = contentList.filter(item => {
     if (activeTab === 'All') return true;
@@ -200,6 +200,9 @@ const ContentLibrary = () => {
     if (activeTab === 'Ranking') return item.isRanking;
     if (activeTab === 'Movies') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'bhojpuri' || item.type === 'new_release';
     if (activeTab === 'TV') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
+    if (activeTab === 'Broadcast') return item.isBroadcast;
+    if (activeTab === 'Mms') return item.isMms;
+    if (activeTab === 'Short Film') return item.isShortFilm;
     return true;
   });
 
@@ -264,7 +267,7 @@ const ContentLibrary = () => {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '4px', marginTop: 0, color: '#111827' }}>Content Library</h1>
           <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>Manage your movies, series, and other content</p>
           <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.85rem' }}>
-            <strong>Real Data:</strong> {contentList.length} items
+            <strong style={{ color: '#064e3b' }}>Real Data:</strong> <span style={{ color: '#065f46' }}>{contentList.length} items</span>
           </div>
         </div>
         <button
@@ -1293,9 +1296,11 @@ const QuickBites = () => {
 
   const columns = [
     {
-      key: 'poster', label: 'Preview', sortable: false, render: (value) => (
-        <img src={value?.url || value} alt="Thumb" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
-      )
+      key: 'poster', label: 'Preview', sortable: false, render: (value, row) => {
+        // Handle various possible image structures
+        const imgUrl = value?.url || value || row.thumbnail?.url || row.thumbnail || row.image?.url || row.image;
+        return <img src={imgUrl} alt="Thumb" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} onError={(e) => { e.target.style.display = 'none'; }} />
+      }
     },
     { key: 'title', label: 'Title', sortable: true },
     { key: 'genre', label: 'Genre', sortable: true },
@@ -1332,7 +1337,7 @@ const QuickBites = () => {
     { key: 'createdAt', label: 'Created', sortable: true, render: (d) => new Date(d).toLocaleDateString() }
   ];
 
-  const handleEdit = (item) => alert(`Edit functionality coming soon for ${item.title}`);
+  const handleEdit = (item) => navigate(`/admin/quick-bytes/edit/${item._id}`);
 
   const handleDelete = async (item) => {
     if (confirm(`Delete ${item.title}? This cannot be undone.`)) {
@@ -1354,7 +1359,7 @@ const QuickBites = () => {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '4px', marginTop: 0, color: '#111827' }}>Quick Bites</h1>
           <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>Manage vertical clips and short content</p>
           <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.8rem' }}>
-            <strong>Vertical Content:</strong> {reels.length} clips active
+            <strong style={{ color: '#064e3b' }}>Vertical Content:</strong> <span style={{ color: '#065f46' }}>{reels.length} clips active</span>
           </div>
         </div>
         <button
@@ -1414,6 +1419,53 @@ const AddQuickBite = () => {
   );
 };
 
+const EditQuickBite = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState(null);
+
+  useEffect(() => {
+    fetchContent();
+  }, [id]);
+
+  const fetchContent = async () => {
+    try {
+      setLoading(true);
+      const data = await adminQuickByteService.getReelById(id); // Use getReelById
+      setContent(data);
+    } catch (error) {
+      console.error("Failed to load content for edit", error);
+      alert("Failed to load Quick Bite details.");
+      navigate('/admin/quick-bytes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdate = async (formData) => {
+    try {
+      await adminQuickByteService.updateReel(id, formData); // Use updateReel
+      alert('Quick Bite updated successfully!');
+      navigate('/admin/quick-bytes');
+    } catch (error) {
+      console.error('Failed to update:', error);
+      alert('Failed to update: ' + error.message);
+    }
+  };
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading details...</div>;
+  if (!content) return <div style={{ padding: '40px', textAlign: 'center', color: 'red' }}>Content not found</div>;
+
+  return (
+    <QuickBitesForm
+      content={content}
+      onSave={handleUpdate}
+      onCancel={() => navigate('/admin/quick-bytes')}
+    />
+  );
+};
+
 const Settings = () => {
   const settingsSections = [
     {
@@ -1468,7 +1520,7 @@ const Settings = () => {
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>Settings</h1>
         <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>Configure application settings and preferences</p>
         <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.85rem' }}>
-          <strong>Mock Settings:</strong> App configuration, content settings, security settings, notification settings
+          <strong style={{ color: '#064e3b' }}>Mock Settings:</strong> <span style={{ color: '#065f46' }}>App configuration, content settings, security settings, notification settings</span>
         </div>
       </div>
 
@@ -1642,6 +1694,7 @@ export default function AdminRoutes() {
         <Route path="content/add" element={<AddContent />} />
         <Route path="quick-bytes" element={<QuickBites />} />
         <Route path="quick-bytes/add" element={<AddQuickBite />} />
+        <Route path="quick-bytes/edit/:id" element={<EditQuickBite />} />
         <Route path="for-you" element={<ForYouReels />} />
         <Route path="users" element={<Users />} />
         <Route path="audio-series" element={<AudioSeriesPage />} />
