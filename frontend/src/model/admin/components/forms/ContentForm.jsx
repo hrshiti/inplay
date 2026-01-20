@@ -26,6 +26,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     isBroadcast: content?.isBroadcast || false,
     isMms: content?.isMms || false,
     isShortFilm: content?.isShortFilm || false,
+    isAudioSeries: content?.isAudioSeries || false,
+    isCrimeShow: content?.isCrimeShow || false,
     cast: content?.cast || '',
     producer: content?.producer || '',
     production: content?.production || '',
@@ -69,6 +71,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         isBroadcast: content.isBroadcast || false,
         isMms: content.isMms || false,
         isShortFilm: content.isShortFilm || false,
+        isAudioSeries: content.isAudioSeries || false,
+        isCrimeShow: content.isCrimeShow || false,
         cast: content.cast || '',
         producer: content.producer || '',
         production: content.production || '',
@@ -626,7 +630,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', background: '#f9fafb' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>Display Categories</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px' }}>
-            {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular', 'isBroadcast', 'isMms', 'isShortFilm'].map(key => (
+            {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular', 'isBroadcast', 'isMms', 'isShortFilm', 'isAudioSeries', 'isCrimeShow'].map(key => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer' }}>
                 <input
                   type="checkbox"

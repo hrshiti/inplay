@@ -100,6 +100,61 @@ const generateHLSUrl = (publicId) => {
 
 // Upload file to Cloudinary
 const uploadToCloudinary = async (file, presetType = 'video') => {
+  // DEV BYPASS: If credentials are missing, SAVE TO LOCAL DISK so user sees THEIR content
+  if (process.env.CLOUDINARY_API_KEY === 'your-api-key' || !process.env.CLOUDINARY_API_KEY) {
+    console.warn("⚠️ CLOUDINARY KEYS MISSING: Saving to LOCAL DISK instead.");
+
+    const fs = require('fs');
+    const path = require('path');
+    const uploadDir = path.join(__dirname, '../public/uploads');
+
+    // Ensure directory exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Handle array if passed
+    const fileToSave = Array.isArray(file) ? file[0] : file;
+
+    // Generate filename
+    const ext = fileToSave.originalname ? path.extname(fileToSave.originalname) : (presetType === 'video' || presetType === 'reel' ? '.mp4' : '.jpg');
+    const filename = `${presetType}_${Date.now()}_${Math.floor(Math.random() * 1000)}${ext}`;
+    const filePath = path.join(uploadDir, filename);
+
+    // Save buffer to file
+    try {
+      if (fileToSave.buffer) {
+        fs.writeFileSync(filePath, fileToSave.buffer);
+      } else if (fileToSave.path) {
+        fs.copyFileSync(fileToSave.path, filePath);
+      } else {
+        // Fallback dummy if no data (should not happen with multer memory storage)
+        return {
+          public_id: `dummy_err_${Date.now()}`,
+          url: 'https://placehold.co/600x400/000/FFF?text=Error',
+          secure_url: 'https://placehold.co/600x400/000/FFF?text=Error'
+        };
+      }
+
+      const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:5001'}/uploads/${filename}`;
+
+      return {
+        public_id: `local_${filename}`,
+        url: fileUrl,
+        secure_url: fileUrl,
+        format: ext.replace('.', ''),
+        size: fileToSave.size || 0,
+        width: 0, // Unknown without processing
+        height: 0,
+        duration: 0 // Unknown without processing
+      };
+
+    } catch (err) {
+      console.error("Local save failed", err);
+      throw new Error("Failed to save local file");
+    }
+  }
+
   try {
     const preset = uploadPresets[presetType];
     if (!preset) {

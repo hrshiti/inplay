@@ -141,6 +141,103 @@ const createQuickByteHandler = async (req, res) => {
     }
 };
 
+// @desc    Get Quick Bite by ID
+// @route   GET /api/quickbytes/:id
+// @access  Private (Admin)
+const getQuickByteById = async (req, res) => {
+    try {
+        const quickByte = await QuickByte.findById(req.params.id);
+        if (!quickByte) {
+            return res.status(404).json({ success: false, message: 'Quick Bite not found' });
+        }
+        res.status(200).json({ success: true, data: quickByte });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update Quick Bite
+// @route   PUT /api/quickbytes/:id
+// @access  Private (Admin)
+const updateQuickByteHandler = async (req, res) => {
+    let mediaUrls = {};
+    try {
+        const {
+            title, status, audioTitle, description,
+            genre, year, rating, isPaid, price,
+            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular
+        } = req.body;
+        const files = req.files || {};
+
+        let quickByte = await QuickByte.findById(req.params.id);
+        if (!quickByte) return res.status(404).json({ success: false, message: 'Not found' });
+
+        // Update basic fields
+        if (title) quickByte.title = title;
+        if (status) quickByte.status = status;
+        if (description) quickByte.description = description;
+        if (genre) quickByte.genre = genre;
+        if (year) quickByte.year = year;
+        if (rating) quickByte.rating = rating;
+        if (isPaid !== undefined) quickByte.isPaid = isPaid === 'true' || isPaid === true;
+        if (price) quickByte.price = price;
+        if (isNewAndHot !== undefined) quickByte.isNewAndHot = isNewAndHot === 'true' || isNewAndHot === true;
+        if (isOriginal !== undefined) quickByte.isOriginal = isOriginal === 'true' || isOriginal === true;
+        if (isRanking !== undefined) quickByte.isRanking = isRanking === 'true' || isRanking === true;
+        if (isMovie !== undefined) quickByte.isMovie = isMovie === 'true' || isMovie === true;
+        if (isTV !== undefined) quickByte.isTV = isTV === 'true' || isTV === true;
+        if (isPopular !== undefined) quickByte.isPopular = isPopular === 'true' || isPopular === true;
+
+        // Handle File Updates
+        // Upload Video (Single Trailer/Main)
+        if (files.video && files.video[0]) {
+            // Delete old video
+            if (quickByte.video && quickByte.video.public_id) {
+                await deleteFromCloudinary(quickByte.video.public_id, 'video');
+            }
+            const result = await uploadToCloudinary(files.video[0], 'reel');
+            quickByte.video = result;
+        }
+
+        // Upload Thumbnail
+        if (files.poster && files.poster[0]) {
+            if (quickByte.thumbnail && quickByte.thumbnail.public_id) {
+                await deleteFromCloudinary(quickByte.thumbnail.public_id, 'image');
+            }
+            const result = await uploadToCloudinary(files.poster[0], 'poster');
+            quickByte.thumbnail = result;
+        }
+
+        // Upload Audio
+        if (files.audio && files.audio[0]) {
+            if (quickByte.audio && quickByte.audio.public_id) {
+                await deleteFromCloudinary(quickByte.audio.public_id, 'video');
+            }
+            const result = await uploadToCloudinary(files.audio[0], 'video');
+            quickByte.audio = {
+                ...result,
+                title: audioTitle || 'Original Audio'
+            };
+        } else if (audioTitle && quickByte.audio) {
+            quickByte.audio.title = audioTitle;
+        }
+
+        await quickByte.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Quick Bite updated successfully',
+            data: quickByte
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 const deleteQuickByte = async (req, res) => {
     try {
         const quickByte = await QuickByte.findById(req.params.id);
@@ -316,6 +413,15 @@ module.exports = {
         createQuickByteHandler
     ],
     deleteQuickByte,
+    getQuickByteById,
+    updateQuickByte: [
+        upload.fields([
+            { name: 'video', maxCount: 1 },
+            { name: 'poster', maxCount: 1 },
+            { name: 'audio', maxCount: 1 }
+        ]),
+        updateQuickByteHandler
+    ],
     toggleLike,
     addComment,
     getComments,

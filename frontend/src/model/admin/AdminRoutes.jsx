@@ -14,6 +14,7 @@ import adminContentService from '../../services/api/adminContentService';
 import adminMonetizationService from '../../services/api/adminMonetizationService';
 import ForYouReels from './ForYouReels';
 import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
+import AdPromotionPage from './pages/AdPromotionPage';
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -1337,7 +1338,7 @@ const QuickBites = () => {
     { key: 'createdAt', label: 'Created', sortable: true, render: (d) => new Date(d).toLocaleDateString() }
   ];
 
-  const handleEdit = (item) => navigate(`/admin/quick-bytes/edit/${item._id}`);
+  const handleEdit = (item) => navigate(`/admin/quick-bytes/edit/${item._id || item.id}`);
 
   const handleDelete = async (item) => {
     if (confirm(`Delete ${item.title}? This cannot be undone.`)) {
@@ -1699,6 +1700,7 @@ export default function AdminRoutes() {
         <Route path="users" element={<Users />} />
         <Route path="audio-series" element={<AudioSeriesPage />} />
         <Route path="monetization/plans" element={<Monetization />} />
+        <Route path="promotions" element={<AdPromotionPage />} />
         <Route path="settings/app" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

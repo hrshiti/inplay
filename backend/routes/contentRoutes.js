@@ -6,6 +6,7 @@ const userContentController = require('../controllers/userContentController');
 // Public routes (no auth required)
 router.get('/all', userContentController.getAllContent);
 router.get('/trending', userContentController.getTrendingContent);
+router.get('/new-releases', userContentController.getNewReleases);
 router.get('/category/:category', userContentController.getContentByCategory);
 
 // Routes requiring authentication for full access

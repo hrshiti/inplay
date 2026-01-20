@@ -149,8 +149,8 @@ export default function MovieDetailsPage({
                             color: 'black',
                             border: 'none',
                             borderRadius: '8px',
-                            padding: '12px',
-                            fontSize: '1rem',
+                            padding: '8px',
+                            fontSize: '0.9rem',
                             fontWeight: 'bold',
                             display: 'flex',
                             alignItems: 'center',
@@ -179,8 +179,8 @@ export default function MovieDetailsPage({
                             color: 'white',
                             border: 'none',
                             borderRadius: '8px',
-                            padding: '12px',
-                            fontSize: '1rem',
+                            padding: '8px',
+                            fontSize: '0.9rem',
                             fontWeight: '600',
                             display: 'flex',
                             alignItems: 'center',
@@ -194,7 +194,7 @@ export default function MovieDetailsPage({
                     </motion.button>
                 </div>
 
-                <p style={{ fontSize: '0.9rem', lineHeight: '1.5', color: '#ddd', marginBottom: '20px' }}>
+                <p style={{ fontSize: '0.82rem', lineHeight: '1.5', color: '#bbb', marginBottom: '20px' }}>
                     {movie.description || "Experience the thrill and excitement of this blockbuster hit. A story that will keep you on the edge of your seat from start to finish."}
                 </p>
 

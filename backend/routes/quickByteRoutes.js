@@ -15,6 +15,8 @@ router.post('/comments/:id/like', protect, quickByteController.toggleCommentLike
 
 // Protected Admin routes
 router.post('/', protect, authorize('admin', 'superadmin'), quickByteController.createQuickByte);
+router.get('/:id', protect, authorize('admin', 'superadmin'), quickByteController.getQuickByteById);
+router.put('/:id', protect, authorize('admin', 'superadmin'), quickByteController.updateQuickByte);
 router.delete('/:id', protect, authorize('admin', 'superadmin'), quickByteController.deleteQuickByte);
 
 module.exports = router;

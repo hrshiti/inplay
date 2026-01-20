@@ -62,6 +62,14 @@ const contentService = {
             body: JSON.stringify(watchData),
         });
         return await response.json();
+    },
+
+    async getNewReleases(limit = 10) {
+        const response = await fetch(`${API_URL}/content/new-releases?limit=${limit}`, {
+            method: 'GET'
+        });
+        const data = await response.json();
+        return data.data || [];
     }
 };
 

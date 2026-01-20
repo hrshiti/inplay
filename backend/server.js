@@ -40,7 +40,9 @@ const audioSeriesRoutes = require('./routes/audioSeriesRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(compression());
 
 // CORS configuration (MUST BE BEFORE LIMITER)
@@ -105,6 +107,11 @@ app.use('/api/quickbytes', quickByteRoutes);
 app.use('/api/foryou', forYouRoutes);
 app.use('/api/audio-series', audioSeriesRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/promotions', require('./routes/promotionRoutes'));
+
+// SERVE STATIC FILES (For Local Uploads)
+app.use('/uploads', express.static('public/uploads'));
+
 
 
 // 404 handler

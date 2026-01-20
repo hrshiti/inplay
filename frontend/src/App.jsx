@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones } from 'lucide-react';
+import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -36,7 +36,9 @@ import Signup from './Signup';
 import authService from './services/api/authService';
 import contentService from './services/api/contentService';
 import paymentService from './services/api/paymentService';
-
+import AdPromotionPage from './model/admin/pages/AdPromotionPage';
+import AdCarousel from './model/components/AdCarousel';
+import promotionService from './services/api/promotionService';
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -57,6 +59,7 @@ function App() {
   const [showAuth, setShowAuth] = useState(null); // 'login' or 'signup'
   const [currentUser, setCurrentUser] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [contentSections, setContentSections] = useState({
     bhojpuri: [],
     trending_now: [],
@@ -64,8 +67,61 @@ function App() {
     hindi_series: [],
     action: [],
     new_release: [],
-    originals: []
+    originals: [],
+    broadcast: []
   });
+  const [qbContinueWatching, setQbContinueWatching] = useState([]);
+
+  const updateQuickByteProgress = () => {
+    if (quickBites.length > 0) {
+      try {
+        const progress = JSON.parse(localStorage.getItem('inplay_quickbyte_progress') || '{}');
+        const continued = quickBites.map(item => {
+          const contentId = item._id || item.id;
+          const prog = progress[contentId];
+          if (prog && prog.watchedSeconds > 0) {
+            return { ...item, ...prog };
+          }
+          return null;
+        })
+          .filter(item => item !== null)
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        setQbContinueWatching(continued);
+      } catch (e) {
+        console.error("Error parsing progress", e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    updateQuickByteProgress();
+  }, [quickBites]);
+
+  const handleResumeQuickByte = (item) => {
+    let episode = null;
+    // Try to find the specific episode object
+    if (item.episodes && item.episodes[item.episodeIndex]) {
+      episode = item.episodes[item.episodeIndex];
+    } else if (item.seasons) {
+      const allEps = item.seasons.flatMap(s => s.episodes || []);
+      episode = allEps[item.episodeIndex];
+    }
+
+    // Play with accumulated progress
+    // Ensure we pass the 'watchedSeconds' so the player resumes
+
+    // IMPORTANT: Explicitly set flags to forces Vertical Player Mode in VideoPlayer.jsx
+    const quickByteItem = {
+      ...item,
+      watchedSeconds: item.watchedSeconds,
+      isVertical: true,
+      type: 'quick_byte',
+      category: 'Quick Bites'
+    };
+
+    handlePlay(quickByteItem, episode);
+  };
   const [allContent, setAllContent] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,7 +159,8 @@ function App() {
           hindi_series: [],
           action: [],
           new_release: [],
-          originals: []
+          originals: [],
+          broadcast: []
         };
 
         if (Array.isArray(allContent)) {
@@ -113,14 +170,31 @@ function App() {
             else if (item.type === 'hindi_series') sections.hindi_series.push(item);
             else if (item.type === 'action') sections.action.push(item);
 
+            if (item.isBroadcast) sections.broadcast.push(item);
+
             if (item.type === 'trending_now' || item.isPopular || item.isNewAndHot || item.isRanking || item.isMovie || item.isTV) sections.trending_now.push(item);
             if (item.type === 'new_release') sections.new_release.push(item);
 
             if (item.isOriginal) sections.originals.push(item);
           });
         }
+
+        try {
+          const newReleases = await contentService.getNewReleases();
+          sections.new_release = newReleases || [];
+        } catch (error) {
+          console.error("Failed to fetch new releases", error);
+        }
+
         setContentSections(sections);
         setAllContent(allContent || []);
+
+        try {
+          const promoData = await promotionService.getActivePromotions();
+          setPromotions(promoData);
+        } catch (err) {
+          console.error("Failed to fetch promotions", err);
+        }
 
       } catch (error) {
         console.error("Failed to fetch content", error);
@@ -129,6 +203,34 @@ function App() {
     };
     fetchData();
   }, []);
+
+  // Auto-scroll for New Releases
+  useEffect(() => {
+    const container = document.querySelector('.nr-auto-scroll');
+    if (!container || !contentSections.new_release?.length) return;
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % contentSections.new_release.length;
+      const scrollStep = 350; // Total width of flex item + gap (roughly)
+
+      if (currentIndex === 0) {
+        container.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        container.scrollBy({ left: scrollStep, behavior: 'smooth' });
+      }
+
+      // If we reached the end visually, reset
+      if (container.scrollLeft >= (container.scrollWidth - container.clientWidth - 10)) {
+        setTimeout(() => {
+          container.scrollTo({ left: 0, behavior: 'instant' });
+          currentIndex = 0;
+        }, 500);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [contentSections.new_release]);
 
   // Route mapping
   const filterMap = {
@@ -140,6 +242,7 @@ function App() {
     'tv': 'TV',
     'broadcast': 'Broadcast',
     'mms': 'Mms',
+    'crime-show': 'Crime Show',
     'audio-series': 'Audio Series',
     'short-film': 'Short Film'
   };
@@ -152,6 +255,7 @@ function App() {
     'Movies': 'movies',
     'TV': 'tv',
     'Broadcast': 'broadcast',
+    'Crime Show': 'crime-show',
     'Mms': 'mms',
     'Audio Series': 'audio-series',
     'Short Film': 'short-film'
@@ -523,7 +627,7 @@ function App() {
 
               {activeTab === 'Home' && !selectedMovie && (
                 <div className="category-tabs-container hide-scrollbar">
-                  {['Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Broadcast', 'Mms', 'Audio Series', 'Short Film'].map((filter) => (
+                  {['Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Crime Show', 'Broadcast', 'Mms', 'Audio Series', 'Short Film'].map((filter) => (
                     <div
                       key={filter}
                       className={`category-tab ${activeFilter === filter ? 'active' : ''}`}
@@ -651,7 +755,7 @@ function App() {
                                     else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length)
                                   }}
                                 >
-                                  <img src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image} alt={movie.title} className="hero-image" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <img src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image} alt={movie.title} className="hero-image" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
 
                                   <div className="hero-overlay" style={{
                                     background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.8) 40%, transparent 100%)',
@@ -667,15 +771,7 @@ function App() {
                                         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                                         style={{ width: '100%' }}
                                       >
-                                        <div style={{
-                                          display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                          padding: '6px 14px', background: 'rgba(255,255,255,0.1)',
-                                          backdropFilter: 'blur(10px)', borderRadius: '20px', fontSize: '0.75rem',
-                                          color: '#46d369', border: '1px solid rgba(70, 211, 105, 0.3)', marginBottom: '16px',
-                                          fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px'
-                                        }}>
-                                          <Sparkles size={12} fill="#46d369" /> #{index + 1} Trending
-                                        </div>
+
 
                                         {movie.isPaid && (
                                           <div style={{
@@ -690,21 +786,9 @@ function App() {
 
 
 
-                                        <h2 className="hero-title" style={{
-                                          fontSize: '1.8rem',
-                                          fontWeight: '900',
-                                          lineHeight: '0.9',
-                                          marginBottom: '8px',
-                                          textTransform: 'uppercase',
-                                          fontStyle: 'italic',
-                                          color: 'white',
-                                          textShadow: '0 4px 10px rgba(0,0,0,0.5)',
-                                          fontFamily: 'var(--font-display)'
-                                        }}>
-                                          {movie.title}
-                                        </h2>
 
-                                        <div className="hero-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#ccc', marginBottom: '16px' }}>
+
+                                        <div className="hero-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#ccc', marginBottom: '8px' }}>
                                           <span style={{ color: '#46d369', fontWeight: 'bold' }}>{Math.round(movie.rating * 10)}% Match</span>
                                           <span style={{ opacity: 0.3 }}>|</span>
                                           <span>{movie.year}</span>
@@ -759,6 +843,98 @@ function App() {
                           </div>
                         </div>
 
+
+
+                        {/* New Release Section */}
+                        {contentSections.new_release && contentSections.new_release.length > 0 && (
+                          <section className="section" style={{ marginBottom: '40px', marginTop: '20px' }}>
+                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
+                                <h2 className="section-title" style={{ fontSize: '1.4rem', fontWeight: '800' }}>New Releases</h2>
+                                <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Latest</span>
+                              </div>
+                            </div>
+                            <div className="horizontal-list hide-scrollbar nr-auto-scroll" style={{ gap: '20px', padding: '0 20px 20px', alignItems: 'center', scrollSnapType: 'x mandatory' }}>
+                              {contentSections.new_release.map((movie, index) => (
+                                <motion.div
+                                  key={movie._id || movie.id}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setSelectedMovie(movie)}
+                                  style={{
+                                    flex: '0 0 350px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    paddingLeft: '30px', // Space for ranking number
+                                    position: 'relative',
+                                    scrollSnapAlign: 'start'
+                                  }}
+                                >
+                                  {/* Ranking Number */}
+                                  <div style={{
+                                    position: 'absolute',
+                                    left: '-5px',
+                                    bottom: '-10px',
+                                    fontSize: '100px',
+                                    fontWeight: '900',
+                                    color: 'white',
+                                    zIndex: 3,
+                                    lineHeight: '1',
+                                    pointerEvents: 'none',
+                                    opacity: 0.5,
+                                    textShadow: '2px 2px 10px rgba(0,0,0,0.5)'
+                                  }}>
+                                    {index + 1}
+                                  </div>
+
+                                  <div style={{
+                                    width: '320px',
+                                    height: '200px',
+                                    borderRadius: '12px',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    zIndex: 2
+                                  }}>
+                                    <img
+                                      src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image}
+                                      alt={movie.title}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+                                      onError={(e) => { e.target.src = `https://placehold.co/240x160/111/FFF?text=${movie.title?.substring(0, 10)}` }}
+                                    />
+                                    {movie.isPaid && (
+                                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px', zIndex: 10 }}>
+                                        PAID
+                                      </div>
+                                    )}
+                                    <div style={{
+                                      position: 'absolute',
+                                      bottom: 0,
+                                      left: 0,
+                                      right: 0,
+                                      padding: '12px',
+                                      background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)',
+                                      zIndex: 5
+                                    }}>
+                                      <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: '800',
+                                        color: '#fff',
+                                        display: 'block',
+                                        textAlign: 'right',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                                      }}>
+                                        {movie.title}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </section>
+                        )}
 
 
                         {/* Continue Watching Section */}
@@ -817,6 +993,7 @@ function App() {
                             </div>
                           </section>
                         )}
+
 
                         {/* Quick Bites (Vertical Content) Section */}
                         {/* This section contains ONLY vertical content as requested */}
@@ -926,6 +1103,128 @@ function App() {
                           </div>
                         </section>
 
+                        {/* Continue Watching (Quick Bites) Section */}
+                        {qbContinueWatching.length > 0 && (
+                          <section className="section" style={{ marginBottom: '40px' }}>
+                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
+                                <h2 className="section-title" style={{ fontSize: '1.4rem', fontWeight: '800' }}>Continue Watching</h2>
+                              </div>
+                            </div>
+                            <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 20px' }}>
+                              {qbContinueWatching.map((item, index) => {
+                                const image = item.thumbnail?.url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
+                                return (
+                                  <motion.div
+                                    key={item._id || item.id || index}
+                                    whileHover={{ scale: 1.05, y: -5 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleResumeQuickByte(item)}
+                                    style={{
+                                      flex: '0 0 120px',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '10px'
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: '120px',
+                                      height: '210px',
+                                      borderRadius: '16px',
+                                      overflow: 'hidden',
+                                      position: 'relative',
+                                      boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
+                                      border: '1px solid rgba(255,255,255,0.1)'
+                                    }}>
+                                      <img
+                                        src={image}
+                                        alt={item.title}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      />
+
+                                      <div style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'flex-end',
+                                        padding: '10px'
+                                      }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                          <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Play size={10} fill="white" stroke="none" />
+                                          </div>
+                                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
+                                            Ep {item.episodeIndex + 1}
+                                          </span>
+                                        </div>
+
+                                        <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                                          <div style={{ width: `${(item.watchedSeconds / item.duration) * 100}%`, height: '100%', background: '#e50914' }}></div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        color: '#fff',
+                                        textAlign: 'left',
+                                        maxWidth: '100%',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                      }}>
+                                        {item.title}
+                                      </span>
+                                      <span style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
+                                        {item.genre || 'Short'} • {item.year || '2026'}
+                                      </span>
+                                    </div>
+                                  </motion.div>
+                                )
+                              })}
+                            </div>
+                          </section>
+                        )}
+
+
+                        {/* Promotion & Ads Section */}
+                        {/* Promotion & Ads Section */}
+                        {/* Promotion & Ads Section */}
+                        <section className="section">
+                          <div className="section-header">
+                            <h2 className="section-title">Promotion & Ads</h2>
+                          </div>
+
+                          {promotions.length === 0 ? (
+                            <div style={{ padding: '0 20px', color: '#666', fontSize: '13px' }}>
+                              No active promotions
+                            </div>
+                          ) : (
+                            <div style={{ padding: '0 20px', position: 'relative' }}>
+                              {(() => {
+                                // Local variable or we need state? 
+                                // We can't use hooks inside this callback easily if not already defined.
+                                // I will define the Carousel logic inline using a wrapper component or just assume I can add state to App.
+                                // I will use a simple implementation that relies on CSS scrolling or just map.
+                                // User asked for "slide hone chahiye". 
+                                // I better implement a proper carousel. 
+                                // But I cannot add state easily without finding the top of the file again.
+                                // I'll use a new component defined at the end of App.jsx or imported.
+                                // Actually, I can use a key-based re-render trick or just use the index if I could.
+                                // Let's create a specialized component `AdCarousel` in a new file and use it here?
+                                // That is safer and cleaner. 
+                              })()}
+                              <AdCarousel promotions={promotions} />
+                            </div>
+                          )}
+                        </section>
+
 
                         {/* Hindi Series Section */}
                         <section className="section">
@@ -934,7 +1233,7 @@ function App() {
                             <a href="#" className="section-link">Show all</a>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
-                            {contentSections.hindi_series.map(movie => (
+                            {(contentSections?.hindi_series || []).map(movie => (
                               <motion.div
                                 key={movie.id}
                                 className="movie-card"
@@ -972,7 +1271,7 @@ function App() {
                             <a href="#" className="section-link">Show all</a>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
-                            {contentSections.bhojpuri.map(movie => (
+                            {(contentSections?.bhojpuri || []).map(movie => (
                               <motion.div
                                 key={movie.id}
                                 className="movie-card"
@@ -1082,8 +1381,50 @@ function App() {
                           </div>
                         </section>
 
+                        {/* Broadcast Section */}
+                        <section className="section">
+                          <div className="section-header">
+                            <h2 className="section-title">Broadcast</h2>
+                            <a href="#" className="section-link" onClick={(e) => { e.preventDefault(); handleFilterChange('Broadcast'); }}>Show all</a>
+                          </div>
+                          <div className="horizontal-list hide-scrollbar">
+                            {(contentSections?.broadcast || []).length === 0 ? (
+                              <div style={{ padding: '0 20px', color: '#666', fontSize: '12px' }}>No Broadcasts yet</div>
+                            ) : (
+                              (contentSections?.broadcast || []).map(movie => (
+                                <motion.div
+                                  key={movie.id || movie._id}
+                                  className="movie-card"
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setSelectedMovie(movie)}
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <div className="poster-container">
+                                    <img
+                                      src={movie.poster?.url || movie.image}
+                                      onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
+                                      alt={movie.title}
+                                      className="poster-img"
+                                    />
+                                    {movie.isPaid && (
+                                      <div style={{
+                                        position: 'absolute', top: '8px', right: '8px',
+                                        background: '#eab308', color: 'black', fontSize: '10px',
+                                        padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
+                                      }}>
+                                        PAID
+                                      </div>
+                                    )}
+                                  </div>
+                                  <h3 className="movie-title">{movie.title}</h3>
+                                </motion.div>
+                              ))
+                            )}
+                          </div>
+                        </section>
+
                         {/* More Sections: Action Movies */}
-                        <section className="section" style={{ paddingBottom: '100px' }}>
+                        <section className="section" style={{ paddingBottom: '40px' }}>
                           <div className="section-header">
                             <h2 className="section-title">Action Blockbusters</h2>
                             <a href="#" className="section-link">Show all</a>
@@ -1129,6 +1470,7 @@ function App() {
                         originalsData={contentSections.originals}
                         trendingData={contentSections.trending_now}
                         newReleaseData={contentSections.new_release}
+                        promotions={promotions}
                       />
                     )}
                   </motion.div>
@@ -1315,15 +1657,16 @@ function App() {
                     onClick={() => handleTabChange('Home')}
                     isPill
                   />
-                  <NavItem icon={<Sparkles size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
+                  <NavItem icon={<Clapperboard size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
                   <NavItem icon={<Search size={24} />} label="Search" active={activeTab === 'Search'} onClick={() => handleTabChange('Search')} />
                   <NavItem icon={<Headphones size={24} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => navigate('/audio-series')} />
                   {/* <NavItem icon={<Crown size={24} />} label="Premium" active={activeTab === 'Premium'} onClick={() => setActiveTab('Premium')} /> */}
-                  <NavItem icon={<Layout size={24} />} label="My Space" active={activeTab === 'My Space'} onClick={() => handleTabChange('My Space')} />
+                  <NavItem icon={<User size={24} />} label="My Space" active={activeTab === 'My Space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
               )}
             </>
-          )}
+          )
+          }
           {/* Video Player Overlay */}
           <AnimatePresence>
             {playingMovie && (
@@ -1334,6 +1677,7 @@ function App() {
                   setPlayingMovie(null);
                   setPlayingEpisode(null);
                   loadUserProfile();
+                  updateQuickByteProgress();
                 }}
                 onToggleMyList={handleToggleMyList}
                 onToggleLike={handleToggleLike}
@@ -1360,7 +1704,7 @@ function App() {
               />
             )}
           </AnimatePresence>
-        </div>
+        </div >
       } />
     </Routes >
   );
@@ -1536,7 +1880,7 @@ function HeroSlide({ movie, onClick }) {
 export default App;
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, originalsData, trendingData, newReleaseData }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, originalsData, trendingData, newReleaseData, promotions }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -1621,6 +1965,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
     hotData = originalsData || [];
   } else if (activeFilter === 'Broadcast') {
     hotData = hotData.filter(item => item.isBroadcast);
+  } else if (activeFilter === 'Crime Show') {
+    hotData = hotData.filter(item => item.isCrimeShow);
   } else if (activeFilter === 'Mms') {
     hotData = hotData.filter(item => item.isMms);
   } else if (activeFilter === 'Audio Series') {
@@ -1688,7 +2034,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
       </div>
 
       {/* New Release Section */}
-      <section className="section" style={{ paddingBottom: '100px' }}>
+      <section className="section" style={{ paddingBottom: '40px' }}>
         <div className="section-header">
           <h2 className="section-title">New Release</h2>
           <div className="tag-pill" style={{ background: 'red', color: 'white', fontSize: '10px' }}>FRESH</div>

@@ -176,13 +176,31 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         const progress = (currentTime / duration) * 100;
         const contentId = movie._id || movie.id;
 
+        // Persist to LocalStorage for Quick Bites (detailed episode tracking)
+        if (isQuickBite || isEpisodic) {
+            try {
+                const savedProgress = JSON.parse(localStorage.getItem('inplay_quickbyte_progress') || '{}');
+                savedProgress[contentId] = {
+                    episodeIndex: currentIndex,
+                    watchedSeconds: currentTime,
+                    timestamp: Date.now(),
+                    totalEpisodes: playlist.length,
+                    duration: duration
+                };
+                localStorage.setItem('inplay_quickbyte_progress', JSON.stringify(savedProgress));
+            } catch (e) {
+                console.error("Failed to save local progress", e);
+            }
+        }
+
         try {
             await contentService.updateWatchHistory({
                 contentId,
                 progress,
                 watchedSeconds: currentTime,
                 totalDuration: duration,
-                completed: progress > 95
+                completed: progress > 95,
+                episodeIndex: currentIndex // Adding this for backend if supported
             });
             lastSyncTime.current = currentTime;
         } catch (e) {

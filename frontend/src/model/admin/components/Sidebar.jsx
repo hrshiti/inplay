@@ -18,6 +18,7 @@ const navigation = [
   { name: 'For You', href: '/admin/for-you', icon: Smartphone },
   { name: 'Audio Series', href: '/admin/audio-series', icon: Film }, // Using Film icon for now, or maybe something better if available
   { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Ad & Promotion', href: '/admin/promotions', icon: Film },
   { name: 'Monetization', href: '/admin/monetization/plans', icon: DollarSign },
   { name: 'Settings', href: '/admin/settings/app', icon: Settings }
 ];

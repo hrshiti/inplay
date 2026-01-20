@@ -364,6 +364,26 @@ const revokeDownload = async (req, res) => {
   }
 };
 
+// @desc    Get new releases content
+// @route   GET /api/content/new-releases
+// @access  Public
+const getNewReleases = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const content = await userContentService.getNewReleases(limit);
+
+    res.status(200).json({
+      success: true,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllContent,
   getContent,
@@ -373,6 +393,7 @@ module.exports = {
   getMyList,
   updateWatchHistory,
   getTrendingContent,
+  getNewReleases,
   getContentByCategory,
   getUserDownloads,
   revokeDownload

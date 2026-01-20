@@ -391,6 +391,18 @@ const getContentByCategory = async (category, limit = 20) => {
   return content;
 };
 
+// Get new releases content
+const getNewReleases = async (limit = 10) => {
+  const content = await Content.find({
+    status: 'published'
+  })
+    .select('title poster type rating year genre video seasons createdAt')
+    .sort({ createdAt: -1 }) // Latest first
+    .limit(limit);
+
+  return content;
+};
+
 module.exports = {
   getContentForUsers,
   getContentById,
@@ -401,5 +413,6 @@ module.exports = {
   getUserMyList,
   updateWatchHistory,
   getTrendingContent,
+  getNewReleases,
   getContentByCategory
 };

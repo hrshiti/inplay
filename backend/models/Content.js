@@ -152,6 +152,38 @@ const contentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isRanking: {
+    type: Boolean,
+    default: false
+  },
+  isMovie: {
+    type: Boolean,
+    default: false
+  },
+  isTV: {
+    type: Boolean,
+    default: false
+  },
+  isBroadcast: {
+    type: Boolean,
+    default: false
+  },
+  isMms: {
+    type: Boolean,
+    default: false
+  },
+  isShortFilm: {
+    type: Boolean,
+    default: false
+  },
+  isAudioSeries: {
+    type: Boolean,
+    default: false
+  },
+  isCrimeShow: {
+    type: Boolean,
+    default: false
+  },
   // Tags and keywords
   tags: [String],
   keywords: [String],
