@@ -54,7 +54,8 @@ app.use(compression());
 const allowedOrigins = [
   'https://inplay-two.vercel.app',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'https://api.inplays.in',
 ];
 
 if (process.env.FRONTEND_URL) {
