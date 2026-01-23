@@ -1,27 +1,36 @@
 const QuickByte = require('../models/QuickByte');
 const Comment = require('../models/Comment');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
-const multer = require('multer');
+const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 
-// Configure multer for file uploads
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB max
-        fieldSize: 10 * 1024 * 1024, // 10MB max
-    },
-    fileFilter: (req, file, cb) => {
-        if (
-            file.mimetype.startsWith('image/') ||
-            file.mimetype.startsWith('video/') ||
-            file.mimetype.startsWith('audio/')
-        ) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only image, video, and audio files are allowed'));
-        }
+// NOTE: Multer configuration is now in config/multerStorage.js
+// Files are automatically saved to disk by the uploadMixed middleware
+
+
+// Helper to hydrate relative URLs to absolute URLs
+const hydrateQuickByte = (doc) => {
+    if (!doc) return doc;
+    const item = doc.toObject ? doc.toObject() : doc;
+
+    const backendUrl = process.env.BACKEND_URL;
+    const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+    const hydrateMedia = (media) => {
+        if (!media) return media;
+        if (media.url) media.url = getFullUrl(media.url);
+        if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+        return media;
+    };
+
+    if (item.video) item.video = hydrateMedia(item.video);
+    if (item.thumbnail) item.thumbnail = hydrateMedia(item.thumbnail);
+    if (item.audio) item.audio = hydrateMedia(item.audio);
+
+    if (item.episodes && Array.isArray(item.episodes)) {
+        item.episodes = item.episodes.map(hydrateMedia);
     }
-});
+
+    return item;
+};
 
 // @desc    Get all Quick Bites
 // @route   GET /api/quickbytes
@@ -33,11 +42,13 @@ const getAllQuickBytes = async (req, res) => {
             query.status = req.query.status;
         }
 
-        const quickBytes = await QuickByte.find(query).sort({ createdAt: -1 });
+        const quickBytes = await QuickByte.find(query).sort({ createdAt: -1 }).lean();
+
+        const hydratedBytes = quickBytes.map(qb => hydrateQuickByte(qb));
 
         res.status(200).json({
             success: true,
-            data: quickBytes
+            data: hydratedBytes
         });
     } catch (error) {
         res.status(500).json({
@@ -79,22 +90,19 @@ const createQuickByteHandler = async (req, res) => {
             isPopular: isPopular === 'true' || isPopular === true
         });
 
-        // Upload Video (Single Trailer/Main)
+        // Transform uploaded video (already saved by multer)
         if (files.video && files.video[0]) {
-            const result = await uploadToCloudinary(files.video[0], 'reel'); // Use 'reel' preset for vertical video
+            const result = transformFileToResponse(files.video[0]);
             quickByte.video = result;
-            mediaUrls.video = result.public_id;
+            mediaUrls.video = result.path;
         }
 
-        // Upload Episodes (Multiple Parts)
+        // Transform uploaded episodes (already saved by multer)
         if (files.videos && files.videos.length > 0) {
             quickByte.episodes = [];
             for (const file of files.videos) {
-                const result = await uploadToCloudinary(file, 'reel');
+                const result = transformFileToResponse(file);
                 quickByte.episodes.push(result);
-                // Keep track for cleanup
-                // We'll trust that successful save persists them. 
-                // To properly cleanup multiple files on error we'd need an array in mediaUrls.
             }
             // If no primary video is set, make the first episode the primary video
             if (!quickByte.video || !quickByte.video.url) {
@@ -102,22 +110,21 @@ const createQuickByteHandler = async (req, res) => {
             }
         }
 
-        // Upload Thumbnail (frontend uses 'poster')
+        // Transform uploaded thumbnail
         if (files.poster && files.poster[0]) {
-            const result = await uploadToCloudinary(files.poster[0], 'poster'); // Use 'poster' preset
+            const result = transformFileToResponse(files.poster[0]);
             quickByte.thumbnail = result;
-            mediaUrls.thumbnail = result.public_id;
+            mediaUrls.thumbnail = result.path;
         }
 
-        // Upload Audio
+        // Transform uploaded audio
         if (files.audio && files.audio[0]) {
-            const result = await uploadToCloudinary(files.audio[0], 'video'); // Cloudinary uses 'video' type for audio too often, or 'raw'
-            // Using 'video' resource type usually works for audio in Cloudinary
+            const result = transformFileToResponse(files.audio[0]);
             quickByte.audio = {
                 ...result,
                 title: audioTitle || 'Original Audio'
             };
-            mediaUrls.audio = result.public_id;
+            mediaUrls.audio = result.path;
         }
 
         await quickByte.save();
@@ -125,14 +132,14 @@ const createQuickByteHandler = async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'Quick Bite created successfully',
-            data: quickByte
+            data: hydrateQuickByte(quickByte)
         });
 
     } catch (error) {
-        // Cleanup
-        if (mediaUrls.video) await deleteFromCloudinary(mediaUrls.video, 'video');
-        if (mediaUrls.thumbnail) await deleteFromCloudinary(mediaUrls.thumbnail, 'image');
-        if (mediaUrls.audio) await deleteFromCloudinary(mediaUrls.audio, 'video');
+        // Cleanup uploaded files from disk
+        if (mediaUrls.video) deleteFile(mediaUrls.video);
+        if (mediaUrls.thumbnail) deleteFile(mediaUrls.thumbnail);
+        if (mediaUrls.audio) deleteFile(mediaUrls.audio);
 
         res.status(400).json({
             success: false,
@@ -150,7 +157,7 @@ const getQuickByteById = async (req, res) => {
         if (!quickByte) {
             return res.status(404).json({ success: false, message: 'Quick Bite not found' });
         }
-        res.status(200).json({ success: true, data: quickByte });
+        res.status(200).json({ success: true, data: hydrateQuickByte(quickByte) });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -188,32 +195,34 @@ const updateQuickByteHandler = async (req, res) => {
         if (isTV !== undefined) quickByte.isTV = isTV === 'true' || isTV === true;
         if (isPopular !== undefined) quickByte.isPopular = isPopular === 'true' || isPopular === true;
 
-        // Handle File Updates
-        // Upload Video (Single Trailer/Main)
+        // Handle File Updates - Transform uploaded video
         if (files.video && files.video[0]) {
-            // Delete old video
-            if (quickByte.video && quickByte.video.public_id) {
-                await deleteFromCloudinary(quickByte.video.public_id, 'video');
+            // Delete old video from disk
+            if (quickByte.video && quickByte.video.url) {
+                const oldPath = getFilePathFromUrl(quickByte.video.url);
+                deleteFile(oldPath);
             }
-            const result = await uploadToCloudinary(files.video[0], 'reel');
+            const result = transformFileToResponse(files.video[0]);
             quickByte.video = result;
         }
 
-        // Upload Thumbnail
+        // Transform uploaded thumbnail
         if (files.poster && files.poster[0]) {
-            if (quickByte.thumbnail && quickByte.thumbnail.public_id) {
-                await deleteFromCloudinary(quickByte.thumbnail.public_id, 'image');
+            if (quickByte.thumbnail && quickByte.thumbnail.url) {
+                const oldPath = getFilePathFromUrl(quickByte.thumbnail.url);
+                deleteFile(oldPath);
             }
-            const result = await uploadToCloudinary(files.poster[0], 'poster');
+            const result = transformFileToResponse(files.poster[0]);
             quickByte.thumbnail = result;
         }
 
-        // Upload Audio
+        // Transform uploaded audio
         if (files.audio && files.audio[0]) {
-            if (quickByte.audio && quickByte.audio.public_id) {
-                await deleteFromCloudinary(quickByte.audio.public_id, 'video');
+            if (quickByte.audio && quickByte.audio.url) {
+                const oldPath = getFilePathFromUrl(quickByte.audio.url);
+                deleteFile(oldPath);
             }
-            const result = await uploadToCloudinary(files.audio[0], 'video');
+            const result = transformFileToResponse(files.audio[0]);
             quickByte.audio = {
                 ...result,
                 title: audioTitle || 'Original Audio'
@@ -227,7 +236,7 @@ const updateQuickByteHandler = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Quick Bite updated successfully',
-            data: quickByte
+            data: hydrateQuickByte(quickByte)
         });
 
     } catch (error) {
@@ -245,9 +254,19 @@ const deleteQuickByte = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Quick Bite not found' });
         }
 
-        if (quickByte.video?.public_id) await deleteFromCloudinary(quickByte.video.public_id, 'video');
-        if (quickByte.thumbnail?.public_id) await deleteFromCloudinary(quickByte.thumbnail.public_id, 'image');
-        if (quickByte.audio?.public_id) await deleteFromCloudinary(quickByte.audio.public_id, 'video');
+        // Delete files from local disk
+        if (quickByte.video?.url) {
+            const path = getFilePathFromUrl(quickByte.video.url);
+            deleteFile(path);
+        }
+        if (quickByte.thumbnail?.url) {
+            const path = getFilePathFromUrl(quickByte.thumbnail.url);
+            deleteFile(path);
+        }
+        if (quickByte.audio?.url) {
+            const path = getFilePathFromUrl(quickByte.audio.url);
+            deleteFile(path);
+        }
 
         await QuickByte.findByIdAndDelete(req.params.id);
 
@@ -404,7 +423,7 @@ const toggleCommentLike = async (req, res) => {
 module.exports = {
     getAllQuickBytes,
     createQuickByte: [
-        upload.fields([
+        uploadMixed.fields([
             { name: 'video', maxCount: 1 },
             { name: 'videos', maxCount: 20 },
             { name: 'poster', maxCount: 1 },
@@ -415,7 +434,7 @@ module.exports = {
     deleteQuickByte,
     getQuickByteById,
     updateQuickByte: [
-        upload.fields([
+        uploadMixed.fields([
             { name: 'video', maxCount: 1 },
             { name: 'poster', maxCount: 1 },
             { name: 'audio', maxCount: 1 }

@@ -1,43 +1,34 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const { uploadToCloudinary } = require('../config/cloudinary');
 const { protect, authorize } = require('../middlewares/auth');
+const { uploadMixed, transformFileToResponse } = require('../config/multerStorage');
 
-// Setup memory storage for multer
-const storage = multer.memoryStorage();
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for audio/images
-});
-
-// @desc    Upload file (image or audio)
+// @desc    Upload file (image, video, or audio)
 // @route   POST /api/upload
 // @access  Private/Admin
-router.post('/', protect, authorize('admin'), upload.single('file'), async (req, res, next) => {
+router.post('/', protect, authorize('admin'), uploadMixed.single('file'), async (req, res, next) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const type = req.body.type || 'image'; // 'image' or 'audio' or 'poster'
+        // Transform the uploaded file to match Cloudinary response format
+        const result = transformFileToResponse(req.file);
 
-        // Map frontend type to cloudinary preset key
-        let presetType = 'poster'; // default
-        if (type === 'audio') presetType = 'audio';
-        else if (type === 'backdrop') presetType = 'backdrop';
-        else if (type === 'avatar') presetType = 'avatar';
-        else if (type === 'poster') presetType = 'poster';
-
-        const result = await uploadToCloudinary(req.file, presetType);
+        // Hydrate URL if local
+        const backendUrl = process.env.BACKEND_URL;
+        const finalUrl = result.secure_url && result.secure_url.startsWith('/')
+            ? `${backendUrl}${result.secure_url}`
+            : result.secure_url;
 
         res.status(200).json({
             success: true,
             data: {
-                url: result.secure_url,
+                url: finalUrl,
                 public_id: result.public_id,
-                duration: result.duration, // Cloudinary returns duration for audio/video
-                format: result.format
+                duration: result.duration,
+                format: result.format,
+                size: result.size
             }
         });
     } catch (err) {
@@ -47,3 +38,4 @@ router.post('/', protect, authorize('admin'), upload.single('file'), async (req,
 });
 
 module.exports = router;
+

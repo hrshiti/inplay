@@ -50,6 +50,10 @@ const generateDownloadLicense = async (contentId, userId, deviceId) => {
   expiresAt.setDate(expiresAt.getDate() + DOWNLOAD_EXPIRY_DAYS);
 
   // Create download record
+  const backendUrl = process.env.BACKEND_URL;
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+  // Create download record
   const download = await Download.create({
     user: userId,
     content: contentId,
@@ -60,17 +64,24 @@ const generateDownloadLicense = async (contentId, userId, deviceId) => {
       title: content.title,
       type: content.type,
       duration: content.video.duration,
-      videoUrl: content.video.secure_url,
-      posterUrl: content.poster?.secure_url
+      videoUrl: getFullUrl(content.video.secure_url),
+      posterUrl: getFullUrl(content.poster?.secure_url)
     }
   });
 
-  // Generate time-limited download URL (24 hours to start download)
-  const downloadUrl = generateSignedUrl(content.video.public_id, {
-    expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
-    attachment: true,
-    format: 'mp4'
-  });
+  // Generate time-limited download URL
+  let downloadUrl;
+  if (content.video.url && content.video.url.startsWith('/')) {
+    // Local file
+    downloadUrl = `${backendUrl}${content.video.url}`;
+  } else {
+    // Cloudinary file
+    downloadUrl = generateSignedUrl(content.video.public_id, {
+      expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+      attachment: true,
+      format: 'mp4'
+    });
+  }
 
   // Increment download count
   await Content.findByIdAndUpdate(contentId, {
@@ -196,9 +207,9 @@ const getUserDownloads = async (userId) => {
     isActive: true,
     expiresAt: { $gt: new Date() }
   })
-  .populate('content', 'title type poster')
-  .select('licenseKey deviceId downloadedAt expiresAt accessCount contentSnapshot')
-  .sort({ downloadedAt: -1 });
+    .populate('content', 'title type poster')
+    .select('licenseKey deviceId downloadedAt expiresAt accessCount contentSnapshot')
+    .sort({ downloadedAt: -1 });
 
   return downloads.map(download => ({
     licenseKey: download.licenseKey,

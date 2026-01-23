@@ -107,8 +107,11 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
     })
   );
 
+  // Hydrate content before returning
+  const hydratedContent = processedContent.map(item => hydrateContentItem(item));
+
   return {
-    content: processedContent,
+    content: hydratedContent,
     pagination: {
       page,
       limit,
@@ -116,6 +119,50 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
       pages: Math.ceil(total / limit)
     }
   };
+};
+
+// Helper to hydrate content items
+const hydrateContentItem = (item) => {
+  if (!item) return item;
+  // Handle mongoose doc
+  if (item.toObject) item = item.toObject();
+
+  const backendUrl = process.env.BACKEND_URL;
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+  const hydrateMedia = (media) => {
+    if (!media) return media;
+    if (media.url) media.url = getFullUrl(media.url);
+    if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+    return media;
+  };
+
+  if (item.poster) item.poster = hydrateMedia(item.poster);
+  if (item.backdrop) item.backdrop = hydrateMedia(item.backdrop);
+  if (item.video) item.video = hydrateMedia(item.video);
+  if (item.trailer) item.trailer = hydrateMedia(item.trailer);
+  if (item.thumbnail) item.thumbnail = hydrateMedia(item.thumbnail); // For quickbytes/reels
+  if (item.image && typeof item.image === 'string' && item.image.startsWith('/')) item.image = getFullUrl(item.image);
+  if (item.coverImage && item.coverImage.startsWith('/')) item.coverImage = getFullUrl(item.coverImage);
+
+  if (item.seasons && Array.isArray(item.seasons)) {
+    item.seasons.forEach(season => {
+      if (season.episodes && Array.isArray(season.episodes)) {
+        season.episodes.forEach(episode => {
+          if (episode.video) episode.video = hydrateMedia(episode.video);
+          if (episode.thumbnail) episode.thumbnail = hydrateMedia(episode.thumbnail);
+        });
+      }
+    });
+  }
+
+  // Handle Audio Series structure if slightly different?
+  // AudioSeries has 'episodes' with maybe 'audioUrl'.
+  // But generic hydration of 'video'/'thumbnail' maps well.
+  // If episodes have 'sourceUrl' or 'audio' object? 
+  // Assuming consistent naming or relying on specific checks if needed.
+
+  return item;
 };
 
 // Get single content with access control
@@ -135,11 +182,12 @@ const getContentById = async (contentId, userId = null) => {
     accessInfo = await checkUserContentAccess(userId, contentId);
   }
 
-  return {
+  const result = {
     ...content.toObject(),
     hasAccess: accessInfo.hasAccess,
     accessType: accessInfo.accessType
   };
+  return hydrateContentItem(result);
 };
 
 // Check if user has access to content
@@ -194,8 +242,15 @@ const generateStreamingUrl = async (contentId, userId, quality = 'HD') => {
     throw new Error('Content not found or not available for streaming');
   }
 
-  // Generate signed HLS URL
-  const streamUrl = generateHLSUrl(content.video.public_id);
+  // Determine stream URL: Local files use direct URL, Cloudinary uses HLS generator
+  let streamUrl;
+  if (content.video.url && content.video.url.startsWith('/')) {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    streamUrl = `${backendUrl}${content.video.url}`;
+  } else {
+    // Legacy Cloudinary or other external logic
+    streamUrl = generateHLSUrl(content.video.public_id);
+  }
 
   // Log streaming access for analytics
   await Content.findByIdAndUpdate(contentId, {
@@ -240,6 +295,9 @@ const generateDownloadLicense = async (contentId, userId, deviceId) => {
     throw new Error('Download already exists for this device');
   }
 
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
   // Create download record
   const Download = require('../models/Download');
   const download = await Download.create({
@@ -250,17 +308,22 @@ const generateDownloadLicense = async (contentId, userId, deviceId) => {
       title: content.title,
       type: content.type,
       duration: content.video.duration,
-      videoUrl: content.video.secure_url,
-      posterUrl: content.poster?.secure_url
+      videoUrl: getFullUrl(content.video.secure_url),
+      posterUrl: getFullUrl(content.poster?.secure_url)
     }
   });
 
-  // Generate download URL (time-limited)
-  const downloadUrl = generateSignedUrl(content.video.public_id, {
-    expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours to download
-    attachment: true,
-    format: 'mp4'
-  });
+  // Generate download URL
+  let downloadUrl;
+  if (content.video.url && content.video.url.startsWith('/')) {
+    downloadUrl = `${backendUrl}${content.video.url}`;
+  } else {
+    downloadUrl = generateSignedUrl(content.video.public_id, {
+      expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours to download
+      attachment: true,
+      format: 'mp4'
+    });
+  }
 
   // Increment download count
   await Content.findByIdAndUpdate(contentId, {
@@ -313,7 +376,8 @@ const getUserMyList = async (userId) => {
     throw new Error('User not found');
   }
 
-  return user.myList || [];
+  const list = user.myList || [];
+  return list.map(item => hydrateContentItem(item));
 };
 
 const mongoose = require('mongoose');
@@ -375,7 +439,7 @@ const getTrendingContent = async (limit = 10) => {
     .sort({ views: -1, likes: -1, createdAt: -1 })
     .limit(limit);
 
-  return content;
+  return content.map(item => hydrateContentItem(item));
 };
 
 // Get content by category
@@ -388,7 +452,7 @@ const getContentByCategory = async (category, limit = 20) => {
     .sort({ createdAt: -1 })
     .limit(limit);
 
-  return content;
+  return content.map(item => hydrateContentItem(item));
 };
 
 // Get new releases content
@@ -400,7 +464,7 @@ const getNewReleases = async (limit = 10) => {
     .sort({ createdAt: -1 }) // Latest first
     .limit(limit);
 
-  return content;
+  return content.map(item => hydrateContentItem(item));
 };
 
 module.exports = {

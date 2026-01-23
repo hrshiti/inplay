@@ -56,7 +56,42 @@ const loginUser = async (email, password) => {
   return user;
 };
 
-// Get user profile
+// Helper to hydrate content items (Content, QuickByte, ForYou)
+const hydrateContentItem = (item) => {
+  if (!item) return item;
+  const backendUrl = process.env.BACKEND_URL;
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+  const hydrateMedia = (media) => {
+    if (!media) return media;
+    if (media.url) media.url = getFullUrl(media.url);
+    if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+    return media;
+  };
+
+  if (item.poster) item.poster = hydrateMedia(item.poster);
+  if (item.backdrop) item.backdrop = hydrateMedia(item.backdrop);
+  if (item.video) item.video = hydrateMedia(item.video);
+  if (item.thumbnail) item.thumbnail = hydrateMedia(item.thumbnail);
+  if (item.coverImage && item.coverImage.startsWith('/')) item.coverImage = getFullUrl(item.coverImage); // For audio series
+  if (item.image && typeof item.image === 'string' && item.image.startsWith('/')) item.image = getFullUrl(item.image);
+
+  // Handle seasons/episodes if present (full content object)
+  if (item.seasons && Array.isArray(item.seasons)) {
+    item.seasons.forEach(season => {
+      if (season.episodes && Array.isArray(season.episodes)) {
+        season.episodes.forEach(episode => {
+          if (episode.video) episode.video = hydrateMedia(episode.video);
+          if (episode.thumbnail) episode.thumbnail = hydrateMedia(episode.thumbnail);
+        });
+      }
+    });
+  }
+
+  return item;
+};
+
+// Start getUserProfile
 const getUserProfile = async (userId) => {
   try {
     const user = await User.findById(userId)
@@ -137,6 +172,45 @@ const getUserProfile = async (userId) => {
     // Filter out password from response just in case
     delete userObj.password;
 
+    // Hydrate everything in userObj
+    if (userObj.avatar && userObj.avatar.startsWith('/')) {
+      const backendUrl = process.env.BACKEND_URL;
+      userObj.avatar = `${backendUrl}${userObj.avatar}`;
+    }
+
+    if (userObj.myList && Array.isArray(userObj.myList)) {
+      userObj.myList = userObj.myList.map(hydrateContentItem);
+    }
+
+    if (userObj.likedContent && Array.isArray(userObj.likedContent)) {
+      userObj.likedContent = userObj.likedContent.map(hydrateContentItem);
+    }
+
+    if (userObj.history && Array.isArray(userObj.history)) {
+      userObj.history = userObj.history.map(item => {
+        // Hydrate the content details merged into history item
+        return hydrateContentItem(item);
+      });
+    }
+
+    if (userObj.continueWatching && Array.isArray(userObj.continueWatching)) {
+      userObj.continueWatching = userObj.continueWatching.map(hydrateContentItem);
+    }
+
+    // Check downloads
+    if (userObj.downloads && Array.isArray(userObj.downloads)) {
+      // Downloads content is populated but might need hydration if it was relative
+      // But downloads usually store snapshot. Snapshot was generated with absolute URLs in downloadService? 
+      // Yes, we updated downloadService to save absolute URLs.
+      // But let's be safe if population is used directly from Content model.
+      // Line 64: .populate('downloads.content', 'title poster type');
+      // If populated from Content, it has relative paths!
+      // We need to hydrate `downloads.content`.
+      userObj.downloads.forEach(d => {
+        if (d.content) hydrateContentItem(d.content);
+      });
+    }
+
     return userObj;
   } catch (error) {
     console.error('Error in getUserProfile service:', error);
@@ -160,7 +234,13 @@ const updateUserProfile = async (userId, updateData) => {
   Object.assign(user, updateData);
   await user.save();
 
-  return user;
+  // Hydrate avatar if returning
+  const userObj = user.toObject();
+  if (userObj.avatar && userObj.avatar.startsWith('/')) {
+    const backendUrl = process.env.BACKEND_URL;
+    userObj.avatar = `${backendUrl}${userObj.avatar}`;
+  }
+  return userObj;
 };
 
 // Change user password
@@ -257,7 +337,12 @@ const updateUserAvatar = async (userId, avatarUrl) => {
   user.avatar = avatarUrl;
   await user.save();
 
-  return user;
+  const userObj = user.toObject();
+  if (userObj.avatar && userObj.avatar.startsWith('/')) {
+    const backendUrl = process.env.BACKEND_URL;
+    userObj.avatar = `${backendUrl}${userObj.avatar}`;
+  }
+  return userObj;
 };
 
 // Logout user (client-side token removal)

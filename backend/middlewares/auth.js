@@ -135,6 +135,12 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success') => 
   const userObj = user.toObject();
   delete userObj.password;
 
+  // Hydrate avatar URL if local
+  if (userObj.avatar && userObj.avatar.startsWith('/')) {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    userObj.avatar = `${backendUrl}${userObj.avatar}`;
+  }
+
   res.status(statusCode).json({
     success: true,
     message,

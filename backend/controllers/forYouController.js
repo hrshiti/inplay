@@ -1,26 +1,32 @@
 const ForYou = require('../models/ForYou');
 const Comment = require('../models/Comment');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
-const multer = require('multer');
+const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 
-// Configure multer for file uploads
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB max
-    },
-    fileFilter: (req, file, cb) => {
-        if (
-            file.mimetype.startsWith('image/') ||
-            file.mimetype.startsWith('video/') ||
-            file.mimetype.startsWith('audio/')
-        ) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only image, video, and audio files are allowed'));
-        }
-    }
-});
+// NOTE: Multer configuration is now in config/multerStorage.js
+// Files are automatically saved to disk by the uploadMixed middleware
+
+
+// Helper to hydrate relative URLs to absolute URLs
+const hydrateForYou = (doc) => {
+    if (!doc) return doc;
+    const item = doc.toObject ? doc.toObject() : doc;
+
+    const backendUrl = process.env.BACKEND_URL;
+    const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+    const hydrateMedia = (media) => {
+        if (!media) return media;
+        if (media.url) media.url = getFullUrl(media.url);
+        if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+        return media;
+    };
+
+    if (item.video) item.video = hydrateMedia(item.video);
+    if (item.thumbnail) item.thumbnail = hydrateMedia(item.thumbnail);
+    if (item.audio) item.audio = hydrateMedia(item.audio);
+
+    return item;
+};
 
 // @desc    Get all For You Reels
 // @route   GET /api/foryou
@@ -32,11 +38,12 @@ const getAllForYou = async (req, res) => {
             query.status = req.query.status;
         }
 
-        const reels = await ForYou.find(query).sort({ createdAt: -1 });
+        const reels = await ForYou.find(query).sort({ createdAt: -1 }).lean();
+        const hydratedReels = reels.map(reel => hydrateForYou(reel));
 
         res.status(200).json({
             success: true,
-            data: reels
+            data: hydratedReels
         });
     } catch (error) {
         res.status(500).json({
@@ -63,28 +70,28 @@ const createForYouHandler = async (req, res) => {
             description: description || ''
         });
 
-        // Upload Video
+        // Transform uploaded video (already saved by multer)
         if (files.video && files.video[0]) {
-            const result = await uploadToCloudinary(files.video[0], 'reel');
+            const result = transformFileToResponse(files.video[0]);
             forYou.video = result;
-            mediaUrls.video = result.public_id;
+            mediaUrls.video = result.path;
         }
 
-        // Upload Thumbnail
+        // Transform uploaded thumbnail
         if (files.poster && files.poster[0]) {
-            const result = await uploadToCloudinary(files.poster[0], 'poster');
+            const result = transformFileToResponse(files.poster[0]);
             forYou.thumbnail = result;
-            mediaUrls.thumbnail = result.public_id;
+            mediaUrls.thumbnail = result.path;
         }
 
-        // Upload Audio
+        // Transform uploaded audio
         if (files.audio && files.audio[0]) {
-            const result = await uploadToCloudinary(files.audio[0], 'video');
+            const result = transformFileToResponse(files.audio[0]);
             forYou.audio = {
                 ...result,
                 title: audioTitle || 'Original Audio'
             };
-            mediaUrls.audio = result.public_id;
+            mediaUrls.audio = result.path;
         }
 
         await forYou.save();
@@ -92,14 +99,14 @@ const createForYouHandler = async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'Reel created successfully',
-            data: forYou
+            data: hydrateForYou(forYou)
         });
 
     } catch (error) {
-        // Cleanup
-        if (mediaUrls.video) await deleteFromCloudinary(mediaUrls.video, 'video');
-        if (mediaUrls.thumbnail) await deleteFromCloudinary(mediaUrls.thumbnail, 'image');
-        if (mediaUrls.audio) await deleteFromCloudinary(mediaUrls.audio, 'video');
+        // Cleanup uploaded files from disk
+        if (mediaUrls.video) deleteFile(mediaUrls.video);
+        if (mediaUrls.thumbnail) deleteFile(mediaUrls.thumbnail);
+        if (mediaUrls.audio) deleteFile(mediaUrls.audio);
 
         res.status(400).json({
             success: false,
@@ -115,9 +122,19 @@ const deleteForYou = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Reel not found' });
         }
 
-        if (forYou.video?.public_id) await deleteFromCloudinary(forYou.video.public_id, 'video');
-        if (forYou.thumbnail?.public_id) await deleteFromCloudinary(forYou.thumbnail.public_id, 'image');
-        if (forYou.audio?.public_id) await deleteFromCloudinary(forYou.audio.public_id, 'video');
+        // Delete files from local disk
+        if (forYou.video?.url) {
+            const path = getFilePathFromUrl(forYou.video.url);
+            deleteFile(path);
+        }
+        if (forYou.thumbnail?.url) {
+            const path = getFilePathFromUrl(forYou.thumbnail.url);
+            deleteFile(path);
+        }
+        if (forYou.audio?.url) {
+            const path = getFilePathFromUrl(forYou.audio.url);
+            deleteFile(path);
+        }
 
         await ForYou.findByIdAndDelete(req.params.id);
 
@@ -243,7 +260,7 @@ const toggleCommentLike = async (req, res) => {
 module.exports = {
     getAllForYou,
     createForYou: [
-        upload.fields([
+        uploadMixed.fields([
             { name: 'video', maxCount: 1 },
             { name: 'poster', maxCount: 1 },
             { name: 'audio', maxCount: 1 }

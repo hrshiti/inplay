@@ -1,5 +1,5 @@
 const Content = require('../models/Content');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
+const { deleteFile, getFilePathFromUrl } = require('../config/multerStorage');
 const { CONTENT_STATUS, FILE_SIZE_LIMITS } = require('../constants');
 
 // Get all content with filters and pagination
@@ -25,12 +25,16 @@ const getAllContent = async (filters = {}, page = 1, limit = 10) => {
     .populate('createdBy', 'name email')
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .lean();
 
   const total = await Content.countDocuments(query);
 
+  // Hydrate URLs for frontend
+  const hydratedContent = content.map(item => hydrateContent(item));
+
   return {
-    content,
+    content: hydratedContent,
     pagination: {
       page,
       limit,
@@ -40,54 +44,91 @@ const getAllContent = async (filters = {}, page = 1, limit = 10) => {
   };
 };
 
+// Helper to hydrate relative URLs to absolute URLs
+const hydrateContent = (contentData) => {
+  if (!contentData) return contentData;
+  // If it's a mongoose document, convert to object
+  const content = contentData.toObject ? contentData.toObject() : contentData;
+
+  const backendUrl = process.env.BACKEND_URL;
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+  const hydrateMedia = (media) => {
+    if (!media) return media;
+    if (media.url) media.url = getFullUrl(media.url);
+    if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+    return media;
+  };
+
+  if (content.poster) content.poster = hydrateMedia(content.poster);
+  if (content.backdrop) content.backdrop = hydrateMedia(content.backdrop);
+  if (content.video) content.video = hydrateMedia(content.video);
+  if (content.trailer) content.trailer = hydrateMedia(content.trailer);
+
+  if (content.seasons && Array.isArray(content.seasons)) {
+    content.seasons.forEach(season => {
+      if (season.episodes && Array.isArray(season.episodes)) {
+        season.episodes.forEach(episode => {
+          if (episode.video) episode.video = hydrateMedia(episode.video);
+          if (episode.thumbnail) episode.thumbnail = hydrateMedia(episode.thumbnail);
+        });
+      }
+    });
+  }
+  return content;
+};
+
 // Get content by ID
 const getContentById = async (contentId) => {
   const content = await Content.findById(contentId)
-    .populate('createdBy', 'name email');
+    .populate('createdBy', 'name email')
+    .lean();
 
   if (!content) {
     throw new Error('Content not found');
   }
 
-  return content;
+  return hydrateContent(content);
 };
 
 // Create new content
 const createContent = async (contentData, adminId, files = {}) => {
-  // Upload media files to Cloudinary
+  // NOTE: Files are already uploaded to disk by multer middleware
+  // We just need to construct the media URLs from the uploaded files
+  const { transformFileToResponse } = require('../config/multerStorage');
   const mediaUrls = {};
 
   try {
-    // Upload poster
+    // Transform uploaded poster
     if (files.poster) {
       if (files.poster.size > FILE_SIZE_LIMITS.POSTER) {
         throw new Error('Poster file size too large');
       }
-      mediaUrls.poster = await uploadToCloudinary(files.poster, 'poster');
+      mediaUrls.poster = transformFileToResponse(files.poster);
     }
 
-    // Upload backdrop
+    // Transform uploaded backdrop
     if (files.backdrop) {
       if (files.backdrop.size > FILE_SIZE_LIMITS.BACKDROP) {
         throw new Error('Backdrop file size too large');
       }
-      mediaUrls.backdrop = await uploadToCloudinary(files.backdrop, 'backdrop');
+      mediaUrls.backdrop = transformFileToResponse(files.backdrop);
     }
 
-    // Upload video
+    // Transform uploaded video
     if (files.video) {
       if (files.video.size > FILE_SIZE_LIMITS.VIDEO) {
         throw new Error('Video file size too large');
       }
-      mediaUrls.video = await uploadToCloudinary(files.video, 'video');
+      mediaUrls.video = transformFileToResponse(files.video);
     }
 
-    // Upload trailer
+    // Transform uploaded trailer
     if (files.trailer) {
       if (files.trailer.size > FILE_SIZE_LIMITS.TRAILER) {
         throw new Error('Trailer file size too large');
       }
-      mediaUrls.trailer = await uploadToCloudinary(files.trailer, 'trailer');
+      mediaUrls.trailer = transformFileToResponse(files.trailer);
     }
 
     // Process episode videos
@@ -103,7 +144,7 @@ const createContent = async (contentData, adminId, files = {}) => {
           throw new Error(`Episode video (S${seasonIndex + 1}:E${episodeIndex + 1}) too large`);
         }
 
-        const uploadResult = await uploadToCloudinary(videoFile, 'video');
+        const uploadResult = transformFileToResponse(videoFile);
 
         // Ensure season structure exists
         if (contentData.seasons && contentData.seasons[seasonIndex]) {
@@ -124,7 +165,7 @@ const createContent = async (contentData, adminId, files = {}) => {
       createdBy: adminId
     });
 
-    return content;
+    return hydrateContent(content);
   } catch (error) {
     // Clean up uploaded files if content creation fails
     await cleanupUploadedFiles(mediaUrls);
@@ -140,56 +181,61 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
     throw new Error('Content not found');
   }
 
-  // Upload new media files
+  // Transform new media files
+  const { transformFileToResponse } = require('../config/multerStorage');
   const mediaUrls = {};
 
   try {
-    // Upload poster if provided
+    // Transform poster if provided
     if (files.poster) {
       if (files.poster.size > FILE_SIZE_LIMITS.POSTER) {
         throw new Error('Poster file size too large');
       }
-      // Delete old poster
-      if (content.poster?.public_id) {
-        await deleteFromCloudinary(content.poster.public_id, 'image');
+      // Delete old poster from disk
+      if (content.poster?.url) {
+        const oldPath = getFilePathFromUrl(content.poster.url);
+        deleteFile(oldPath);
       }
-      mediaUrls.poster = await uploadToCloudinary(files.poster, 'poster');
+      mediaUrls.poster = transformFileToResponse(files.poster);
     }
 
-    // Upload backdrop if provided
+    // Transform backdrop if provided
     if (files.backdrop) {
       if (files.backdrop.size > FILE_SIZE_LIMITS.BACKDROP) {
         throw new Error('Backdrop file size too large');
       }
-      // Delete old backdrop
-      if (content.backdrop?.public_id) {
-        await deleteFromCloudinary(content.backdrop.public_id, 'image');
+      // Delete old backdrop from disk
+      if (content.backdrop?.url) {
+        const oldPath = getFilePathFromUrl(content.backdrop.url);
+        deleteFile(oldPath);
       }
-      mediaUrls.backdrop = await uploadToCloudinary(files.backdrop, 'backdrop');
+      mediaUrls.backdrop = transformFileToResponse(files.backdrop);
     }
 
-    // Upload video if provided
+    // Transform video if provided
     if (files.video) {
       if (files.video.size > FILE_SIZE_LIMITS.VIDEO) {
         throw new Error('Video file size too large');
       }
-      // Delete old video
-      if (content.video?.public_id) {
-        await deleteFromCloudinary(content.video.public_id, 'video');
+      // Delete old video from disk
+      if (content.video?.url) {
+        const oldPath = getFilePathFromUrl(content.video.url);
+        deleteFile(oldPath);
       }
-      mediaUrls.video = await uploadToCloudinary(files.video, 'video');
+      mediaUrls.video = transformFileToResponse(files.video);
     }
 
-    // Upload trailer if provided
+    // Transform trailer if provided
     if (files.trailer) {
       if (files.trailer.size > FILE_SIZE_LIMITS.TRAILER) {
         throw new Error('Trailer file size too large');
       }
-      // Delete old trailer
-      if (content.trailer?.public_id) {
-        await deleteFromCloudinary(content.trailer.public_id, 'video');
+      // Delete old trailer from disk
+      if (content.trailer?.url) {
+        const oldPath = getFilePathFromUrl(content.trailer.url);
+        deleteFile(oldPath);
       }
-      mediaUrls.trailer = await uploadToCloudinary(files.trailer, 'trailer');
+      mediaUrls.trailer = transformFileToResponse(files.trailer);
     }
 
     // Process episode videos
@@ -205,8 +251,8 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
           throw new Error(`Episode video (S${seasonIndex + 1}:E${episodeIndex + 1}) too large`);
         }
 
-        // Ideally check existing to delete, but skipping for now
-        const uploadResult = await uploadToCloudinary(videoFile, 'video');
+        // Transform episode video
+        const uploadResult = transformFileToResponse(videoFile);
 
         if (updateData.seasons && updateData.seasons[seasonIndex]) {
           if (!updateData.seasons[seasonIndex].episodes) {
@@ -224,7 +270,7 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
     content.updatedBy = adminId;
     await content.save();
 
-    return content;
+    return hydrateContent(content);
   } catch (error) {
     // Clean up newly uploaded files if update fails
     await cleanupUploadedFiles(mediaUrls);
@@ -240,19 +286,23 @@ const deleteContent = async (contentId) => {
     throw new Error('Content not found');
   }
 
-  // Delete media files from Cloudinary
+  // Delete media files from local disk
   try {
-    if (content.poster?.public_id) {
-      await deleteFromCloudinary(content.poster.public_id, 'image');
+    if (content.poster?.url) {
+      const path = getFilePathFromUrl(content.poster.url);
+      deleteFile(path);
     }
-    if (content.backdrop?.public_id) {
-      await deleteFromCloudinary(content.backdrop.public_id, 'image');
+    if (content.backdrop?.url) {
+      const path = getFilePathFromUrl(content.backdrop.url);
+      deleteFile(path);
     }
-    if (content.video?.public_id) {
-      await deleteFromCloudinary(content.video.public_id, 'video');
+    if (content.video?.url) {
+      const path = getFilePathFromUrl(content.video.url);
+      deleteFile(path);
     }
-    if (content.trailer?.public_id) {
-      await deleteFromCloudinary(content.trailer.public_id, 'video');
+    if (content.trailer?.url) {
+      const path = getFilePathFromUrl(content.trailer.url);
+      deleteFile(path);
     }
   } catch (error) {
     console.error('Error deleting media files:', error);
@@ -280,7 +330,7 @@ const toggleContentStatus = async (contentId, status) => {
   content.status = status;
   await content.save();
 
-  return content;
+  return hydrateContent(content);
 };
 
 // Get content analytics
@@ -320,17 +370,17 @@ const getContentAnalytics = async () => {
 // Clean up uploaded files (utility function)
 const cleanupUploadedFiles = async (mediaUrls) => {
   try {
-    if (mediaUrls.poster?.public_id) {
-      await deleteFromCloudinary(mediaUrls.poster.public_id, 'image');
+    if (mediaUrls.poster?.path) {
+      deleteFile(mediaUrls.poster.path);
     }
-    if (mediaUrls.backdrop?.public_id) {
-      await deleteFromCloudinary(mediaUrls.backdrop.public_id, 'image');
+    if (mediaUrls.backdrop?.path) {
+      deleteFile(mediaUrls.backdrop.path);
     }
-    if (mediaUrls.video?.public_id) {
-      await deleteFromCloudinary(mediaUrls.video.public_id, 'video');
+    if (mediaUrls.video?.path) {
+      deleteFile(mediaUrls.video.path);
     }
-    if (mediaUrls.trailer?.public_id) {
-      await deleteFromCloudinary(mediaUrls.trailer.public_id, 'video');
+    if (mediaUrls.trailer?.path) {
+      deleteFile(mediaUrls.trailer.path);
     }
   } catch (error) {
     console.error('Error cleaning up files:', error);

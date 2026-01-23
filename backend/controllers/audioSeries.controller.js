@@ -1,15 +1,33 @@
 const AudioSeries = require('../models/AudioSeries');
 
+// Helper to hydrate URLs
+const hydrateAudioSeries = (doc) => {
+    if (!doc) return doc;
+    const series = doc.toObject ? doc.toObject() : doc;
+    const backendUrl = process.env.BACKEND_URL;
+    const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+    if (series.coverImage) series.coverImage = getFullUrl(series.coverImage);
+    if (series.episodes && Array.isArray(series.episodes)) {
+        series.episodes.forEach(ep => {
+            if (ep.audioUrl) ep.audioUrl = getFullUrl(ep.audioUrl);
+        });
+    }
+    return series;
+};
+
 // @desc    Get all audio series
 // @route   GET /api/audio-series
 // @access  Public
 exports.getAllAudioSeries = async (req, res, next) => {
     try {
-        const series = await AudioSeries.find({ isActive: true }).sort('-createdAt');
+        const series = await AudioSeries.find({ isActive: true }).sort('-createdAt').lean();
+        const hydratedSeries = series.map(hydrateAudioSeries);
+
         res.status(200).json({
             success: true,
-            count: series.length,
-            data: series
+            count: hydratedSeries.length,
+            data: hydratedSeries
         });
     } catch (err) {
         next(err);
@@ -29,7 +47,7 @@ exports.getAudioSeries = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: series
+            data: hydrateAudioSeries(series)
         });
     } catch (err) {
         next(err);
@@ -44,7 +62,7 @@ exports.createAudioSeries = async (req, res, next) => {
         const series = await AudioSeries.create(req.body);
         res.status(201).json({
             success: true,
-            data: series
+            data: hydrateAudioSeries(series)
         });
     } catch (err) {
         next(err);
@@ -69,7 +87,7 @@ exports.updateAudioSeries = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: series
+            data: hydrateAudioSeries(series)
         });
     } catch (err) {
         next(err);
@@ -114,7 +132,7 @@ exports.addEpisode = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: series
+            data: hydrateAudioSeries(series)
         });
     } catch (err) {
         next(err);
@@ -137,7 +155,7 @@ exports.deleteEpisode = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: series
+            data: hydrateAudioSeries(series)
         });
     } catch (err) {
         next(err);

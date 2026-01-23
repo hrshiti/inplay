@@ -1,24 +1,10 @@
-const multer = require('multer');
 const contentService = require('../services/contentService');
 const { CONTENT_STATUS } = require('../constants');
+const { uploadMixed } = require('../config/multerStorage');
 
-// Configure multer for file uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB max
-    fieldSize: 25 * 1024 * 1024, // 25MB max for text fields (JSON data)
-    files: 300 // increased to allow many episodes (poster, backdrop, video, trailer + episodes)
-  },
-  fileFilter: (req, file, cb) => {
-    // Allow images and videos
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image and video files are allowed'));
-    }
-  }
-});
+// NOTE: Multer configuration is now in config/multerStorage.js
+// Files are automatically saved to disk by the uploadMixed middleware
+
 
 // @desc    Get all content
 // @route   GET /api/admin/content
@@ -75,7 +61,7 @@ const getContent = async (req, res) => {
 // @route   POST /api/admin/content
 // @access  Private (Admin only)
 const createContent = [
-  upload.any(), // Allow any files (dynamic names for episodes)
+  uploadMixed.any(), // Allow any files (dynamic names for episodes)
   async (req, res) => {
     try {
       // Parse JSON data if sent as string in 'data' field (common in FormData)
@@ -150,7 +136,7 @@ const createContent = [
 // @route   PUT /api/admin/content/:id
 // @access  Private (Admin only)
 const updateContent = [
-  upload.any(),
+  uploadMixed.any(),
   async (req, res) => {
     try {
       // Parse JSON data if sent as string in 'data' field

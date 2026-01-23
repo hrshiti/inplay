@@ -20,7 +20,15 @@ const generateStreamingUrl = async (contentId, userId, quality = 'HD') => {
   const expiryMinutes = STREAM_EXPIRY_MINUTES;
   const expiryTime = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
 
-  const streamUrl = generateHLSUrl(content.video.public_id);
+  const backendUrl = process.env.BACKEND_URL;
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
+  let streamUrl;
+  if (content.video.url && content.video.url.startsWith('/')) {
+    streamUrl = `${backendUrl}${content.video.url}`;
+  } else {
+    streamUrl = generateHLSUrl(content.video.public_id);
+  }
 
   // Update view count (only count unique views per user per content)
   await updateViewCount(contentId, userId);
@@ -32,8 +40,8 @@ const generateStreamingUrl = async (contentId, userId, quality = 'HD') => {
       title: content.title,
       type: content.type,
       duration: content.video.duration,
-      poster: content.poster?.secure_url,
-      backdrop: content.backdrop?.secure_url
+      poster: getFullUrl(content.poster?.secure_url),
+      backdrop: getFullUrl(content.backdrop?.secure_url)
     },
     expiresIn: expiryMinutes * 60, // seconds
     accessType: accessCheck.accessType
@@ -121,6 +129,9 @@ const getStreamingInfo = async (contentId, userId) => {
 
   const content = await Content.findById(contentId).select('title type video poster backdrop');
 
+  const backendUrl = process.env.BACKEND_URL;
+  const getFullUrl = (url) => url && url.startsWith('/') ? `${backendUrl}${url}` : url;
+
   return {
     canStream: true,
     content: {
@@ -128,8 +139,8 @@ const getStreamingInfo = async (contentId, userId) => {
       title: content.title,
       type: content.type,
       duration: content.video?.duration,
-      poster: content.poster?.secure_url,
-      backdrop: content.backdrop?.secure_url,
+      poster: getFullUrl(content.poster?.secure_url),
+      backdrop: getFullUrl(content.backdrop?.secure_url),
       hasVideo: !!content.video?.public_id
     },
     accessType: accessCheck.accessType

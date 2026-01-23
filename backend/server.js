@@ -4,9 +4,14 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const multer = require("multer");
+const path = require("path");
 
 // Load environment variables FIRST
 require('dotenv').config();
+
+const PORT = process.env.PORT || 5001;
+const BACKEND_URL = process.env.BACKEND_URL;
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
@@ -109,9 +114,74 @@ app.use('/api/audio-series', audioSeriesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/promotions', require('./routes/promotionRoutes'));
 
-// SERVE STATIC FILES (For Local Uploads)
-app.use('/uploads', express.static('public/uploads'));
+// SERVE STATIC FILES - All uploaded media (images, videos, audio)
+// Files are stored in backend/uploads/ and served at /uploads/ URL path
+// This makes files publicly accessible via: http://localhost:5001/uploads/...
+// const path = require('path'); // Already imported at top
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// -------------------
+// Multer Storage Setup
+// -------------------
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    if (file.mimetype.startsWith("image"))
+      cb(null, path.join(__dirname, "uploads/images"));
+    else if (file.mimetype.startsWith("video"))
+      cb(null, path.join(__dirname, "uploads/videos"));
+    else if (file.mimetype.startsWith("audio"))
+      cb(null, path.join(__dirname, "uploads/audio"));
+    else
+      cb(new Error("Unsupported file type"), null);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
+});
+
+const upload = multer({ storage });
+
+// -------------------
+// Upload Route
+// -------------------
+app.post("/upload", upload.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).send("No file uploaded");
+
+  // Generate relative path
+  // Safeguard: use relative path from project root if 'backend/' isn't in path
+  let relativePath = req.file.path;
+  if (req.file.path.includes("backend")) {
+    relativePath = req.file.path.split("backend")[1].replace(/\\/g, "/");
+    // Ensure leading slash if missing after split
+    if (!relativePath.startsWith('/')) relativePath = '/' + relativePath;
+  } else {
+    // Fallback relative to uploads if backend folder name differs
+    relativePath = "/uploads/" + req.file.path.split("uploads")[1].replace(/\\/g, "/");
+  }
+
+  // Clean up relative path double slashes if any
+  relativePath = relativePath.replace('//', '/');
+
+
+  // Generate full URL
+  const fileUrl = `${BACKEND_URL}/uploads/${req.file.path.split("uploads")[1].replace(/\\/g, "/")}`;
+
+  res.json({
+    message: "File uploaded successfully",
+    relativePath,
+    url: fileUrl
+  });
+});
+
+// -------------------
+// Test route for hydration
+// -------------------
+app.get("/test-upload", (req, res) => {
+  res.json({
+    exampleRelative: "/uploads/images/example.jpg",
+    exampleUrl: `${BACKEND_URL}/uploads/images/example.jpg`
+  });
+});
 
 
 // 404 handler
@@ -225,7 +295,7 @@ const startServer = async () => {
   // Start scheduled tasks
   startScheduledTasks();
 
-  const PORT = process.env.PORT || 5000;
+  // Port is defined globally at the top
   const server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     console.log('Scheduled tasks started');

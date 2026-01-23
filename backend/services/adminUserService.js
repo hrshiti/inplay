@@ -33,12 +33,16 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
     .populate('subscription.plan', 'name price')
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .lean();
 
   const total = await User.countDocuments(query);
 
+  // Hydrate users
+  const hydratedUsers = users.map(user => hydrateUser(user));
+
   return {
-    users,
+    users: hydratedUsers,
     pagination: {
       page,
       limit,
@@ -46,6 +50,17 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
       pages: Math.ceil(total / limit)
     }
   };
+};
+
+// Helper to hydrate users
+const hydrateUser = (doc) => {
+  if (!doc) return doc;
+  const user = doc.toObject ? doc.toObject() : doc;
+  const backendUrl = process.env.BACKEND_URL;
+  if (user.avatar && user.avatar.startsWith('/')) {
+    user.avatar = `${backendUrl}${user.avatar}`;
+  }
+  return user;
 };
 
 // Get user by ID
@@ -60,7 +75,7 @@ const getUserById = async (userId) => {
     throw new Error('User not found');
   }
 
-  return user;
+  return hydrateUser(user);
 };
 
 // Update user status
@@ -74,7 +89,7 @@ const updateUserStatus = async (userId, isActive) => {
   user.isActive = isActive;
   await user.save();
 
-  return user;
+  return hydrateUser(user);
 };
 
 // Get user analytics
@@ -160,7 +175,7 @@ const updateUserSubscription = async (userId, subscriptionData) => {
 
   await user.save();
 
-  return user;
+  return hydrateUser(user);
 };
 
 // Delete user (admin action)

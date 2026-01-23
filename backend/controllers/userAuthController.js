@@ -1,23 +1,7 @@
 const { validationResult } = require('express-validator');
-const multer = require('multer');
 const userAuthService = require('../services/userAuthService');
 const { sendTokenResponse } = require('../middlewares/auth');
-const { uploadToCloudinary } = require('../config/cloudinary');
-
-// Configure multer for avatar upload
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB max
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+const { uploadAvatar, transformFileToResponse } = require('../config/multerStorage');
 
 // @desc    Register new user
 // @route   POST /api/user/auth/register
@@ -255,8 +239,8 @@ const getWatchHistory = async (req, res) => {
 // @desc    Update user avatar
 // @route   PUT /api/user/auth/avatar
 // @access  Private
-const uploadAvatar = [
-  upload.single('avatar'),
+const uploadAvatarHandler = [
+  uploadAvatar.single('avatar'),
   async (req, res) => {
     try {
       if (!req.file) {
@@ -266,8 +250,8 @@ const uploadAvatar = [
         });
       }
 
-      // Upload to Cloudinary
-      const result = await uploadToCloudinary(req.file, 'avatar');
+      // Transform uploaded file (already saved by multer)
+      const result = transformFileToResponse(req.file);
 
       // Update user avatar in DB
       const user = await userAuthService.updateUserAvatar(req.user._id, result.secure_url);
@@ -333,7 +317,7 @@ module.exports = {
   loginUser,
   getUserProfile,
   updateUserProfile,
-  uploadAvatar,
+  uploadAvatar: uploadAvatarHandler,
   changeUserPassword,
   updateUserPreferences,
   addToMyList,
