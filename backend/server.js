@@ -67,6 +67,9 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
+// Debugging: Log allowed origins on startup
+console.log('✅ Allowed CORS Origins:', allowedOrigins);
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -75,8 +78,9 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('Blocked by CORS:', origin); // Log for debugging
-      callback(new Error('Not allowed by CORS'));
+      console.error(`❌ BLOCKED BY CORS: '${origin}'`); // Use console.error to ensure it shows in logs
+      console.error(`   - Allowed: ${JSON.stringify(allowedOrigins)}`);
+      callback(new Error(`Not allowed by CORS (Origin: ${origin})`));
     }
   },
   credentials: true
