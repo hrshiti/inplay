@@ -900,7 +900,7 @@ function App() {
                                     zIndex: 2
                                   }}>
                                     <img
-                                      src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image}
+                                      src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
                                       alt={movie.title}
                                       style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
                                       onError={(e) => { e.target.src = `https://placehold.co/240x160/111/FFF?text=${movie.title?.substring(0, 10)}` }}
@@ -964,7 +964,7 @@ function App() {
                                 >
                                   <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
                                     <img
-                                      src={show.image}
+                                      src={getImageUrl(show.image)}
                                       alt={show.title}
                                       className="poster-img"
                                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1402,7 +1402,7 @@ function App() {
                                 >
                                   <div className="poster-container">
                                     <img
-                                      src={movie.poster?.url || movie.image}
+                                      src={getImageUrl(movie.poster?.url || movie.image)}
                                       onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
                                       alt={movie.title}
                                       className="poster-img"

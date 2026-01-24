@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Mic, Music, Play, X, Save, Upload, ArrowLeft, Clock } from 'lucide-react';
 import axios from 'axios';
+import { getImageUrl } from '../../../../utils/imageUtils';
 
 // --- API Service (inline for simplicity or move to services/api.js) ---
 const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api') + '/audio-series';
@@ -105,7 +106,7 @@ const AudioSeriesPage = () => {
                         }}>
                             <div style={{ height: '160px', overflow: 'hidden', position: 'relative' }}>
                                 <img
-                                    src={series.coverImage || 'https://placehold.co/600x400?text=Audio+Series'}
+                                    src={getImageUrl(series.coverImage) || 'https://placehold.co/600x400?text=Audio+Series'}
                                     alt={series.title}
                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 />
@@ -304,7 +305,7 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
                         </div>
                         {loadingAudio && <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Uploading...</div>}
                         {formData.coverImage && (
-                            <img src={formData.coverImage} alt="Preview" style={{ width: '100px', height: '150px', objectFit: 'cover', marginTop: '10px', borderRadius: '8px' }} />
+                            <img src={getImageUrl(formData.coverImage)} alt="Preview" style={{ width: '100px', height: '150px', objectFit: 'cover', marginTop: '10px', borderRadius: '8px' }} />
                         )}
                     </div>
 

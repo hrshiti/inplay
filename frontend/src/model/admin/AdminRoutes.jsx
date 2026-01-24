@@ -15,6 +15,7 @@ import adminMonetizationService from '../../services/api/adminMonetizationServic
 import ForYouReels from './ForYouReels';
 import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
 import AdPromotionPage from './pages/AdPromotionPage';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -208,7 +209,7 @@ const ContentLibrary = () => {
   });
 
   const columns = [
-    { key: 'image', label: 'Poster', sortable: false, render: (value, row) => <img src={row.poster?.url || row.image} alt="poster" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} /> },
+    { key: 'image', label: 'Poster', sortable: false, render: (value, row) => <img src={getImageUrl(row.poster?.url || row.image)} alt="poster" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} /> },
     { key: 'title', label: 'Title', sortable: true },
     { key: 'type', label: 'Type', sortable: true },
     { key: 'genre', label: 'Genre', sortable: true },
@@ -357,7 +358,7 @@ const ContentLibrary = () => {
             <h2 style={{ marginBottom: '16px', fontSize: '1.5rem', fontWeight: 'bold' }}>{selectedContent.title}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <img src={selectedContent.poster?.url || selectedContent.image} alt="Poster" style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }} />
+                <img src={getImageUrl(selectedContent.poster?.url || selectedContent.image)} alt="Poster" style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }} />
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {selectedContent.genre?.map(g => <span key={g} style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{g}</span>)}
                 </div>
@@ -427,7 +428,7 @@ const Users = () => {
       // Map backend data to table format
       const mappedUsers = data.map(user => ({
         id: user._id,
-        avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
+        avatar: getImageUrl(user.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
         name: user.name,
         email: user.email,
         plan: user.subscription?.plan?.name || 'Free',
@@ -463,7 +464,7 @@ const Users = () => {
   const columns = [
     {
       key: 'avatar', label: 'Avatar', sortable: false, render: (value) => (
-        <img src={value} alt="Avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+        <img src={getImageUrl(value)} alt="Avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
       )
     },
     { key: 'name', label: 'Name', sortable: true },
@@ -624,7 +625,7 @@ const Users = () => {
             <div style={{ padding: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                 <img
-                  src={selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=random&color=fff`}
+                  src={getImageUrl(selectedUser.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=random&color=fff`}
                   alt="User"
                   style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #46d369' }}
                 />
@@ -784,7 +785,7 @@ const Monetization = () => {
     {
       key: 'title', label: 'Content Title', sortable: true, render: (val, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src={row.poster} alt="" style={{ width: '30px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
+          <img src={getImageUrl(row.poster)} alt="" style={{ width: '30px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
           <span>{val}</span>
         </div>
       )
@@ -1299,7 +1300,7 @@ const QuickBites = () => {
     {
       key: 'poster', label: 'Preview', sortable: false, render: (value, row) => {
         // Handle various possible image structures
-        const imgUrl = value?.url || value || row.thumbnail?.url || row.thumbnail || row.image?.url || row.image;
+        const imgUrl = getImageUrl(value?.url || value || row.thumbnail?.url || row.thumbnail || row.image?.url || row.image);
         return <img src={imgUrl} alt="Thumb" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} onError={(e) => { e.target.style.display = 'none'; }} />
       }
     },

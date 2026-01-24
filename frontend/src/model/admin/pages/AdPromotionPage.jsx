@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Upload, X, Trash2, Edit, Plus, Save, Loader } from 'lucide-react';
 import promotionService from '../../../services/api/promotionService';
 import uploadService from '../../../services/api/uploadService';
+import { getImageUrl } from '../../../utils/imageUtils';
 
 const AdPromotionPage = () => {
     const [promotions, setPromotions] = useState([]);
@@ -186,7 +187,7 @@ const AdPromotionPage = () => {
                             <div key={promo._id} style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', position: 'relative' }}>
                                 <div style={{ height: '160px', overflow: 'hidden', position: 'relative', background: '#000' }}>
                                     {promo.posterImageUrl && (
-                                        <img src={promo.posterImageUrl} alt={promo.title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: promo.promoVideoUrl ? 0.7 : 1 }} />
+                                        <img src={getImageUrl(promo.posterImageUrl)} alt={promo.title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: promo.promoVideoUrl ? 0.7 : 1 }} />
                                     )}
                                     <div style={{ position: 'absolute', top: '10px', right: '10px', background: promo.isActive ? '#059669' : '#dc2626', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', zIndex: 10 }}>
                                         {promo.isActive ? 'Active' : 'Inactive'}
@@ -231,7 +232,7 @@ const AdPromotionPage = () => {
                             <div style={{ border: '2px dashed #d1d5db', padding: '20px', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
                                 {formData.posterImageUrl ? (
                                     <div style={{ position: 'relative', width: '100%', height: '200px' }}>
-                                        <img src={formData.posterImageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        <img src={getImageUrl(formData.posterImageUrl)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                         <button
                                             type="button"
                                             onClick={(e) => {
