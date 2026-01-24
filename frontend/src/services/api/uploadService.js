@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_Base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 const API_URL = `${API_Base}/upload`;
 
 const uploadFile = async (file, type = 'image') => {

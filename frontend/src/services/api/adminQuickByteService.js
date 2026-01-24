@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
 const adminQuickByteService = {
     // Fetch all Quick Bites (using new dedicated model)
