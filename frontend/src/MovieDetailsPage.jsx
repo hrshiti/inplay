@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { MOVIES } from './data';
+import { getImageUrl } from './utils/imageUtils';
 
 export default function MovieDetailsPage({
     movie,
@@ -75,7 +76,7 @@ export default function MovieDetailsPage({
             {/* Hero Backdrop */}
             <div style={{ position: 'relative', height: '35vh', width: '100%' }}>
                 <img
-                    src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image}
+                    src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
                     alt={movie.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => { e.target.src = `https://placehold.co/1200x675/111/FFF?text=${movie.title}` }}
@@ -307,7 +308,7 @@ export default function MovieDetailsPage({
                                         >
                                             <div style={{ position: 'relative', width: '120px', height: '68px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                                                 <img
-                                                    src={ep.image || movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image}
+                                                    src={getImageUrl(ep.image || movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
                                                     alt={ep.title}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     onError={(e) => { e.target.src = `https://placehold.co/300x170/333/FFF?text=Ep` }}
@@ -349,7 +350,7 @@ export default function MovieDetailsPage({
                                             style={{ aspectRatio: '2/3', background: '#222', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}
                                         >
                                             <img
-                                                src={item.poster?.url || item.image}
+                                                src={getImageUrl(item.poster?.url || item.image)}
                                                 alt={item.title}
                                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 onError={(e) => { e.target.src = `https://placehold.co/300x450/222/FFF?text=${item.title}` }}

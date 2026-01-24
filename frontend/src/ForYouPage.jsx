@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause, ArrowLeft, Send, X, Trash2 } from 'lucide-react';
+import { getImageUrl } from './utils/imageUtils';
 import { io } from 'socket.io-client';
 import contentService from './services/api/contentService';
 import authService from './services/api/authService';
@@ -192,7 +193,7 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
 
     const [currentEpIndex, setCurrentEpIndex] = useState(0);
     const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
-    const currentVideoSrc = episodes[currentEpIndex]?.url || '';
+    const currentVideoSrc = getImageUrl(episodes[currentEpIndex]?.url) || '';
 
     // Reset episode index when reel changes or comes into view? 
     // Usually standard reels just play from start.
@@ -273,7 +274,7 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
             <div style={{ position: 'absolute', bottom: '20px', left: '16px', right: '80px', color: 'white', zIndex: 20, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                     {/* Placeholder Avatar if none */}
-                    <img src={reel.thumbnail?.url || 'https://via.placeholder.com/40'} alt="User" style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px', border: '2px solid white' }} />
+                    <img src={getImageUrl(reel.thumbnail?.url) || 'https://via.placeholder.com/40'} alt="User" style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px', border: '2px solid white' }} />
                     <h4 style={{ margin: 0 }}>InPlay Official <span style={{ fontWeight: 400, opacity: 0.8 }}>• Follow</span></h4>
                 </div>
                 <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', lineHeight: '1.4' }}>{reel.title} {reel.description}</p>
@@ -427,7 +428,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
         return (
             <div key={comment._id} style={{ display: 'flex', gap: '14px', marginBottom: isReply ? '16px' : '24px', marginLeft: isReply ? '44px' : '0', position: 'relative', animation: 'fadeIn 0.4s ease' }}>
                 <img
-                    src={comment.user?.avatar || `https://ui-avatars.com/api/?name=${comment.user?.name || 'User'}&background=random&color=fff`}
+                    src={getImageUrl(comment.user?.avatar) || `https://ui-avatars.com/api/?name=${comment.user?.name || 'User'}&background=random&color=fff`}
                     style={{ width: isReply ? '28px' : '40px', height: isReply ? '28px' : '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #f0f0f0' }}
                 />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>

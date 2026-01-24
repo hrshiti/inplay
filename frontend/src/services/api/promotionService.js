@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_Base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+// Remove trailing slash if exists and ensure /api suffix
+const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 const API_URL = `${API_Base}/promotions`;
 
 // Get active promotions (Public)

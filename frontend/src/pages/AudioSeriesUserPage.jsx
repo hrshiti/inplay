@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Play, Pause, SkipBack, SkipForward, X, Mic, Heart, Clock, ChevronLeft } from 'lucide-react';
+import { getImageUrl } from '../utils/imageUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api') + '/audio-series';
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+// Remove trailing slash if exists and ensure /api suffix
+const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
+const API_URL = API_Base + '/audio-series';
 
 export default function AudioSeriesUserPage({ onBack }) {
     const [seriesList, setSeriesList] = useState([]);
@@ -25,7 +29,7 @@ export default function AudioSeriesUserPage({ onBack }) {
     // Audio Playback Effect
     useEffect(() => {
         if (currentEpisode && audioRef.current) {
-            audioRef.current.src = currentEpisode.audioUrl;
+            audioRef.current.src = getImageUrl(currentEpisode.audioUrl);
             audioRef.current.volume = 1.0;
             audioRef.current.play()
                 .then(() => setIsPlaying(true))
@@ -84,7 +88,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                         {seriesList.map(series => (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer' }}>
                                 <div style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px' }}>
-                                    <img src={series.coverImage} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '50%' }}>
                                         <Play fill="white" size={16} />
                                     </div>
@@ -102,7 +106,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                     </button>
 
                     <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                        <img src={selectedSeries.coverImage} alt={selectedSeries.title} style={{ width: '140px', height: '140px', borderRadius: '12px', objectFit: 'cover' }} />
+                        <img src={getImageUrl(selectedSeries.coverImage)} alt={selectedSeries.title} style={{ width: '140px', height: '140px', borderRadius: '12px', objectFit: 'cover' }} />
                         <div style={{ flex: 1 }}>
                             <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '8px' }}>{selectedSeries.title}</h1>
                             <p style={{ color: '#ccc', fontSize: '0.9rem', lineHeight: '1.4', marginBottom: '16px' }}>{selectedSeries.description}</p>
@@ -172,7 +176,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                     >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <img src={currentEpisode.coverImage} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
+                                <img src={getImageUrl(currentEpisode.coverImage)} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
                                 <div>
                                     <div style={{ fontSize: '0.9rem', fontWeight: 'bold', width: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {currentEpisode.title}

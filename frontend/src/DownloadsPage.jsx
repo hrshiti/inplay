@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Download, Trash2, Play, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MY_SPACE_DATA } from './data';
+import { getImageUrl } from './utils/imageUtils';
 
 export default function DownloadsPage({ onMovieClick }) {
     const navigate = useNavigate();
@@ -68,7 +69,7 @@ export default function DownloadsPage({ onMovieClick }) {
                         {/* Thumbnail */}
                         <div style={{ width: '100px', height: '60px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                             <img
-                                src={item.backdrop || item.image}
+                                src={getImageUrl(item.backdrop || item.image)}
                                 alt={item.title}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

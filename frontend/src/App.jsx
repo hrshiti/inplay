@@ -39,6 +39,7 @@ import paymentService from './services/api/paymentService';
 import AdPromotionPage from './model/admin/pages/AdPromotionPage';
 import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
+import { getImageUrl } from './utils/imageUtils';
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -755,7 +756,7 @@ function App() {
                                     else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length)
                                   }}
                                 >
-                                  <img src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image} alt={movie.title} className="hero-image" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                                  <img src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)} alt={movie.title} className="hero-image" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
 
                                   <div className="hero-overlay" style={{
                                     background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.8) 40%, transparent 100%)',
@@ -1052,7 +1053,7 @@ function App() {
                                       border: '1px solid rgba(255,255,255,0.1)'
                                     }}>
                                       <img
-                                        src={verticalItem.image}
+                                        src={getImageUrl(verticalItem.image)}
                                         alt={verticalItem.title}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                       />
@@ -1139,7 +1140,7 @@ function App() {
                                       border: '1px solid rgba(255,255,255,0.1)'
                                     }}>
                                       <img
-                                        src={image}
+                                        src={getImageUrl(image)}
                                         alt={item.title}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                       />
@@ -1243,7 +1244,7 @@ function App() {
                               >
                                 <div className="poster-container">
                                   <img
-                                    src={movie.poster?.url || movie.image}
+                                    src={getImageUrl(movie.poster?.url || movie.image)}
                                     onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
                                     alt={movie.title}
                                     className="poster-img"
@@ -1281,7 +1282,7 @@ function App() {
                               >
                                 <div className="poster-container">
                                   <img
-                                    src={movie.poster?.url || movie.image}
+                                    src={getImageUrl(movie.poster?.url || movie.image)}
                                     onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
                                     alt={movie.title}
                                     className="poster-img"
@@ -1320,7 +1321,7 @@ function App() {
                               >
                                 <div className="song-poster-container">
                                   <img
-                                    src={song.poster?.url || song.image}
+                                    src={getImageUrl(song.poster?.url || song.image)}
                                     onError={(e) => { e.target.src = `https://placehold.co/300x300/111/FFF?text=${song.title}` }}
                                     alt={song.title}
                                     className="poster-img"
@@ -1360,7 +1361,7 @@ function App() {
                               >
                                 <div className="poster-container">
                                   <img
-                                    src={movie.poster?.url || movie.image}
+                                    src={getImageUrl(movie.poster?.url || movie.image)}
                                     onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
                                     alt={movie.title}
                                     className="poster-img"
@@ -1440,7 +1441,7 @@ function App() {
                               >
                                 <div className="poster-container">
                                   <img
-                                    src={movie.poster?.url || movie.image}
+                                    src={getImageUrl(movie.poster?.url || movie.image)}
                                     onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
                                     alt={movie.title}
                                     className="poster-img"
@@ -1784,7 +1785,7 @@ function HeroSlide({ movie, onClick }) {
       <div style={{ position: 'absolute', inset: 0 }}>
         {/* Background Image */}
         <motion.img
-          src={movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image}
+          src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
           alt={movie.title}
           className="hero-image"
           style={{ objectFit: 'cover', width: '100%', height: '100%', position: 'absolute', inset: 0 }}
@@ -1906,7 +1907,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
             <div key={item.id} className="original-card" onClick={() => setSelectedMovie(item)}>
               <div className="original-poster">
                 <img
-                  src={item.poster?.url || item.image}
+                  src={getImageUrl(item.poster?.url || item.image)}
                   alt={item.title}
                   onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${item.title}` }}
                 />
@@ -1997,7 +1998,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
           <div key={item.id} className="hottest-card" onClick={() => setSelectedMovie(item)}>
             <div className="hottest-poster">
               <img
-                src={item.poster?.url || item.image}
+                src={getImageUrl(item.poster?.url || item.image)}
                 alt={item.title}
                 onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${item.title}` }}
               />
@@ -2047,7 +2048,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedMovie(movie)}
             >
-              <img src={movie.poster?.url || movie.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }} />
+              <img src={getImageUrl(movie.poster?.url || movie.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }} />
               <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
               </div>

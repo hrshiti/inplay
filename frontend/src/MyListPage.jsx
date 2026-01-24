@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Trash2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from './utils/imageUtils';
 
 export default function MyListPage({ myList, onMovieClick }) {
     const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function MyListPage({ myList, onMovieClick }) {
                             marginBottom: '8px'
                         }}>
                             <img
-                                src={movie.image}
+                                src={getImageUrl(movie.image || movie.poster?.url)}
                                 alt={movie.title}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}

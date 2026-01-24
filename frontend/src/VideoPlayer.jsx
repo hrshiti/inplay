@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, Plus, Check, ThumbsUp, Download } from 'lucide-react';
 import contentService from './services/api/contentService';
+import { getImageUrl } from './utils/imageUtils';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
     // User logic: Playing all content as movie content (Standard Landscape Player)
@@ -38,12 +39,14 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     // Helper to get URL dynamically
     const getVideoUrl = (item) => {
         if (!item) return '';
+        let url = '';
         // QuickByte episode (direct url field)
-        if (item.url && !item.video) return item.url;
+        if (item.url && !item.video) url = item.url;
         // Standard video object structure
-        if (typeof item.video === 'string') return item.video;
-        if (item.video?.url) return item.video.url;
-        return '';
+        else if (typeof item.video === 'string') url = item.video;
+        else if (item.video?.url) url = item.video.url;
+
+        return getImageUrl(url);
     };
 
     const videoSrc = getVideoUrl(currentItem);
@@ -531,7 +534,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 >
                                     <div style={{ width: '120px', height: '68px', background: '#333', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
                                         <img
-                                            src={ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image}
+                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image)}
                                             alt={ep.title}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => e.target.style.display = 'none'}
@@ -657,7 +660,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 >
                                     <div style={{ width: '120px', height: '68px', background: '#333', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
                                         <img
-                                            src={ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image}
+                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image)}
                                             alt={ep.title}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => e.target.style.display = 'none'}
@@ -820,7 +823,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 >
                                     <div style={{ width: '130px', height: '74px', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                                         <img
-                                            src={ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image}
+                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image)}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => e.target.style.display = 'none'}
                                         />

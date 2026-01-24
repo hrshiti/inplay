@@ -4,6 +4,7 @@ import { ArrowLeft, Search, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import contentService from './services/api/contentService'; // Add import
+import { getImageUrl } from './utils/imageUtils';
 
 const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch it
     const [query, setQuery] = useState('');
@@ -123,7 +124,7 @@ const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch
                                     background: '#333'
                                 }}>
                                     <img
-                                        src={item.backdrop?.url || item.backdrop || item.poster?.url || item.image || 'https://placehold.co/160x90/222/FFF'}
+                                        src={getImageUrl(item.backdrop?.url || item.backdrop || item.poster?.url || item.image) || 'https://placehold.co/160x90/222/FFF'}
                                         alt={item.title}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />

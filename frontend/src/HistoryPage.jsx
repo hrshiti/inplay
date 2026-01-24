@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Clock, Play, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from './utils/imageUtils';
 
 export default function HistoryPage({ onMovieClick, watchHistory = [] }) {
     const navigate = useNavigate();
@@ -78,7 +79,7 @@ export default function HistoryPage({ onMovieClick, watchHistory = [] }) {
                         {/* Thumbnail */}
                         <div style={{ width: '140px', height: '80px', position: 'relative', flexShrink: 0 }}>
                             <img
-                                src={item.poster?.url || item.thumbnail?.url || item.backdrop || item.image}
+                                src={getImageUrl(item.poster?.url || item.thumbnail?.url || item.backdrop || item.image)}
                                 alt={item.title}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => { e.target.src = "https://placehold.co/140x80/222/FFF?text=InPlay" }}

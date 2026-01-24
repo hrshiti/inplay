@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { getImageUrl } from './utils/imageUtils';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Download, ChevronRight, Settings, User, Plus, ThumbsUp, Play } from 'lucide-react';
@@ -31,7 +32,7 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
                 >
                     <div style={{ position: 'relative' }}>
                         <img
-                            src={userAvatar}
+                            src={getImageUrl(userAvatar)}
                             alt="Profile"
                             style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)', objectFit: 'cover' }}
                         />
@@ -161,7 +162,7 @@ function SpaceCard({ item, type, onClick }) {
                 position: 'relative'
             }}>
                 <img
-                    src={item.thumbnail?.url || item.poster?.url || item.backdrop || item.image}
+                    src={getImageUrl(item.thumbnail?.url || item.poster?.url || item.backdrop || item.image)}
                     onError={(e) => { e.target.src = "https://placehold.co/110x160/222/FFF?text=No+Image" }}
                     alt={item.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isPoster ? 1 : 0.8 }}
@@ -206,7 +207,7 @@ function DownloadRow({ item, onClick }) {
             }}
         >
             <div style={{ width: '80px', height: '50px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-                <img src={item.backdrop || item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getImageUrl(item.backdrop || item.image)} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '0.95rem', marginBottom: '4px' }}>{item.title}</h4>

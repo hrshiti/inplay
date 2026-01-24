@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Volume2, VolumeX } from 'lucide-react';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const AdCarousel = ({ promotions }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -37,8 +38,8 @@ const AdCarousel = ({ promotions }) => {
                         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                             <video
                                 ref={videoRef}
-                                src={currentPromo.promoVideoUrl}
-                                poster={currentPromo.posterImageUrl}
+                                src={getImageUrl(currentPromo.promoVideoUrl)}
+                                poster={getImageUrl(currentPromo.posterImageUrl)}
                                 autoPlay
                                 muted={isMuted}
                                 loop
@@ -65,7 +66,7 @@ const AdCarousel = ({ promotions }) => {
                         </div>
                     ) : (
                         <img
-                            src={currentPromo.posterImageUrl}
+                            src={getImageUrl(currentPromo.posterImageUrl)}
                             alt={currentPromo.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => { e.target.src = `https://placehold.co/800x450/111/FFF?text=${currentPromo.title}` }}
