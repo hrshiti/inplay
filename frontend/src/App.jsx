@@ -40,6 +40,7 @@ import AdPromotionPage from './model/admin/pages/AdPromotionPage';
 import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
 import { getImageUrl } from './utils/imageUtils';
+import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission } from './services/pushNotificationService';
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -301,6 +302,29 @@ function App() {
     navigate(`/${slug}`);
   };
   const heroRef = useRef(null);
+
+  useEffect(() => {
+    // Initialize push notifications
+    const initNotifications = async () => {
+      try {
+        const granted = await requestNotificationPermission();
+        if (granted && currentUser) {
+          await registerFCMTokenWithBackend();
+        }
+      } catch (err) {
+        console.error('Notification init error:', err);
+      }
+    };
+
+    initNotifications();
+
+    // Setup foreground notification handler
+    setupForegroundNotificationHandler((payload) => {
+      if (payload.notification) {
+        showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
+      }
+    });
+  }, [currentUser]);
 
   const showToast = (message) => {
     setToast(message);

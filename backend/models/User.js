@@ -116,6 +116,15 @@ const userSchema = new mongoose.Schema({
       updates: { type: Boolean, default: true }
     }
   },
+  // FCM Tokens for Push Notifications at root level
+  fcm_web: {
+    type: [String],
+    default: []
+  },
+  fcm_mobile: {
+    type: [String],
+    default: []
+  },
   downloads: [{
     content: {
       type: mongoose.Schema.Types.ObjectId,

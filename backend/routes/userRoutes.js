@@ -29,6 +29,8 @@ router.delete('/auth/my-list/:contentId', userAuthController.removeFromMyList);
 router.post('/auth/like/:contentId', userAuthController.toggleLike);
 router.get('/auth/watch-history', userAuthController.getWatchHistory);
 router.post('/auth/logout', userAuthController.logoutUser);
+router.post('/auth/fcm-token', userAuthController.saveFCMToken);
+router.delete('/auth/fcm-token', userAuthController.removeFCMToken);
 
 // Content routes
 router.get('/my-list', userContentController.getMyList);
