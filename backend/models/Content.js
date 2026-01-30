@@ -19,6 +19,14 @@ const contentSchema = new mongoose.Schema({
   dynamicTabs: [{
     type: String
   }],
+  dynamicTabId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tab'
+  },
+  dynamicCategoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
+  },
   category: {
     type: String,
     default: 'General'
@@ -68,7 +76,22 @@ const contentSchema = new mongoose.Schema({
     required: [true, 'Please add release year']
   },
   director: [String],
-  cast: [String],
+  cast: {
+    type: String, // Changed to String to match frontend input
+    default: ''
+  },
+  producer: {
+    type: String,
+    default: ''
+  },
+  production: {
+    type: String,
+    default: ''
+  },
+  releaseDate: {
+    type: Date,
+    default: null
+  },
   // Series specific fields
   seasons: [{
     seasonNumber: {

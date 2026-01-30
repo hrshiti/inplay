@@ -37,14 +37,15 @@
   padding: 0 24px;
   margin-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(10, 10, 10, 0.95);
-  /* High opacity background */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #0b1120;
+  /* Match Header Background */
   position: sticky;
-  top: 0;
+  top: 59px;
+  /* Overlap by 1px to close any gap */
   z-index: 9999;
-  padding-top: 10px;
+  padding-top: 0;
+  margin-top: 0;
+  /* Removed gap */
 }
 
 /* ... (skipped category tab styles) ... */
@@ -80,6 +81,8 @@
   padding-bottom: 10px;
   position: relative;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .category-tab.active {
@@ -720,4 +723,93 @@
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* MX Style Header */
+.mx-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background-color: #0b1120;
+  position: sticky;
+  top: 0;
+  z-index: 10000;
+  box-shadow: none;
+  /* Removed shadow to remove "cap" look */
+  height: 60px;
+  /* Fixed height for calculations */
+  box-sizing: border-box;
+  margin-bottom: 0px;
+  /* Ensure no margin */
+}
+
+.mx-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+}
+
+.brand-primary {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #e50914;
+  /* Red */
+  letter-spacing: 0.5px;
+  font-style: normal;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+  /* Outfit */
+}
+
+.brand-divider {
+  color: #888;
+  font-size: 1.4rem;
+  font-weight: 300;
+  margin-top: -4px;
+}
+
+.brand-secondary {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.mx-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.icon-container {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-container:active {
+  transform: scale(0.9);
+}
+
+.notification-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background-color: #3b82f6;
+  border-radius: 50%;
+  border: 1px solid #0b1120;
 }

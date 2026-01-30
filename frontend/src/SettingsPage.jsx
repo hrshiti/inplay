@@ -4,6 +4,8 @@ import { ArrowLeft, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, 
 import { useNavigate } from 'react-router-dom';
 import { MY_SPACE_DATA } from './data';
 import authService from './services/api/authService';
+import appSettingsService from './services/api/appSettingsService';
+import { getImageUrl } from './utils/imageUtils';
 
 export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     const navigate = useNavigate();
@@ -24,6 +26,19 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     });
     const [selectedLanguage, setSelectedLanguage] = useState('English');
     const [currentTheme, setCurrentTheme] = useState('Dark Mode');
+    const [appSettings, setAppSettings] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const data = await appSettingsService.getSettings();
+                setAppSettings(data);
+            } catch (err) {
+                console.error("Failed to fetch app settings:", err);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     useEffect(() => {
         if (currentUser) {
@@ -123,15 +138,6 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
             title: 'Account',
             items: [
                 { id: 'profile', icon: <User size={20} />, label: 'Profile Settings', value: userName, action: () => setActiveModal('profile') },
-                { id: 'subscription', icon: <Crown size={20} color="#ffd700" />, label: 'Plan Details', value: userPlan, action: () => setActiveModal('plan') },
-            ]
-        },
-        {
-            title: 'Preferences',
-            items: [
-                { id: 'notifications', icon: <Bell size={20} />, label: 'Notifications', value: 'Customized', action: () => setActiveModal('notifications') },
-                { id: 'language', icon: <Globe size={20} />, label: 'App Language', value: selectedLanguage, action: () => setActiveModal('language') },
-                { id: 'appearance', icon: <Moon size={20} />, label: 'Appearance', value: currentTheme, action: () => setActiveModal('appearance') },
             ]
         },
         {
@@ -214,7 +220,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                     marginBottom: '32px'
                 }}>
                     <img
-                        src={userAvatar}
+                        src={getImageUrl(userAvatar)}
                         alt="Profile"
                         style={{ width: '70px', height: '70px', borderRadius: '50%', border: '2px solid #ff0000', objectFit: 'cover' }}
                     />
@@ -391,7 +397,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                                 border: '4px solid #1a1a1a'
                                             }}>
                                                 <img
-                                                    src={userAvatar}
+                                                    src={getImageUrl(userAvatar)}
                                                     alt="Profile"
                                                     style={{
                                                         width: '100%',
@@ -688,7 +694,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                         padding: '20px',
                                         textAlign: 'center'
                                     }}>
-                                        <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '16px' }}>Need assistance? Our support team is here to help you 24/7.</p>
+                                        <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '16px' }}>{appSettings?.helpCenter?.chatSupportText || 'Need assistance? Our support team is here to help you 24/7.'}</p>
                                         <motion.button
                                             whileTap={{ scale: 0.95 }}
                                             style={{
@@ -700,31 +706,34 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                                 fontWeight: '700',
                                                 cursor: 'pointer'
                                             }}
+                                            onClick={() => window.open(`https://wa.me/91XXXXXXXXXX`, '_blank')}
                                         >
                                             Chat Support
                                         </motion.button>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         <h3 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '8px' }}>Frequently Asked Questions</h3>
-                                        {[
-                                            'How do I cancel my subscription?',
-                                            'Can I watch offline?',
-                                            'How to change my password?',
-                                            'Devices supported by InPlay',
-                                            'Reporting a playback issue'
-                                        ].map((faq, i) => (
-                                            <div key={i} style={{
+                                        {(appSettings?.helpCenter?.faqs || [
+                                            { question: 'How do I cancel my subscription?', answer: 'Go to settings to cancel.' },
+                                            { question: 'Can I watch offline?', answer: 'Yes, download the videos.' },
+                                            { question: 'How to change my password?', answer: 'Go to profile settings.' },
+                                            { question: 'Devices supported by InPlay', answer: 'Mobile, Tablet, and Web.' },
+                                            { question: 'Reporting a playback issue', answer: 'Contact support with details.' }
+                                        ]).map((faq, i) => (
+                                            <details key={i} style={{
                                                 padding: '16px',
                                                 background: 'rgba(255,255,255,0.03)',
                                                 borderRadius: '12px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
                                                 cursor: 'pointer'
                                             }}>
-                                                <span style={{ fontSize: '0.9rem' }}>{faq}</span>
-                                                <ChevronRight size={16} color="#444" />
-                                            </div>
+                                                <summary style={{ fontSize: '0.9rem', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span>{faq.question}</span>
+                                                    <ChevronRight size={16} color="#444" />
+                                                </summary>
+                                                <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#888', lineHeight: '1.5' }}>
+                                                    {faq.answer}
+                                                </p>
+                                            </details>
                                         ))}
                                     </div>
                                 </div>
@@ -734,15 +743,11 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                             {activeModal === 'privacy' && (
                                 <div style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.6' }}>
                                     <h3 style={{ color: 'white', marginBottom: '16px' }}>Privacy Policy</h3>
-                                    <p style={{ marginBottom: '16px' }}>Last updated: January 2026</p>
-                                    <p style={{ marginBottom: '16px' }}>InPlay ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how your personal information is collected, used, and disclosed by InPlay.</p>
-                                    <h4 style={{ color: 'white', marginBottom: '8px' }}>1. Information We Collect</h4>
-                                    <p style={{ marginBottom: '16px' }}>We collect information you provide directly to us, such as when you create an account, subscribe to our service, or communicate with us.</p>
-                                    <h4 style={{ color: 'white', marginBottom: '8px' }}>2. How We Use Information</h4>
-                                    <p style={{ marginBottom: '16px' }}>We use the information we collect to provide, maintain, and improve our services, develop new ones, and protect InPlay and our users.</p>
-                                    <h4 style={{ color: 'white', marginBottom: '8px' }}>3. Data Security</h4>
-                                    <p style={{ marginBottom: '16px' }}>We use reasonable measures to help protect information about you from loss, theft, misuse and unauthorized access, disclosure, alteration and destruction.</p>
-                                    <p>By using InPlay, you agree to the collection and use of information in accordance with this policy.</p>
+                                    <p style={{ marginBottom: '16px' }}>Last updated: {appSettings?.privacyPolicy?.lastUpdated ? new Date(appSettings.privacyPolicy.lastUpdated).toLocaleDateString() : 'January 2026'}</p>
+                                    <div
+                                        style={{ whiteSpace: 'pre-wrap' }}
+                                        dangerouslySetInnerHTML={{ __html: appSettings?.privacyPolicy?.content || 'InPlay ("we", "our", or "us") is committed to protecting your privacy...' }}
+                                    />
                                 </div>
                             )}
 
@@ -763,7 +768,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                         <div style={{ color: 'white', fontSize: '2rem', fontWeight: '900 italic' }}>IP</div>
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '8px' }}>InPlay</h3>
-                                    <p style={{ color: '#666', marginBottom: '32px' }}>Version 2.4.0 (Stable Build)</p>
+                                    <p style={{ color: '#666', marginBottom: '32px' }}>Version {appSettings?.aboutInPlay?.version || '2.4.0 (Stable Build)'}</p>
                                     <div style={{
                                         background: 'rgba(255,255,255,0.03)',
                                         borderRadius: '16px',
@@ -773,22 +778,22 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                         flexDirection: 'column',
                                         gap: '16px'
                                     }}>
-                                        <p style={{ color: '#888', fontSize: '0.9rem' }}>InPlay is the next generation streaming platform bringing you the best in movies, shows, and originals with an unmatched user experience.</p>
+                                        <p style={{ color: '#888', fontSize: '0.9rem' }}>{appSettings?.aboutInPlay?.description || 'InPlay is the next generation streaming platform bringing you the best in movies, shows, and originals with an unmatched user experience.'}</p>
                                         <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <span style={{ color: '#555' }}>Website</span>
-                                            <span style={{ color: '#ff4d4d' }}>www.inplay.com</span>
+                                            <a href={`https://${appSettings?.aboutInPlay?.website}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.website || 'www.inplay.com'}</a>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <span style={{ color: '#555' }}>Twitter</span>
-                                            <span style={{ color: '#ff4d4d' }}>@InPlayHQ</span>
+                                            <a href={`https://twitter.com/${appSettings?.aboutInPlay?.twitter?.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.twitter || '@InPlayHQ'}</a>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <span style={{ color: '#555' }}>Instagram</span>
-                                            <span style={{ color: '#ff4d4d' }}>@inplay_official</span>
+                                            <a href={`https://instagram.com/${appSettings?.aboutInPlay?.instagram?.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.instagram || '@inplay_official'}</a>
                                         </div>
                                     </div>
-                                    <p style={{ color: '#333', fontSize: '0.75rem', marginTop: '40px' }}>&copy; 2026 InPlay Entertainment Records Inc.<br />All rights reserved.</p>
+                                    <p style={{ color: '#333', fontSize: '0.75rem', marginTop: '40px' }}>&copy; {new Date().getFullYear()} InPlay Entertainment Records Inc.<br />All rights reserved.</p>
                                 </div>
                             )}
 

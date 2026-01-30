@@ -14,6 +14,8 @@ const getAllContent = async (filters = {}, page = 1, limit = 10) => {
   }
   if (filters.status) query.status = filters.status;
   if (filters.isPaid !== undefined) query.isPaid = filters.isPaid;
+  if (filters.dynamicTabId) query.dynamicTabId = filters.dynamicTabId;
+  if (filters.dynamicTabs) query.dynamicTabs = { $in: [filters.dynamicTabs] };
   if (filters.search) {
     query.$text = { $search: filters.search };
   }
@@ -394,5 +396,6 @@ module.exports = {
   updateContent,
   deleteContent,
   toggleContentStatus,
-  getContentAnalytics
+  getContentAnalytics,
+  hydrateContent
 };

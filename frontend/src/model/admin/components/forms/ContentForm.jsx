@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Upload, X, Save, ArrowLeft, Plus, Trash, ChevronDown, ChevronUp } from 'lucide-react';
+import adminTabService from '../../../../services/api/adminTabService';
 
 export default function ContentForm({ content = null, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -31,8 +32,48 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     cast: content?.cast || '',
     producer: content?.producer || '',
     production: content?.production || '',
-    releaseDate: content?.releaseDate || ''
+    releaseDate: content?.releaseDate || '',
+    dynamicTabs: content?.dynamicTabs || [],
+    dynamicTabId: content?.dynamicTabId || '',
+    dynamicCategoryId: content?.dynamicCategoryId || ''
   });
+
+  const [dynamicTabs, setDynamicTabs] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchTabs = async () => {
+      try {
+        const tabs = await adminTabService.getAllTabs();
+        setDynamicTabs(tabs);
+
+        // If editing, find categories for the selected tab
+        if (content?.dynamicTabId) {
+          const tab = tabs.find(t => t._id === content.dynamicTabId);
+          if (tab && tab.categories) {
+            setAvailableCategories(tab.categories);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch dynamic tabs", error);
+      }
+    };
+    fetchTabs();
+  }, [content]);
+
+  // Update categories when selected tab changes
+  useEffect(() => {
+    if (formData.dynamicTabId) {
+      const selectedTab = dynamicTabs.find(t => t._id === formData.dynamicTabId);
+      if (selectedTab && selectedTab.categories) {
+        setAvailableCategories(selectedTab.categories);
+      } else {
+        setAvailableCategories([]);
+      }
+    } else {
+      setAvailableCategories([]);
+    }
+  }, [formData.dynamicTabId, dynamicTabs]);
 
   // Sync state with content prop changes
   useEffect(() => {
@@ -76,7 +117,10 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         cast: content.cast || '',
         producer: content.producer || '',
         production: content.production || '',
-        releaseDate: content.releaseDate || ''
+        releaseDate: content.releaseDate || '',
+        dynamicTabs: content.dynamicTabs || [],
+        dynamicTabId: content.dynamicTabId || '',
+        dynamicCategoryId: content.dynamicCategoryId || ''
       }));
     }
   }, [content]);
@@ -93,6 +137,17 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleDynamicTabChange = (tabName) => {
+    setFormData(prev => {
+      const currentTabs = prev.dynamicTabs || [];
+      if (currentTabs.includes(tabName)) {
+        return { ...prev, dynamicTabs: currentTabs.filter(t => t !== tabName) };
+      } else {
+        return { ...prev, dynamicTabs: [...currentTabs, tabName] };
+      }
+    });
   };
 
   const validateForm = () => {
@@ -165,9 +220,13 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         submissionData.seasons.forEach(season => {
           if (season.episodes) {
             season.episodes.forEach(ep => {
+              if (ep.videoFile) {
+                // IMPORTANT: If we are uploading a new file, we MUST remove the Base64 preview URL
+                // from the JSON payload, otherwise it exceeds the server's field size limits.
+                // The backend will generate a new URL from the uploaded file.
+                ep.video = { url: '' };
+              }
               delete ep.videoFile;
-              // Don't delete ep.video object here as it might contain necessary metadata or old URL
-              // But if we are uploading a new file, the backend will overwrite 'video' anyway.
             });
           }
         });
@@ -177,6 +236,10 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         submissionData.totalSeasons = formData.seasons.length;
         submissionData.totalEpisodes = formData.seasons.reduce((acc, s) => acc + s.episodes.length, 0);
       }
+
+      // Clean up empty dynamic IDs
+      if (!submissionData.dynamicTabId) submissionData.dynamicTabId = null;
+      if (!submissionData.dynamicCategoryId) submissionData.dynamicCategoryId = null;
 
       fd.append('data', JSON.stringify(submissionData));
 
@@ -353,6 +416,59 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               <option value="new_release">New Release</option>
               <option value="reel">Short Reel</option>
               <option value="for_tab">For Tab</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Dynamic Tab (Optional)
+            </label>
+            <select
+              name="dynamicTabId"
+              value={formData.dynamicTabId}
+              onChange={handleInputChange}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none',
+                background: 'white'
+              }}
+            >
+              <option value="">None</option>
+              {dynamicTabs.map(tab => (
+                <option key={tab._id} value={tab._id}>{tab.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Dynamic Category (Optional)
+            </label>
+            <select
+              name="dynamicCategoryId"
+              value={formData.dynamicCategoryId}
+              onChange={handleInputChange}
+              disabled={!formData.dynamicTabId}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none',
+                background: formData.dynamicTabId ? 'white' : '#f3f4f6'
+              }}
+            >
+              <option value="">None</option>
+              {availableCategories.map(cat => (
+                <option key={cat._id} value={cat._id}>{cat.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -640,6 +756,19 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                   style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#46d369' }}
                 />
                 {key.replace('is', '').replace(/([A-Z])/g, ' $1').trim()}
+              </label>
+            ))}
+
+            {/* Dynamic Tabs Checkboxes */}
+            {dynamicTabs.map(tab => (
+              <label key={tab._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={(formData.dynamicTabs || []).includes(tab.name)}
+                  onChange={() => handleDynamicTabChange(tab.name)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                />
+                <span>{tab.name}</span>
               </label>
             ))}
           </div>

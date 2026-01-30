@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Upload, X, Trash2, Edit, Plus, Save, Loader } from 'lucide-react';
+import { Upload, X, Trash2, Edit, Plus, Loader, ArrowLeft } from 'lucide-react';
 import promotionService from '../../../services/api/promotionService';
 import uploadService from '../../../services/api/uploadService';
 import { getImageUrl } from '../../../utils/imageUtils';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 const AdPromotionPage = () => {
     const [promotions, setPromotions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState('list'); // 'list', 'add', 'edit'
+
+    // Routing hooks
+    const navigate = useNavigate();
+    const { id } = useParams();
+    const location = useLocation();
+
+    const isAdd = location.pathname.endsWith('/add');
+    const isEdit = !!id;
+    const viewMode = isAdd ? 'add' : (isEdit ? 'edit' : 'list');
+
     const [selectedPromotion, setSelectedPromotion] = useState(null);
     const [formData, setFormData] = useState({
         title: '',
@@ -23,6 +33,34 @@ const AdPromotionPage = () => {
     useEffect(() => {
         fetchPromotions();
     }, []);
+
+    // Sync form data on Edit
+    useEffect(() => {
+        if (viewMode === 'edit' && id && promotions.length > 0) {
+            const promo = promotions.find(p => p._id === id);
+            if (promo) {
+                setSelectedPromotion(promo);
+                setFormData({
+                    title: promo.title,
+                    posterImageUrl: promo.posterImageUrl,
+                    promoVideoUrl: promo.promoVideoUrl,
+                    displayLocation: promo.displayLocation,
+                    isActive: promo.isActive
+                });
+            }
+        } else if (viewMode === 'add') {
+            // Reset form for add
+            setFormData({
+                title: '',
+                posterImageUrl: '',
+                promoVideoUrl: '',
+                displayLocation: 'both',
+                isActive: true
+            });
+            setSelectedPromotion(null);
+        }
+    }, [viewMode, id, promotions]);
+
 
     const fetchPromotions = async () => {
         try {
@@ -52,23 +90,7 @@ const AdPromotionPage = () => {
             if (type === 'poster') setUploadingPoster(true);
             else setUploadingVideo(true);
 
-            // Use 'poster' type for image, 'video' isn't explicitly in backend but 'audio' is. 
-            // Backend maps types. user expects video. Backend upload logic supports 'image' default.
-            // Let's pass 'poster' for image. For video, let's try passing 'video' if supported or just default?
-            // Backend `uploadRoutes.js`: 
-            // const type = req.body.type || 'image'; 
-            // presetType maps: 'poster' -> 'poster'. 
-            // If I send 'video', it might default to 'poster' preset if not mapped? 
-            // Wait, backend `uploadRoutes.js` lines 26-30:
-            // let presetType = 'poster'; // default
-            // if (type === 'audio') presetType = 'audio';
-            // ...
-            // So if I send 'video', it uses 'poster' preset. Cloudinary handles video if allowed in preset.
-            // Ideally should have 'video' preset. Assuming 'poster' preset allows video or 'auto'.
-
-            const uploadType = type === 'poster' ? 'poster' : 'video'; // Pass distinct type just in case backend gets updated
-
-            // Actually, frontend `uploadService` sends `type`.
+            const uploadType = type === 'poster' ? 'poster' : 'video';
 
             const result = await uploadService.uploadFile(file, uploadType);
 
@@ -104,8 +126,8 @@ const AdPromotionPage = () => {
                 await promotionService.createPromotion(formData);
                 alert('Promotion created successfully');
             }
-            setViewMode('list');
             fetchPromotions();
+            navigate('/admin/promotions');
         } catch (error) {
             console.error('Failed to save promotion', error);
             alert('Failed to save promotion');
@@ -115,15 +137,7 @@ const AdPromotionPage = () => {
     };
 
     const handleEdit = (promo) => {
-        setSelectedPromotion(promo);
-        setFormData({
-            title: promo.title,
-            posterImageUrl: promo.posterImageUrl,
-            promoVideoUrl: promo.promoVideoUrl,
-            displayLocation: promo.displayLocation,
-            isActive: promo.isActive
-        });
-        setViewMode('edit');
+        navigate(`/admin/promotions/edit/${promo._id}`);
     };
 
     const handleDelete = async (id) => {
@@ -139,15 +153,11 @@ const AdPromotionPage = () => {
     };
 
     const handleAddNew = () => {
-        setFormData({
-            title: '',
-            posterImageUrl: '',
-            promoVideoUrl: '',
-            displayLocation: 'both',
-            isActive: true
-        });
-        setSelectedPromotion(null);
-        setViewMode('add');
+        navigate('/admin/promotions/add');
+    };
+
+    const handleCancel = () => {
+        navigate('/admin/promotions');
     };
 
     return (
@@ -211,8 +221,11 @@ const AdPromotionPage = () => {
             ) : (
                 <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', maxWidth: '600px', margin: '0 auto', color: '#000' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{viewMode === 'add' ? 'Add Promotion' : 'Edit Promotion'}</h2>
-                        <button onClick={() => setViewMode('list')} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <button onClick={handleCancel} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}><ArrowLeft size={20} /></button>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{viewMode === 'add' ? 'Add Promotion' : 'Edit Promotion'}</h2>
+                        </div>
+                        <button onClick={handleCancel} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
                     </div>
                     <form onSubmit={handleSubmit}>
                         <div style={{ marginBottom: '16px' }}>
@@ -330,7 +343,7 @@ const AdPromotionPage = () => {
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button
                                 type="button"
-                                onClick={() => setViewMode('list')}
+                                onClick={handleCancel}
                                 style={{ flex: 1, padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                             >
                                 Cancel

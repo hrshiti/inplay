@@ -6,7 +6,7 @@ import contentService from './services/api/contentService';
 import authService from './services/api/authService';
 
 // Initialize Socket outside component to prevent multiple connections
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/';
 const socket = io(API_URL.replace('/api', ''), {
     autoConnect: false
 });

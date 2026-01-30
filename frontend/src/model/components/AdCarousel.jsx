@@ -24,7 +24,7 @@ const AdCarousel = ({ promotions }) => {
     const isVideo = !!currentPromo.promoVideoUrl;
 
     return (
-        <div style={{ width: '100%', maxWidth: '400px', margin: '0 0', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '180px' }}>
+        <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '140px' }}>
             <AnimatePresence mode='wait'>
                 <motion.div
                     key={currentPromo._id}
@@ -44,7 +44,7 @@ const AdCarousel = ({ promotions }) => {
                                 muted={isMuted}
                                 loop
                                 playsInline
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
                             />
                             <button
                                 onClick={() => setIsMuted(!isMuted)}
@@ -68,7 +68,7 @@ const AdCarousel = ({ promotions }) => {
                         <img
                             src={getImageUrl(currentPromo.posterImageUrl)}
                             alt={currentPromo.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
                             onError={(e) => { e.target.src = `https://placehold.co/800x450/111/FFF?text=${currentPromo.title}` }}
                         />
                     )}

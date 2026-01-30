@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Search, User, Menu, LogOut } from 'lucide-react';
+import { Bell, User, Menu, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import adminAuthService from '../../../services/api/adminAuthService';
 
@@ -55,33 +55,7 @@ export default function Topbar({ onMenuClick }) {
 
       {/* Right Section */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {/* Search */}
-        <div className="search-container" style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          <Search size={18} style={{
-            position: 'absolute',
-            left: '12px',
-            color: '#666'
-          }} />
-          <input
-            type="text"
-            placeholder="Search content, users..."
-            style={{
-              padding: '8px 12px 8px 40px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              width: '250px',
-              backgroundColor: '#f8f9fa',
-              outline: 'none'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#46d369'}
-            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-          />
-        </div>
+
 
         {/* Notifications */}
         <button

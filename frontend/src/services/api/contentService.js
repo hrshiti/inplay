@@ -1,4 +1,4 @@
-const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
 // Remove trailing slash if exists and ensure /api suffix
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
@@ -11,6 +11,8 @@ const contentService = {
         if (filters.limit) queryParams.append('limit', filters.limit);
         if (filters.page) queryParams.append('page', filters.page);
         if (filters.search) queryParams.append('search', filters.search);
+        if (filters.dynamicTabId) queryParams.append('dynamicTabId', filters.dynamicTabId);
+        if (filters.dynamicTabs) queryParams.append('dynamicTabs', filters.dynamicTabs);
 
         const response = await fetch(`${API_URL}/content/all?${queryParams.toString()}`, {
             method: 'GET',
@@ -27,6 +29,25 @@ const contentService = {
 
         const data = await response.json();
         return data.data || []; // Returns array of content
+    },
+
+    // Fetch single content details
+    async getContentById(id) {
+        const token = localStorage.getItem('inplay_token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}/content/${id}`, {
+            method: 'GET',
+            headers: headers,
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch content details');
+        }
+        const data = await response.json();
+        return data.data;
     },
 
     // New method for Quick Bytes
@@ -70,6 +91,23 @@ const contentService = {
         const response = await fetch(`${API_URL}/content/new-releases?limit=${limit}`, {
             method: 'GET'
         });
+        const data = await response.json();
+        return data.data || [];
+    },
+
+    // Dynamic Navigation
+    async getDynamicStructure() {
+        const response = await fetch(`${API_URL}/public/dynamic-structure`);
+        const data = await response.json();
+        return data.data || [];
+    },
+
+    async getDynamicContent(tabSlug, categorySlug) {
+        const queryParams = new URLSearchParams();
+        if (tabSlug) queryParams.append('tabSlug', tabSlug);
+        if (categorySlug) queryParams.append('categorySlug', categorySlug);
+
+        const response = await fetch(`${API_URL}/public/dynamic-content?${queryParams.toString()}`);
         const data = await response.json();
         return data.data || [];
     }

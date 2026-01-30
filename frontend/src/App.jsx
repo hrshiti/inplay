@@ -26,6 +26,7 @@ import DownloadsPage from './DownloadsPage';
 import SearchPage from './SearchPage';
 import SettingsPage from './SettingsPage';
 import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
+import DynamicTabPage from './DynamicTabPage';
 
 import VideoPlayer from './VideoPlayer';
 import { AdminRoutes } from './model/admin';
@@ -41,6 +42,8 @@ import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
 import { getImageUrl } from './utils/imageUtils';
 import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission } from './services/pushNotificationService';
+
+import Header from './Header';
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -73,6 +76,7 @@ function App() {
     broadcast: []
   });
   const [qbContinueWatching, setQbContinueWatching] = useState([]);
+  const [dynamicStructure, setDynamicStructure] = useState([]);
 
   const updateQuickByteProgress = () => {
     if (quickBites.length > 0) {
@@ -128,6 +132,68 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Track the source tab for correct "More Like This" recommendations
+  const [selectedSourceTab, setSelectedSourceTab] = useState(null);
+
+  const handleContentSelect = (movie, sourceTab = null) => {
+    navigate(`/content/${movie._id || movie.id}`, { state: { movie, sourceTab } });
+  };
+
+  useEffect(() => {
+    // Check if the current path is a content detail path
+    const match = location.pathname.match(/^\/content\/([^/]+)$/);
+    if (match) {
+      const id = match[1];
+
+      // Restore source tab from navigation state if available
+      if (location.state?.sourceTab) {
+        setSelectedSourceTab(location.state.sourceTab);
+      } else {
+        // If deep linking without state, we might lose context, which is expected behavior for direct links
+        // We could try to infer it from current filter if it matches a dynamic tab, but safer to respect state.
+        if (!location.state) setSelectedSourceTab(null);
+      }
+
+      if (location.state?.movie) {
+        setSelectedMovie(location.state.movie);
+        return;
+      }
+
+      // If we don't have a selected movie or it doesn't match the URL ID, fetch/set it
+      if (!selectedMovie || (selectedMovie._id !== id && selectedMovie.id !== id)) {
+        // Optimization: Try to find in existing lists first to show immediately
+        let found = null;
+        if (allContent.length > 0) found = allContent.find(i => (i._id === id || i.id === id));
+        if (!found && heroMovies.length > 0) found = heroMovies.find(i => (i._id === id || i.id === id));
+
+        if (found) {
+          setSelectedMovie(found);
+        } else {
+          // Fetch from API
+          // We'll set a loading flag for the modal if needed, but for now just fetch
+          contentService.getContentById(id)
+            .then(data => {
+              if (data) setSelectedMovie(data);
+            })
+            .catch(err => {
+              console.error("Failed to load content from URL", err);
+              navigate('/'); // Redirect to home on failure
+            });
+        }
+      }
+    } else {
+      // If NOT in a content route, ensure selectedMovie is null (close modal)
+      if (location.pathname !== `/content/${selectedMovie?._id}` && location.pathname !== `/content/${selectedMovie?.id}`) {
+        // Only clear if we really moved away (double check path)
+        if (selectedMovie) {
+          setSelectedMovie(null);
+          setSelectedSourceTab(null);
+        }
+      }
+    }
+  }, [location.pathname, allContent, location.state]); // Depend on location and content list
+
+
   const loadUserProfile = async () => {
     const token = localStorage.getItem('inplay_token');
     if (!token) return;
@@ -150,6 +216,9 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const structure = await contentService.getDynamicStructure();
+        setDynamicStructure(structure);
+
         const reels = await contentService.getQuickBytes(20);
         setQuickBites(reels);
 
@@ -263,6 +332,13 @@ function App() {
     'Short Film': 'short-film'
   };
 
+  const handleFilterChange = (cat) => {
+    setActiveFilter(cat);
+    const dynamicTab = dynamicStructure.find(t => t.name === cat);
+    const slug = dynamicTab ? dynamicTab.slug : (reverseFilterMap[cat] || '');
+    navigate(`/${slug}`);
+  };
+
   // Sync state with URL on mount and location change
   useEffect(() => {
     if (location.pathname.startsWith('/admin')) return;
@@ -270,7 +346,7 @@ function App() {
     // Normalize path: remove leading and trailing slashes
     const path = location.pathname ? location.pathname.replace(/^\/|\/$/g, '') : '';
 
-    // Check if it's a category route
+    // 1. Check Static Routes
     if (filterMap[path]) {
       setActiveFilter(filterMap[path]);
       setActiveTab('Home');
@@ -286,9 +362,22 @@ function App() {
     } else if (['history', 'my-list', 'downloads', 'settings'].includes(path)) {
       setActiveTab('My Space');
     }
-  }, [location.pathname]);
+    // 2. Check Dynamic Tab Slugs
+    else if (dynamicStructure.length > 0) {
+      const dynamicTab = dynamicStructure.find(t => t.slug === path);
+      if (dynamicTab) {
+        setActiveFilter(dynamicTab.name);
+        setActiveTab('Home');
+      }
+    }
+  }, [location.pathname, dynamicStructure]);
 
   const handleTabChange = (tab) => {
+    if (tab === 'My Space' && !currentUser) {
+      setShowAuth('login');
+      return;
+    }
+
     setActiveTab(tab);
     if (tab === 'Home') navigate('/');
     else if (tab === 'For You') navigate('/for-you');
@@ -296,11 +385,6 @@ function App() {
     else if (tab === 'Search') navigate('/search');
   };
 
-  const handleFilterChange = (cat) => {
-    setActiveFilter(cat);
-    const slug = reverseFilterMap[cat] || '';
-    navigate(`/${slug}`);
-  };
   const heroRef = useRef(null);
 
   useEffect(() => {
@@ -595,7 +679,7 @@ function App() {
     }, 5000); // Change slide every 5 seconds
 
     return () => clearInterval(timer);
-  }, []);
+  }, [heroMovies]);
 
   const [showSearch, setShowSearch] = useState(false);
 
@@ -638,7 +722,7 @@ function App() {
                 {selectedMovie && (
                   <MovieDetailsPage
                     movie={selectedMovie}
-                    onClose={() => setSelectedMovie(null)}
+                    onClose={() => navigate(-1)}
                     onPlay={handlePlay}
                     myList={myList}
                     likedVideos={likedVideos}
@@ -646,38 +730,45 @@ function App() {
                     onToggleLike={toggleLike}
                     isPurchased={purchasedContent.includes(selectedMovie.id)}
                     onPurchase={handlePurchase}
+                    sourceTab={selectedSourceTab}
                   />
                 )}
               </AnimatePresence>
 
               {activeTab === 'Home' && !selectedMovie && (
-                <div className="category-tabs-container hide-scrollbar">
-                  {['Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Crime Show', 'Broadcast', 'Mms', 'Audio Series', 'Short Film'].map((filter) => (
-                    <div
-                      key={filter}
-                      className={`category-tab ${activeFilter === filter ? 'active' : ''}`}
-                      onClick={() => handleFilterChange(filter)}
-                    >
-                      {filter}
-                      {activeFilter === filter && (
-                        <motion.div
-                          layoutId="activeTabIndicator"
-                          style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            height: '3px',
-                            background: '#ff0a16',
-                            borderRadius: '2px 2px 0 0',
-                            zIndex: 1
-                          }}
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <Header currentUser={currentUser} onLoginClick={() => setShowAuth('login')} />
+                  <div className="category-tabs-container hide-scrollbar">
+                    {[
+                      'Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Crime Show', 'Broadcast', 'Mms', 'Audio Series', 'Short Film',
+                      ...dynamicStructure.map(t => t.name)
+                    ].map((filter) => (
+                      <div
+                        key={filter}
+                        className={`category-tab ${activeFilter === filter ? 'active' : ''}`}
+                        onClick={() => handleFilterChange(filter)}
+                      >
+                        {filter}
+                        {activeFilter === filter && (
+                          <motion.div
+                            layoutId="activeTabIndicator"
+                            style={{
+                              position: 'absolute',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              height: '3px',
+                              background: '#ff0a16',
+                              borderRadius: '2px 2px 0 0',
+                              zIndex: 1
+                            }}
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
               <AnimatePresence mode='wait'>
@@ -692,7 +783,12 @@ function App() {
 
 
                     {/* Content Switching based on Filter */}
-                    {activeFilter === 'Audio Series' ? (
+                    {dynamicStructure.find(t => t.name === activeFilter) ? (
+                      <DynamicTabPage
+                        tab={dynamicStructure.find(t => t.name === activeFilter)}
+                        onMovieClick={handleContentSelect}
+                      />
+                    ) : activeFilter === 'Audio Series' ? (
                       <AudioSeriesUserPage onBack={() => setActiveFilter('Popular')} />
                     ) : activeFilter === 'Popular' || activeFilter === 'All' ? (
                       /* Standard Home View */
@@ -775,7 +871,7 @@ function App() {
                                     }
                                   }}
                                   onClick={() => {
-                                    if (isActive) setSelectedMovie(movie)
+                                    if (isActive) handleContentSelect(movie)
                                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + heroMovies.length) % heroMovies.length)
                                     else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length)
                                   }}
@@ -830,7 +926,7 @@ function App() {
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               if (movie.isPaid && !purchasedContent.includes(movie.id)) {
-                                                setSelectedMovie(movie); // Open details to buy
+                                                handleContentSelect(movie); // Open details to buy
                                               } else {
                                                 handlePlay(movie);
                                               }
@@ -886,7 +982,7 @@ function App() {
                                   key={movie._id || movie.id}
                                   whileHover={{ scale: 1.05 }}
                                   whileTap={{ scale: 0.95 }}
-                                  onClick={() => setSelectedMovie(movie)}
+                                  onClick={() => handleContentSelect(movie)}
                                   style={{
                                     flex: '0 0 350px',
                                     cursor: 'pointer',
@@ -984,7 +1080,7 @@ function App() {
                                   className="continue-card"
                                   whileTap={{ scale: 0.95 }}
                                   style={{ minWidth: '140px', marginRight: '16px', position: 'relative', cursor: 'pointer' }}
-                                  onClick={() => setSelectedMovie(show)}
+                                  onClick={() => handleContentSelect(show)}
                                 >
                                   <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
                                     <img
@@ -1263,7 +1359,7 @@ function App() {
                                 key={movie.id}
                                 className="movie-card"
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedMovie(movie)}
+                                onClick={() => handleContentSelect(movie)}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <div className="poster-container">
@@ -1301,7 +1397,7 @@ function App() {
                                 key={movie.id}
                                 className="movie-card"
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedMovie(movie)}
+                                onClick={() => handleContentSelect(movie)}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <div className="poster-container">
@@ -1340,7 +1436,7 @@ function App() {
                                 className="song-card"
                                 whileTap={{ scale: 0.95 }}
                                 // Song click could play song, for now showing details like movie
-                                onClick={() => setSelectedMovie({ ...song, description: `Artist: ${song.artist}` })}
+                                onClick={() => handleContentSelect({ ...song, description: `Artist: ${song.artist}` })}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <div className="song-poster-container">
@@ -1380,7 +1476,7 @@ function App() {
                                 key={movie.id}
                                 className="movie-card"
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedMovie(movie)}
+                                onClick={() => handleContentSelect(movie)}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <div className="poster-container">
@@ -1487,16 +1583,23 @@ function App() {
                         </section>
                       </>
                     ) : (
-                      /* Category Grid View (New & Hot, etc.) */
-                      <CategoryGridView
-                        activeFilter={activeFilter}
-                        setSelectedMovie={setSelectedMovie}
-                        purchasedContent={purchasedContent}
-                        originalsData={contentSections.originals}
-                        trendingData={contentSections.trending_now}
-                        newReleaseData={contentSections.new_release}
-                        promotions={promotions}
-                      />
+                      /* Category Grid View (New & Hot, etc.) or Dynamic Tab Page */
+                      dynamicStructure.some(t => t.name === activeFilter) ? (
+                        <DynamicTabPage
+                          tab={dynamicStructure.find(t => t.name === activeFilter)}
+                          onMovieClick={setSelectedMovie}
+                        />
+                      ) : (
+                        <CategoryGridView
+                          activeFilter={activeFilter}
+                          setSelectedMovie={setSelectedMovie}
+                          purchasedContent={purchasedContent}
+                          originalsData={contentSections.originals}
+                          trendingData={contentSections.trending_now}
+                          newReleaseData={contentSections.new_release}
+                          promotions={promotions}
+                        />
+                      )
                     )}
                   </motion.div>
                 )}
@@ -1902,7 +2005,6 @@ function HeroSlide({ movie, onClick }) {
   );
 }
 
-export default App;
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
 function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, originalsData, trendingData, newReleaseData, promotions }) {
@@ -2087,3 +2189,4 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
   );
 }
 
+export default App;

@@ -14,7 +14,9 @@ const getAllContent = async (req, res) => {
       type: req.query.type,
       category: req.query.category,
       genre: req.query.genre ? req.query.genre.split(',') : [],
-      search: req.query.search
+      search: req.query.search,
+      dynamicTabId: req.query.dynamicTabId,
+      dynamicTabs: req.query.dynamicTabs // Add support for string-based tabs
     };
 
     const userId = req.user?._id;

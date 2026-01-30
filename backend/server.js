@@ -110,6 +110,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/admin/dynamic', require('./routes/adminTabRoutes'));
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/content', contentRoutes);
@@ -119,6 +120,8 @@ app.use('/api/foryou', forYouRoutes);
 app.use('/api/audio-series', audioSeriesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/promotions', require('./routes/promotionRoutes'));
+app.use('/api/app-settings', require('./routes/appSettingRoutes'));
+app.use('/api/public', require('./routes/publicTabRoutes'));
 
 // SERVE STATIC FILES - All uploaded media (images, videos, audio)
 // Files are stored in backend/uploads/ and served at /uploads/ URL path

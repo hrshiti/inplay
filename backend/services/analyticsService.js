@@ -2,6 +2,11 @@ const User = require('../models/User');
 const Content = require('../models/Content');
 const Payment = require('../models/Payment');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
+const QuickByte = require('../models/QuickByte');
+const AudioSeries = require('../models/AudioSeries');
+const ForYou = require('../models/ForYou');
+const Promotion = require('../models/Promotion');
+const Tab = require('../models/Tab');
 
 // Get comprehensive dashboard analytics
 const getDashboardAnalytics = async (startDate, endDate) => {
@@ -21,6 +26,21 @@ const getDashboardAnalytics = async (startDate, endDate) => {
   // Subscription analytics
   const subscriptionAnalytics = await getSubscriptionAnalytics(start, end);
 
+  // Quick Bites analytics
+  const quickByteAnalytics = await getQuickByteAnalytics(start, end);
+
+  // Audio Series analytics
+  const audioSeriesAnalytics = await getAudioSeriesAnalytics(start, end);
+
+  // For You analytics
+  const forYouAnalytics = await getForYouAnalytics(start, end);
+
+  // Promotion analytics
+  const promotionAnalytics = await getPromotionAnalytics();
+
+  // Tab analytics
+  const tabAnalytics = await getTabAnalytics();
+
   // Recent activity
   const recentActivity = await getRecentActivity();
 
@@ -29,7 +49,13 @@ const getDashboardAnalytics = async (startDate, endDate) => {
     users: userAnalytics,
     content: contentAnalytics,
     revenue: revenueAnalytics,
+    revenue: revenueAnalytics,
     subscriptions: subscriptionAnalytics,
+    quickBites: quickByteAnalytics,
+    audioSeries: audioSeriesAnalytics,
+    forYou: forYouAnalytics,
+    promotions: promotionAnalytics,
+    tabs: tabAnalytics,
     recentActivity
   };
 };
@@ -331,6 +357,84 @@ const getSubscriptionAnalytics = async (startDate, endDate) => {
       period: { start: startDate, end: endDate }
     }
   };
+  return {
+    plans: subStats,
+    churnRate: {
+      churnedUsers: churnStats[0]?.churnedUsers || 0,
+      period: { start: startDate, end: endDate }
+    }
+  };
+};
+
+// Quick Bites analytics
+const getQuickByteAnalytics = async (startDate, endDate) => {
+  const stats = await QuickByte.aggregate([
+    {
+      $facet: {
+        total: [{ $count: 'count' }],
+        views: [{ $group: { _id: null, totalViews: { $sum: '$views' } } }],
+        published: [{ $match: { status: 'published' } }, { $count: 'count' }]
+      }
+    }
+  ]);
+
+  return {
+    total: stats[0].total[0]?.count || 0,
+    totalViews: stats[0].views[0]?.totalViews || 0,
+    published: stats[0].published[0]?.count || 0
+  };
+};
+
+// Audio Series analytics
+const getAudioSeriesAnalytics = async (startDate, endDate) => {
+  const stats = await AudioSeries.aggregate([
+    {
+      $facet: {
+        total: [{ $count: 'count' }],
+        views: [{ $group: { _id: null, totalViews: { $sum: '$totalViews' } } }],
+        active: [{ $match: { isActive: true } }, { $count: 'count' }]
+      }
+    }
+  ]);
+
+  return {
+    total: stats[0].total[0]?.count || 0,
+    totalViews: stats[0].views[0]?.totalViews || 0,
+    active: stats[0].active[0]?.count || 0
+  };
+};
+
+// For You analytics
+const getForYouAnalytics = async (startDate, endDate) => {
+  const stats = await ForYou.aggregate([
+    {
+      $facet: {
+        total: [{ $count: 'count' }],
+        views: [{ $group: { _id: null, totalViews: { $sum: '$views' } } }],
+        published: [{ $match: { status: 'published' } }, { $count: 'count' }]
+      }
+    }
+  ]);
+
+  return {
+    total: stats[0].total[0]?.count || 0,
+    totalViews: stats[0].views[0]?.totalViews || 0,
+    published: stats[0].published[0]?.count || 0
+  };
+};
+
+// Promotion analytics
+const getPromotionAnalytics = async () => {
+  const total = await Promotion.countDocuments();
+  const active = await Promotion.countDocuments({ isActive: true });
+  return { total, active };
+};
+
+// Tab analytics
+const getTabAnalytics = async () => {
+  const total = await Tab.countDocuments();
+  const active = await Tab.countDocuments({ isActive: true });
+  return { total, active };
 };
 
 // Recent activity

@@ -21,6 +21,8 @@ const getAllContent = async (req, res) => {
       genre: req.query.genre ? req.query.genre.split(',') : [],
       status: req.query.status,
       isPaid: req.query.isPaid === 'true' ? true : req.query.isPaid === 'false' ? false : undefined,
+      dynamicTabId: req.query.dynamicTabId,
+      dynamicTabs: req.query.dynamicTabs,
       search: req.query.search
     };
 
@@ -85,8 +87,9 @@ const createContent = [
       if (typeof contentData.director === 'string') {
         contentData.director = contentData.director.split(',').filter(Boolean);
       }
+      // Cast is now a String in the model, no need to split
       if (typeof contentData.cast === 'string') {
-        contentData.cast = contentData.cast.split(',').filter(Boolean);
+        contentData.cast = contentData.cast.trim();
       }
       if (typeof contentData.tags === 'string') {
         contentData.tags = contentData.tags.split(',').filter(Boolean);
@@ -174,8 +177,9 @@ const updateContent = [
       if (typeof contentData.director === 'string') {
         contentData.director = contentData.director.split(',').filter(Boolean);
       }
+      // Cast is now a String in the model, no need to split
       if (typeof contentData.cast === 'string') {
-        contentData.cast = contentData.cast.split(',').filter(Boolean);
+        contentData.cast = contentData.cast.trim();
       }
       if (typeof contentData.tags === 'string') {
         contentData.tags = contentData.tags.split(',').filter(Boolean);

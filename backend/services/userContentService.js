@@ -18,6 +18,16 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
     query.genre = { $in: filters.genre };
   }
 
+  // Apply Dynamic Tab ID filter if present
+  if (filters.dynamicTabId) {
+    query.dynamicTabId = filters.dynamicTabId;
+  }
+
+  // Apply Dynamic Tabs (String) filter if present
+  if (filters.dynamicTabs) {
+    query.dynamicTabs = filters.dynamicTabs;
+  }
+
   // Advanced Search Logic
   let audioSeriesResults = [];
   if (filters.search) {

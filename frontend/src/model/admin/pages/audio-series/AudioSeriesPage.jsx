@@ -1,21 +1,47 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Mic, Music, Play, X, Save, Upload, ArrowLeft, Clock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Mic, Play, X, Upload, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import { getImageUrl } from '../../../../utils/imageUtils';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
-// --- API Service (inline for simplicity or move to services/api.js) ---
-const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api') + '/audio-series';
+// --- API Service ---
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
+const BASE_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api')
+    ? rawApiUrl.replace(/\/$/, '')
+    : `${rawApiUrl.replace(/\/$/, '')}/api`;
+const API_URL = `${BASE_URL}/audio-series`;
 
 const AudioSeriesPage = () => {
     const [seriesList, setSeriesList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('list'); // 'list' | 'form'
     const [currentSeries, setCurrentSeries] = useState(null);
 
-    // Fetch Series
+    const navigate = useNavigate();
+    const { id } = useParams();
+    const location = useLocation();
+
+    // Determine view mode based on URL
+    const isAddMode = location.pathname.endsWith('/add');
+    const isEditMode = !!id;
+    const isFormView = isAddMode || isEditMode;
+
+    // Fetch Series List (Only if in list view and empty)
     useEffect(() => {
-        fetchSeries();
-    }, []);
+        if (!isFormView) {
+            fetchSeries();
+            setCurrentSeries(null); // Clear selected series when returning to list
+        }
+    }, [isFormView]);
+
+    // Fetch Single Series (If in edit mode)
+    useEffect(() => {
+        if (isEditMode && id) {
+            fetchSingleSeries(id);
+        } else if (isAddMode) {
+            setCurrentSeries(null); // Ensure clean state for new
+            setLoading(false);
+        }
+    }, [isEditMode, isAddMode, id]);
 
     const fetchSeries = async () => {
         try {
@@ -31,11 +57,28 @@ const AudioSeriesPage = () => {
         }
     };
 
-    const handleDelete = async (id) => {
+    const fetchSingleSeries = async (seriesId) => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('adminToken');
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const res = await axios.get(`${API_URL}/${seriesId}`, config);
+            // API usually returns { data: object } or just object
+            setCurrentSeries(res.data.data || res.data);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching single series:", error);
+            alert("Failed to load series details");
+            navigate('/admin/audio-series');
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (deleteId) => {
         if (!window.confirm("Are you sure you want to delete this series?")) return;
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.delete(`${API_URL}/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.delete(`${API_URL}/${deleteId}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchSeries();
         } catch (error) {
             console.error("Error deleting audio series:", error);
@@ -43,25 +86,26 @@ const AudioSeriesPage = () => {
     };
 
     const handleEdit = (series) => {
-        setCurrentSeries(series);
-        setView('form');
+        navigate(`/admin/audio-series/edit/${series._id}`);
     };
 
     const handleAddNew = () => {
-        setCurrentSeries(null); // Clear for new
-        setView('form');
+        navigate('/admin/audio-series/add');
     };
 
     const handleFormSave = () => {
-        setView('list');
-        fetchSeries();
+        navigate('/admin/audio-series');
     };
 
     const handleFormCancel = () => {
-        setView('list');
+        navigate('/admin/audio-series');
     };
 
-    if (view === 'form') {
+    if (isFormView) {
+        if (loading && isEditMode && !currentSeries) {
+            return <div style={{ padding: '24px' }}>Loading series details...</div>;
+        }
+
         return (
             <AudioSeriesForm
                 seriesData={currentSeries}
@@ -109,6 +153,7 @@ const AudioSeriesPage = () => {
                                     src={getImageUrl(series.coverImage) || 'https://placehold.co/600x400?text=Audio+Series'}
                                     alt={series.title}
                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => e.target.src = 'https://placehold.co/600x400?text=Audio+Series'}
                                 />
                                 <div style={{
                                     position: 'absolute', top: '10px', right: '10px',
@@ -163,6 +208,16 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
         coverImage: seriesData?.coverImage || '',
         episodes: seriesData?.episodes || []
     });
+
+    // Reset form when seriesData changes (important for switching between add/edit or different items)
+    useEffect(() => {
+        setFormData({
+            title: seriesData?.title || '',
+            description: seriesData?.description || '',
+            coverImage: seriesData?.coverImage || '',
+            episodes: seriesData?.episodes || []
+        });
+    }, [seriesData]);
 
     const [saving, setSaving] = useState(false);
     const [loadingAudio, setLoadingAudio] = useState(false);
@@ -256,7 +311,7 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
             const token = localStorage.getItem('adminToken');
             const config = { headers: { Authorization: `Bearer ${token}` } };
 
-            if (seriesData) {
+            if (seriesData && seriesData._id) {
                 // Update
                 await axios.put(`${API_URL}/${seriesData._id}`, formData, config);
             } else {

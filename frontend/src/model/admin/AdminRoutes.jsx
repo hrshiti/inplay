@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film } from 'lucide-react';
 import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
 import ContentForm from './components/forms/ContentForm';
@@ -12,9 +12,12 @@ import adminDashboardService from '../../services/api/adminDashboardService';
 import adminQuickByteService from '../../services/api/adminQuickByteService';
 import adminContentService from '../../services/api/adminContentService';
 import adminMonetizationService from '../../services/api/adminMonetizationService';
+import adminAuthService from '../../services/api/adminAuthService';
 import ForYouReels from './ForYouReels';
 import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
 import AdPromotionPage from './pages/AdPromotionPage';
+import LegalPages from './pages/LegalPages';
+import TabManagementPage from './pages/TabManagementPage';
 import { getImageUrl } from '../../utils/imageUtils';
 
 const Dashboard = () => {
@@ -29,7 +32,31 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
-      const dashboardData = await adminDashboardService.getDashboardAnalytics();
+      const [dashboardData, paidContent] = await Promise.all([
+        adminDashboardService.getDashboardAnalytics(),
+        adminMonetizationService.getPaidContentPerformance().catch(err => {
+          console.error("Failed to load paid content", err);
+          return [];
+        })
+      ]);
+
+      // Merge paid content into subscription plans for the dashboard view
+      if (dashboardData && dashboardData.subscriptions && paidContent) {
+        const contentItems = paidContent.map(item => ({
+          _id: item._id || item.id,
+          name: item.title,
+          subscriberCount: item.purchases || 0,
+          revenue: item.revenue || 0,
+          isOneTimePurchase: true
+        }));
+
+        // Combine plans and paid content, sorted by revenue (highest first)
+        dashboardData.subscriptions.plans = [
+          ...dashboardData.subscriptions.plans,
+          ...contentItems
+        ].sort((a, b) => b.revenue - a.revenue);
+      }
+
       setData(dashboardData);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
@@ -57,112 +84,218 @@ const Dashboard = () => {
 
   if (!data) return null;
 
-  const { users, content, revenue, subscriptions, recentActivity } = data;
+  const { users, content, revenue, subscriptions, recentActivity, quickBites, audioSeries, forYou, promotions, tabs } = data;
   const movieCount = content.byType.find(t => t._id === 'movie')?.count || 0;
   const seriesCount = content.byType.find(t => t._id === 'series')?.count || 0;
 
+  // Safe access for new props
+  const qbTotal = quickBites?.total || 0;
+  const asTotal = audioSeries?.total || 0;
+  const fyTotal = forYou?.total || 0;
+  const promoActive = promotions?.active || 0;
+  const tabsActive = tabs?.active || 0;
+
+  const StatCard = ({ title, value, subtext, icon: Icon, color, bgColor }) => (
+    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', margin: 0 }}>{title}</h3>
+        <div style={{ padding: '8px', background: bgColor, borderRadius: '50%', color: color }}>
+          <Icon size={18} />
+        </div>
+      </div>
+      <div>
+        <p style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '2px', margin: 0 }}>{value}</p>
+        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '4px 0 0' }}>{subtext}</p>
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ padding: '12px' }}>
-      <div style={{ marginBottom: '16px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '6px' }}>Dashboard Overview</h1>
-        <p style={{ color: '#666', fontSize: '0.85rem' }}>Welcome back! Here's what's happening with your platform.</p>
-        <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '8px', marginTop: '10px' }}>
-          <p style={{ color: '#064e3b', fontSize: '0.8rem', margin: 0, fontWeight: '600' }}>
-            <strong style={{ color: '#064e3b' }}>Real-time Data Active:</strong> <span style={{ color: '#065f46' }}>{users.totalUsers} users, {content.overview.totalContent} content items, {recentActivity.length} recent activities</span>
+    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>Dashboard Overview</h1>
+        <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>Welcome back! Here's a comprehensive overview of your platform's performance.</p>
+
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px 16px', borderRadius: '8px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '8px', height: '8px', background: '#16a34a', borderRadius: '50%', flexShrink: 0 }}></div>
+          <p style={{ color: '#166534', fontSize: '0.9rem', margin: 0, fontWeight: '500' }}>
+            System Status: <strong>Operational</strong> • {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Total Users</h3>
-            <div style={{ width: '10px', height: '10px', background: '#46d369', borderRadius: '50%' }}></div>
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '2px' }}>{users.totalUsers.toLocaleString()}</p>
-          <p style={{ fontSize: '0.8rem', color: '#4b5563' }}>{users.activeUsers} active users</p>
-        </div>
-
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Total Content</h3>
-            <div style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '50%' }}></div>
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '2px' }}>{content.overview.totalContent}</p>
-          <p style={{ fontSize: '0.8rem', color: '#4b5563' }}>{movieCount} movies, {seriesCount} series</p>
-        </div>
-
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Total Views</h3>
-            <div style={{ width: '10px', height: '10px', background: '#8b5cf6', borderRadius: '50%' }}></div>
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '2px' }}>{(content.overview.totalViews / 1000).toFixed(0)}K</p>
-          <p style={{ fontSize: '0.8rem', color: '#4b5563' }}>Content views this month</p>
-        </div>
-
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Revenue</h3>
-            <div style={{ width: '10px', height: '10px', background: '#f59e0b', borderRadius: '50%' }}></div>
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '2px' }}>₹{(revenue.overview.totalRevenue / 100000).toFixed(1)}L</p>
-          <p style={{ fontSize: '0.8rem', color: '#4b5563' }}>Monthly recurring revenue</p>
-        </div>
+      {/* Primary Stats Row */}
+      <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: '#374151' }}>Key Metrics</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        <StatCard
+          title="Total Users"
+          value={users.totalUsers.toLocaleString()}
+          subtext={`${users.activeUsers} active now`}
+          icon={UserIcon}
+          color="#16a34a"
+          bgColor="#dcfce7"
+        />
+        <StatCard
+          title="Total Content"
+          value={content.overview.totalContent}
+          subtext={`${movieCount} movies, ${seriesCount} series`}
+          icon={Film}
+          color="#2563eb"
+          bgColor="#dbeafe"
+        />
+        <StatCard
+          title="Total Views"
+          value={`${(content.overview.totalViews / 1000).toFixed(1)}K`}
+          subtext="Lifetime content views"
+          icon={Video}
+          color="#7c3aed"
+          bgColor="#ede9fe"
+        />
+        <StatCard
+          title="Revenue"
+          value={`₹${(revenue.overview.totalRevenue / 100000).toFixed(2)}L`}
+          subtext="Total lifetime revenue"
+          icon={Shield}
+          color="#d97706"
+          bgColor="#fef3c7"
+        />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: '#111827' }}>Recent Activity</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Secondary Stats Row - Module Breakdowns */}
+      <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: '#374151' }}>Module Overview</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        <StatCard
+          title="Quick Bites"
+          value={qbTotal}
+          subtext={`${quickBites?.totalViews?.toLocaleString() || 0} views`}
+          icon={Smartphone}
+          color="#db2777"
+          bgColor="#fce7f3"
+        />
+        <StatCard
+          title="Audio Series"
+          value={asTotal}
+          subtext={`${audioSeries?.totalViews?.toLocaleString() || 0} plays`}
+          icon={Headphones}
+          color="#0891b2"
+          bgColor="#cffafe"
+        />
+        <StatCard
+          title="For You Reels"
+          value={fyTotal}
+          subtext={`${forYou?.totalViews?.toLocaleString() || 0} views`}
+          icon={Video}
+          color="#ea580c"
+          bgColor="#ffedd5"
+        />
+        <StatCard
+          title="Active Ads"
+          value={promoActive}
+          subtext={`${promotions?.total || 0} total campaigns`}
+          icon={Megaphone}
+          color="#4f46e5"
+          bgColor="#e0e7ff"
+        />
+        <StatCard
+          title="Active Tabs"
+          value={tabsActive}
+          subtext={`${tabs?.total || 0} configured tabs`}
+          icon={Layers}
+          color="#0d9488"
+          bgColor="#ccfbf1"
+        />
+      </div>
+
+      {/* Activity and Subscriptions Split */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+
+        {/* Recent Activity */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, color: '#111827' }}>Recent Activity</h3>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Last 10 events</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {recentActivity.length > 0 ? (
               recentActivity.map((activity, index) => (
-                <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', borderRadius: '8px', background: '#f3f4f6' }}>
+                <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', paddingBottom: index !== recentActivity.length - 1 ? '12px' : 0, borderBottom: index !== recentActivity.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                   <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: activity.type === 'user_registration' ? '#059669' :
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: activity.type === 'user_registration' ? '#dcfce7' :
+                      activity.type === 'content_upload' ? '#dbeafe' :
+                        activity.type === 'payment' ? '#fef3c7' : '#f3f4f6',
+                    color: activity.type === 'user_registration' ? '#16a34a' :
                       activity.type === 'content_upload' ? '#2563eb' :
                         activity.type === 'payment' ? '#d97706' : '#4b5563',
-                    marginTop: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     flexShrink: 0
-                  }}></div>
+                  }}>
+                    {activity.type === 'user_registration' ? <UserIcon size={16} /> :
+                      activity.type === 'content_upload' ? <Video size={16} /> :
+                        activity.type === 'payment' ? <Shield size={16} /> : <AlertCircle size={16} />}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '2px', color: '#1f2937' }}>{activity.message}</p>
-                    <p style={{ fontSize: '0.8rem', color: '#4b5563' }}>
-                      {new Date(activity.timestamp).toLocaleDateString()} • {activity.user}
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>
+                      {new Date(activity.timestamp).toLocaleString()} • {activity.user}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>No recent activity found.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.9rem', textAlign: 'center', padding: '20px' }}>No recent activity found.</p>
             )}
           </div>
         </div>
 
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: '#111827' }}>Subscription Overview</h3>
+        {/* Subscription Performance */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, color: '#111827' }}>Subscription Performance</h3>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Revenue by Plan</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {subscriptions.plans.length > 0 ? (
-              subscriptions.plans.map((plan) => (
-                <div key={plan._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
-                  <div>
-                    <p style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151' }}>{plan.name}</p>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>{plan.subscriberCount} users</p>
+              subscriptions.plans.map((plan) => {
+                const percentage = users.totalUsers > 0 ? (plan.subscriberCount / users.totalUsers) * 100 : 0;
+                return (
+                  <div key={plan._id}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div>
+                        <p style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', margin: 0 }}>{plan.name}</p>
+                        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{plan.subscriberCount} {plan.isOneTimePurchase ? 'purchases' : 'active subscribers'}</p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>₹{(plan.revenue / 100000).toFixed(2)}L</p>
+                      </div>
+                    </div>
+                    {/* Progress Bar */}
+                    <div style={{ width: '100%', height: '6px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${percentage}%`, height: '100%', background: '#46d369', borderRadius: '3px' }}></div>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1f2937' }}>₹{(plan.revenue / 100000).toFixed(1)}L</p>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>{users.totalUsers > 0 ? ((plan.subscriberCount / users.totalUsers) * 100).toFixed(0) : 0}% of users</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>No subscription plans data available.</p>
+              <p style={{ color: '#6b7280', fontSize: '0.9rem', textAlign: 'center', padding: '20px' }}>No subscription plans data available.</p>
             )}
+
+            {/* Churn Rate Mini-Card */}
+            <div style={{ marginTop: '16px', padding: '16px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ color: '#991b1b', fontWeight: '600', fontSize: '0.9rem', margin: 0 }}>Churned Users (This Period)</p>
+                <span style={{ background: '#fff', color: '#ef4444', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  {subscriptions.churnRate?.churnedUsers || 0} users
+                </span>
+              </div>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
@@ -173,8 +306,8 @@ const ContentLibrary = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [contentList, setContentList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list'); // 'list', 'edit', 'view'
-  const [selectedContent, setSelectedContent] = useState(null);
+
+
 
   useEffect(() => {
     fetchContent();
@@ -229,8 +362,7 @@ const ContentLibrary = () => {
   ];
 
   const handleEdit = (item) => {
-    setSelectedContent(item);
-    setViewMode('edit');
+    navigate(`/admin/content/edit/${item._id}`);
   };
 
   const handleDelete = async (item) => {
@@ -245,22 +377,10 @@ const ContentLibrary = () => {
   };
 
   const handleView = (item) => {
-    setSelectedContent(item);
-    setViewMode('view');
+    navigate(`/admin/content/view/${item._id}`);
   };
 
-  const handleUpdateContent = async (formData) => {
-    try {
-      await adminContentService.updateContent(selectedContent._id, formData);
-      alert('Content updated successfully!');
-      setViewMode('list');
-      setSelectedContent(null);
-      fetchContent();
-    } catch (err) {
-      console.error("Failed to update content", err);
-      alert('Failed to update content: ' + (err.message || 'Unknown error'));
-    }
-  };
+
 
   return (
     <div style={{ padding: '12px' }}>
@@ -331,56 +451,113 @@ const ContentLibrary = () => {
         />
       )}
 
-      {/* Edit Mode */}
-      {viewMode === 'edit' && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 5000, overflowY: 'auto' }}>
-          <ContentForm
-            content={selectedContent}
-            onSave={handleUpdateContent}
-            onCancel={() => {
-              setViewMode('list');
-              setSelectedContent(null);
-            }}
-          />
-        </div>
-      )}
 
-      {/* View Modal */}
-      {viewMode === 'view' && selectedContent && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
-        }}>
-          <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative' }}>
-            <button onClick={() => setViewMode('list')} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'transparent', cursor: 'pointer' }}>
-              <X size={24} />
-            </button>
-            <h2 style={{ marginBottom: '16px', fontSize: '1.5rem', fontWeight: 'bold' }}>{selectedContent.title}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <img src={getImageUrl(selectedContent.poster?.url || selectedContent.image)} alt="Poster" style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }} />
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {selectedContent.genre?.map(g => <span key={g} style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{g}</span>)}
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <p><strong>Description:</strong> {selectedContent.description}</p>
-                <p><strong>Type:</strong> {selectedContent.type}</p>
-                <p><strong>Year:</strong> {selectedContent.year}</p>
-                <p><strong>Rating:</strong> {selectedContent.rating}/10</p>
-                <p><strong>Status:</strong> {selectedContent.status}</p>
-                <p><strong>Views:</strong> {selectedContent.views}</p>
-                <p><strong>Monetization:</strong> {selectedContent.isPaid ? `Paid (₹${selectedContent.price})` : 'Free'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 // ... (other components)
+
+const EditContent = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const data = await adminContentService.getContent(id);
+        setContent(data);
+      } catch (e) {
+        console.error(e);
+        navigate('/admin/content/library');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetch();
+  }, [id, navigate]);
+
+  const handleUpdate = async (formData) => {
+    try {
+      await adminContentService.updateContent(id, formData);
+      alert('Content updated successfully!');
+      navigate('/admin/content/library');
+    } catch (err) {
+      console.error("Failed to update content", err);
+      alert('Failed to update content: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 5000, overflowY: 'auto' }}>
+      <ContentForm
+        content={content}
+        onSave={handleUpdate}
+        onCancel={() => navigate('/admin/content/library')}
+      />
+    </div>
+  );
+};
+
+const ViewContent = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const data = await adminContentService.getContent(id);
+        setContent(data);
+      } catch (e) {
+        console.error(e);
+        navigate('/admin/content/library');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetch();
+  }, [id, navigate]);
+
+  if (loading) return <div>Loading...</div>;
+  if (!content) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+    }}>
+      <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative' }}>
+        <button onClick={() => navigate('/admin/content/library')} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+          <X size={24} />
+        </button>
+        <h2 style={{ marginBottom: '16px', fontSize: '1.5rem', fontWeight: 'bold' }}>{content.title}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div>
+            <img src={getImageUrl(content.poster?.url || content.image)} alt="Poster" style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }} />
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {content.genre?.map(g => <span key={g} style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{g}</span>)}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p><strong>Description:</strong> {content.description}</p>
+            <p><strong>Type:</strong> {content.type}</p>
+            <p><strong>Year:</strong> {content.year}</p>
+            <p><strong>Rating:</strong> {content.rating}/10</p>
+            <p><strong>Status:</strong> {content.status}</p>
+            <p><strong>Views:</strong> {content.views}</p>
+            <p><strong>Monetization:</strong> {content.isPaid ? `Paid (₹${content.price})` : 'Free'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AddContent = () => {
   const navigate = useNavigate();
@@ -1469,218 +1646,210 @@ const EditQuickBite = () => {
 };
 
 const Settings = () => {
-  const settingsSections = [
-    {
-      title: 'App Configuration',
-      icon: '⚙️',
-      items: [
-        { label: 'Platform Name', value: 'InPlay OTT', type: 'text' },
-        { label: 'Default Language', value: 'English', type: 'select' },
-        { label: 'Timezone', value: 'Asia/Kolkata', type: 'select' },
-        { label: 'Maintenance Mode', value: false, type: 'toggle' }
-      ]
-    },
-    {
-      title: 'Content Settings',
-      icon: '🎬',
-      items: [
-        { label: 'Auto-publish New Content', value: false, type: 'toggle' },
-        { label: 'Content Review Required', value: true, type: 'toggle' },
-        { label: 'Max Upload Size (MB)', value: '500', type: 'number' },
-        { label: 'Allowed Video Formats', value: 'MP4, MOV, AVI', type: 'text' }
-      ]
-    },
-    {
-      title: 'Security Settings',
-      icon: '🔒',
-      items: [
-        { label: 'Two-Factor Authentication', value: true, type: 'toggle' },
-        { label: 'Session Timeout (minutes)', value: '60', type: 'number' },
-        { label: 'Password Policy', value: 'Strong', type: 'select' },
-        { label: 'IP Whitelisting', value: false, type: 'toggle' }
-      ]
-    },
-    {
-      title: 'Notification Settings',
-      icon: '🔔',
-      items: [
-        { label: 'Email Notifications', value: true, type: 'toggle' },
-        { label: 'Push Notifications', value: true, type: 'toggle' },
-        { label: 'System Alerts', value: true, type: 'toggle' },
-        { label: 'User Activity Alerts', value: false, type: 'toggle' }
-      ]
-    }
-  ];
+  const [adminProfile, setAdminProfile] = useState({ name: '', email: '' });
+  const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    alert('Settings saved successfully!');
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const data = await adminAuthService.getProfile();
+      setAdminProfile({ name: data.name, email: data.email });
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load profile', err);
+      setError('Failed to load profile data.');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      await adminAuthService.updateProfile({ name: adminProfile.name }); // Only updates name for now based on typical flows
+      setSuccess('Profile details updated successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Update failed', err);
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (security.newPassword !== security.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+    if (security.newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      await adminAuthService.changePassword(security.currentPassword, security.newPassword);
+      setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setSuccess('Password changed successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Password change failed', err);
+      setError(err.message || 'Failed to change password');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Admin Profile...</div>;
+
   return (
-    <div style={{ padding: '12px' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>Settings</h1>
-        <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>Configure application settings and preferences</p>
-        <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.85rem' }}>
-          <strong style={{ color: '#064e3b' }}>Mock Settings:</strong> <span style={{ color: '#065f46' }}>App configuration, content settings, security settings, notification settings</span>
+    <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>Admin Profile</h1>
+        <p style={{ color: '#4b5563', fontSize: '0.95rem' }}>Manage your account settings and security preferences</p>
+      </div>
+
+      {error && (
+        <div style={{ marginBottom: '20px', padding: '12px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', color: '#b91c1c' }}>
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{ marginBottom: '20px', padding: '12px', background: '#dcfce7', border: '1px solid #22c55e', borderRadius: '8px', color: '#15803d' }}>
+          {success}
+        </div>
+      )}
+
+      {/* Profile Details Section */}
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '32px' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <UserIcon size={20} /> Personal Information
+          </h2>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <form onSubmit={handleUpdateProfile}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={adminProfile.name}
+                onChange={(e) => setAdminProfile({ ...adminProfile, name: e.target.value })}
+                required
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+              />
+            </div>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={adminProfile.email}
+                disabled
+                title="Email cannot be changed directly"
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed' }}
+              />
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>Email cannot be changed.</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  background: '#46d369', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                {saving ? 'Saving...' : <><Save size={18} /> Save Changes</>}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: '24px' }}>
-        {settingsSections.map((section, sectionIndex) => (
-          <div key={sectionIndex} style={{
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '20px 24px',
-              borderBottom: '1px solid #e5e7eb',
-              background: '#f9fafb'
-            }}>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#374151',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '1.5rem' }}>{section.icon}</span>
-                {section.title}
-              </h2>
+      {/* Security Section */}
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Shield size={20} /> Security & Password
+          </h2>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <form onSubmit={handleChangePassword}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={security.currentPassword}
+                onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
+                required
+                placeholder="Enter current password"
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+              />
             </div>
-
-            <div style={{ padding: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-                {section.items.map((item, itemIndex) => (
-                  <div key={itemIndex} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      flex: 1
-                    }}>
-                      {item.label}
-                    </label>
-
-                    <div style={{ flex: 1, maxWidth: '150px' }}>
-                      {item.type === 'toggle' ? (
-                        <label style={{
-                          position: 'relative',
-                          display: 'inline-block',
-                          width: '44px',
-                          height: '24px',
-                          cursor: 'pointer'
-                        }}>
-                          <input
-                            type="checkbox"
-                            defaultChecked={item.value}
-                            style={{
-                              opacity: 0,
-                              width: 0,
-                              height: 0
-                            }}
-                          />
-                          <span style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: item.value ? '#46d369' : '#ccc',
-                            borderRadius: '24px',
-                            transition: '0.4s'
-                          }}>
-                            <span style={{
-                              position: 'absolute',
-                              height: '18px',
-                              width: '18px',
-                              left: item.value ? '23px' : '3px',
-                              bottom: '3px',
-                              backgroundColor: 'white',
-                              borderRadius: '50%',
-                              transition: '0.4s'
-                            }}></span>
-                          </span>
-                        </label>
-                      ) : item.type === 'select' ? (
-                        <select
-                          defaultValue={item.value}
-                          style={{
-                            width: '100%',
-                            padding: '6px 8px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          <option value={item.value}>{item.value}</option>
-                        </select>
-                      ) : item.type === 'number' ? (
-                        <input
-                          type="number"
-                          defaultValue={item.value}
-                          style={{
-                            width: '100%',
-                            padding: '6px 8px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          defaultValue={item.value}
-                          style={{
-                            width: '100%',
-                            padding: '6px 8px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={security.newPassword}
+                  onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
+                  required
+                  placeholder="At least 6 characters"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={security.confirmPassword}
+                  onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
+                  required
+                  placeholder="Confirm new password"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{
-        position: 'fixed',
-        bottom: '24px',
-        right: '24px',
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-        padding: '16px',
-        border: '1px solid #e5e7eb',
-        zIndex: 1000
-      }}>
-        <button
-          onClick={handleSave}
-          style={{
-            background: '#46d369',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '0.9rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'background-color 0.3s ease'
-          }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#3ea055'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#46d369'}
-        >
-          Save Changes
-        </button>
+            <div style={{ textAlign: 'right' }}>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  background: '#374151', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                {saving ? 'Processing...' : <><Shield size={18} /> Update Password</>}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -1694,14 +1863,22 @@ export default function AdminRoutes() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="content/library" element={<ContentLibrary />} />
         <Route path="content/add" element={<AddContent />} />
+        <Route path="content/edit/:id" element={<EditContent />} />
+        <Route path="content/view/:id" element={<ViewContent />} />
         <Route path="quick-bytes" element={<QuickBites />} />
         <Route path="quick-bytes/add" element={<AddQuickBite />} />
         <Route path="quick-bytes/edit/:id" element={<EditQuickBite />} />
         <Route path="for-you" element={<ForYouReels />} />
         <Route path="users" element={<Users />} />
         <Route path="audio-series" element={<AudioSeriesPage />} />
+        <Route path="audio-series/add" element={<AudioSeriesPage />} />
+        <Route path="audio-series/edit/:id" element={<AudioSeriesPage />} />
         <Route path="monetization/plans" element={<Monetization />} />
         <Route path="promotions" element={<AdPromotionPage />} />
+        <Route path="promotions/add" element={<AdPromotionPage />} />
+        <Route path="promotions/edit/:id" element={<AdPromotionPage />} />
+        <Route path="legal" element={<LegalPages />} />
+        <Route path="tabs" element={<TabManagementPage />} />
         <Route path="settings/app" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

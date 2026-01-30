@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
-  Smartphone
+  Smartphone,
+  Shield,
+  Layout
 } from 'lucide-react';
 
 const navigation = [
@@ -20,6 +22,8 @@ const navigation = [
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Ad & Promotion', href: '/admin/promotions', icon: Film },
   { name: 'Monetization', href: '/admin/monetization/plans', icon: DollarSign },
+  { name: 'Legal Pages', href: '/admin/legal', icon: Shield },
+  { name: 'Tab Management', href: '/admin/tabs', icon: Layout },
   { name: 'Settings', href: '/admin/settings/app', icon: Settings }
 ];
 

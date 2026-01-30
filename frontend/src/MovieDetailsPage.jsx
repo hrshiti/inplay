@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { MOVIES } from './data';
 import { getImageUrl } from './utils/imageUtils';
+import contentService from './services/api/contentService';
 
 export default function MovieDetailsPage({
     movie,
@@ -15,7 +16,8 @@ export default function MovieDetailsPage({
     isPurchased,
     onPurchase,
     recommendedContent = [],
-    onSelectMovie
+    onSelectMovie,
+    sourceTab // Receive the source tab context
 }) {
     if (!movie) return null;
 
@@ -23,9 +25,72 @@ export default function MovieDetailsPage({
     const [activeTab, setActiveTab] = useState(isSeries ? 'Episodes' : 'More Like This');
     const [selectedSeason, setSelectedSeason] = useState(isSeries && movie.seasons && movie.seasons.length > 0 ? movie.seasons[0] : null);
     const [isSeasonOpen, setIsSeasonOpen] = useState(false);
+    const [fullMovie, setFullMovie] = useState(null);
 
-    // Filter "More Like This" based on genre (mock logic)
-    // const moreLikeThis = [1, 2, 3, 4, 5, 6]; 
+    const [similarContent, setSimilarContent] = useState([]);
+
+    // Fetch full details (Cast, Producer, etc might be missing in list view)
+    useEffect(() => {
+        if (movie && (movie._id || movie.id)) {
+            // Only fetch full details if not already available
+            if (!fullMovie) {
+                contentService.getContentById(movie._id || movie.id)
+                    .then(data => {
+                        if (data) setFullMovie(data);
+                    })
+                    .catch(err => console.error("Failed to fetch full movie details", err));
+            }
+
+            // Fetch Similar Content
+            const fetchSimilar = async () => {
+                try {
+                    const targetMovie = fullMovie || movie;
+                    let filters = { limit: 12, status: 'published' };
+                    let isDynamicContext = false;
+
+                    // 1. Prioritize Contextual Source Tab (from Navigation)
+                    if (sourceTab) {
+                        isDynamicContext = true;
+                        if (sourceTab._id) filters.dynamicTabId = sourceTab._id;
+                        else if (sourceTab.name) filters.dynamicTabs = sourceTab.name;
+                    }
+                    // 2. Fallback to Content's own Dynamic Tab ID (Strong Link)
+                    else if (targetMovie.dynamicTabId) {
+                        isDynamicContext = true;
+                        // Handle if it's an object (populated) or string
+                        const tabId = typeof targetMovie.dynamicTabId === 'object' ? targetMovie.dynamicTabId._id : targetMovie.dynamicTabId;
+                        filters.dynamicTabId = tabId;
+                    }
+                    // 3. Fallback to Dynamic Tabs Tags (Weak Link)
+                    else if (targetMovie.dynamicTabs && targetMovie.dynamicTabs.length > 0) {
+                        isDynamicContext = true;
+                        filters.dynamicTabs = targetMovie.dynamicTabs[0];
+                    }
+
+                    // 4. Default to Type/Genre ONLY if NOT in a dynamic context
+                    if (!isDynamicContext) {
+                        filters.type = targetMovie.type;
+                        if (targetMovie.genre && typeof targetMovie.genre === 'string') {
+                            filters.genre = targetMovie.genre.split(',')[0];
+                        } else if (Array.isArray(targetMovie.genre) && targetMovie.genre.length > 0) {
+                            filters.genre = targetMovie.genre[0];
+                        }
+                    }
+
+                    const results = await contentService.getAllContent(filters);
+                    // Filter out current movie
+                    const filtered = results.filter(m => (m._id || m.id) !== (movie._id || movie.id));
+                    setSimilarContent(filtered);
+                } catch (error) {
+                    console.error("Failed to fetch similar content", error);
+                }
+            };
+            fetchSimilar();
+        }
+    }, [movie, fullMovie, sourceTab]);
+
+    const displayMovie = fullMovie || movie;
+    const displayRecommendations = similarContent.length > 0 ? similarContent : recommendedContent;
 
     return (
         <motion.div
@@ -76,10 +141,10 @@ export default function MovieDetailsPage({
             {/* Hero Backdrop */}
             <div style={{ position: 'relative', height: '35vh', width: '100%' }}>
                 <img
-                    src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
-                    alt={movie.title}
+                    src={getImageUrl(displayMovie.backdrop?.url || displayMovie.backdrop || displayMovie.poster?.url || displayMovie.image)}
+                    alt={displayMovie.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => { e.target.src = `https://placehold.co/1200x675/111/FFF?text=${movie.title}` }}
+                    onError={(e) => { e.target.src = `https://placehold.co/1200x675/111/FFF?text=${displayMovie.title}` }}
                 />
                 <div style={{
                     position: 'absolute',
@@ -100,13 +165,13 @@ export default function MovieDetailsPage({
                     marginBottom: '8px',
                     fontFamily: 'var(--font-display)'
                 }}>
-                    {movie.title}
+                    {displayMovie.title}
                 </h1>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#aaa', fontSize: '0.85rem', marginBottom: '16px' }}>
-                    <span style={{ color: '#46d369', fontWeight: 'bold' }}>{movie.rating ? Math.round(movie.rating * 10) : 95}% Match</span>
-                    <span>{movie.year || '2022'}</span>
-                    <span>{movie.genre}</span>
+                    <span style={{ color: '#46d369', fontWeight: 'bold' }}>{displayMovie.rating ? Math.round(displayMovie.rating * 10) : 95}% Match</span>
+                    <span>{displayMovie.year || '2022'}</span>
+                    <span>{displayMovie.genre}</span>
                     <span style={{ border: '1px solid #666', padding: '0 4px', fontSize: '0.7rem' }}>HD</span>
                 </div>
 
@@ -115,21 +180,21 @@ export default function MovieDetailsPage({
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
-                            if (movie.isPaid && !isPurchased) {
+                            if (displayMovie.isPaid && !isPurchased) {
                                 // Trigger purchase flow
                                 if (onPurchase) onPurchase(movie);
                             } else {
-                                console.log("Play clicked for:", movie.title);
+                                console.log("Play clicked for:", displayMovie.title);
                                 if (onPlay) {
                                     // Special handling for Series (Hindi Series) which might not have a direct video URL
                                     // but have episodes/seasons.
-                                    if ((movie.type === 'hindi_series' || movie.category === 'Hindi Series') && (!movie.video || movie.video === '')) {
+                                    if ((displayMovie.type === 'hindi_series' || displayMovie.category === 'Hindi Series') && (!displayMovie.video || displayMovie.video === '')) {
                                         // Find first episode
                                         let firstEpisode = null;
-                                        if (movie.episodes && movie.episodes.length > 0) {
-                                            firstEpisode = movie.episodes[0];
-                                        } else if (movie.seasons && movie.seasons.length > 0 && movie.seasons[0].episodes && movie.seasons[0].episodes.length > 0) {
-                                            firstEpisode = movie.seasons[0].episodes[0];
+                                        if (displayMovie.episodes && displayMovie.episodes.length > 0) {
+                                            firstEpisode = displayMovie.episodes[0];
+                                        } else if (displayMovie.seasons && displayMovie.seasons.length > 0 && displayMovie.seasons[0].episodes && displayMovie.seasons[0].episodes.length > 0) {
+                                            firstEpisode = displayMovie.seasons[0].episodes[0];
                                         }
 
                                         if (firstEpisode) {
@@ -146,7 +211,7 @@ export default function MovieDetailsPage({
                         }}
                         style={{
                             flex: 1,
-                            background: movie.isPaid && !isPurchased ? '#eab308' : 'white',
+                            background: displayMovie.isPaid && !isPurchased ? '#eab308' : 'white',
                             color: 'black',
                             border: 'none',
                             borderRadius: '8px',
@@ -160,9 +225,9 @@ export default function MovieDetailsPage({
                             cursor: 'pointer'
                         }}
                     >
-                        {movie.isPaid && !isPurchased ? (
+                        {displayMovie.isPaid && !isPurchased ? (
                             <>
-                                <span style={{ fontSize: '1.2em' }}>₹</span> Buy for ₹{movie.price}
+                                <span style={{ fontSize: '1.2em' }}>₹</span> Buy for ₹{displayMovie.price}
                             </>
                         ) : (
                             <>
@@ -173,7 +238,7 @@ export default function MovieDetailsPage({
 
                     <motion.button
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => alert(movie.isPaid && !isPurchased ? "Please purchase to download." : `Download started for ${movie.title}`)}
+                        onClick={() => alert(displayMovie.isPaid && !isPurchased ? "Please purchase to download." : `Download started for ${displayMovie.title}`)}
                         style={{
                             flex: 1,
                             background: 'rgba(255,255,255,0.2)',
@@ -188,7 +253,7 @@ export default function MovieDetailsPage({
                             justifyContent: 'center',
                             gap: '8px',
                             cursor: 'pointer',
-                            opacity: movie.isPaid && !isPurchased ? 0.5 : 1
+                            opacity: displayMovie.isPaid && !isPurchased ? 0.5 : 1
                         }}
                     >
                         <Download size={20} /> Download
@@ -196,22 +261,50 @@ export default function MovieDetailsPage({
                 </div>
 
                 <p style={{ fontSize: '0.82rem', lineHeight: '1.5', color: '#bbb', marginBottom: '20px' }}>
-                    {movie.description || "Experience the thrill and excitement of this blockbuster hit. A story that will keep you on the edge of your seat from start to finish."}
+                    {displayMovie.description || "Experience the thrill and excitement of this blockbuster hit. A story that will keep you on the edge of your seat from start to finish."}
                 </p>
+
+                {/* Additional Movie Details */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', fontSize: '0.85rem' }}>
+                    {displayMovie.cast && (
+                        <div>
+                            <span style={{ color: '#888', display: 'block', marginBottom: '2px' }}>Cast</span>
+                            <span style={{ color: 'white' }}>{displayMovie.cast}</span>
+                        </div>
+                    )}
+                    {displayMovie.producer && (
+                        <div>
+                            <span style={{ color: '#888', display: 'block', marginBottom: '2px' }}>Producer</span>
+                            <span style={{ color: 'white' }}>{displayMovie.producer}</span>
+                        </div>
+                    )}
+                    {displayMovie.production && (
+                        <div>
+                            <span style={{ color: '#888', display: 'block', marginBottom: '2px' }}>Production</span>
+                            <span style={{ color: 'white' }}>{displayMovie.production}</span>
+                        </div>
+                    )}
+                    {displayMovie.releaseDate && (
+                        <div>
+                            <span style={{ color: '#888', display: 'block', marginBottom: '2px' }}>Release Date</span>
+                            <span style={{ color: 'white' }}>{new Date(displayMovie.releaseDate).toLocaleDateString()}</span>
+                        </div>
+                    )}
+                </div>
 
                 {/* Menu Actions */}
                 <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '24px' }}>
                     <ActionButton
-                        icon={myList && myList.find(m => (m._id || m.id) == (movie._id || movie.id)) ? <Check size={24} color="#46d369" /> : <Plus size={24} />}
-                        label={myList && myList.find(m => (m._id || m.id) == (movie._id || movie.id)) ? "Saved" : "My List"}
+                        icon={myList && myList.find(m => (m._id || m.id) == (displayMovie._id || displayMovie.id)) ? <Check size={24} color="#46d369" /> : <Plus size={24} />}
+                        label={myList && myList.find(m => (m._id || m.id) == (displayMovie._id || displayMovie.id)) ? "Saved" : "My List"}
                         onClick={(e) => {
                             e.stopPropagation();
                             if (onToggleMyList) onToggleMyList(movie);
                         }}
                     />
                     <ActionButton
-                        icon={<ThumbsUp size={24} fill={likedVideos && likedVideos.find(m => (m._id || m.id) == (movie._id || movie.id)) ? "white" : "none"} color={likedVideos && likedVideos.find(m => (m._id || m.id) == (movie._id || movie.id)) ? "#46d369" : "currentColor"} />}
-                        label={likedVideos && likedVideos.find(m => (m._id || m.id) == (movie._id || movie.id)) ? "Liked" : "Like"}
+                        icon={<ThumbsUp size={24} fill={likedVideos && likedVideos.find(m => (m._id || m.id) == (displayMovie._id || displayMovie.id)) ? "white" : "none"} color={likedVideos && likedVideos.find(m => (m._id || m.id) == (displayMovie._id || displayMovie.id)) ? "#46d369" : "currentColor"} />}
+                        label={likedVideos && likedVideos.find(m => (m._id || m.id) == (displayMovie._id || displayMovie.id)) ? "Liked" : "Like"}
                         onClick={(e) => {
                             e.stopPropagation();
                             if (onToggleLike) onToggleLike(movie);
@@ -222,8 +315,8 @@ export default function MovieDetailsPage({
                         if (navigator.share) {
                             try {
                                 await navigator.share({
-                                    title: movie.title,
-                                    text: `Check out ${movie.title} on InPlay!`,
+                                    title: displayMovie.title,
+                                    text: `Check out ${displayMovie.title} on InPlay!`,
                                     url: window.location.href
                                 });
                             } catch (error) {
@@ -231,7 +324,7 @@ export default function MovieDetailsPage({
                             }
                         } else {
                             // Fallback
-                            navigator.clipboard.writeText(`Check out ${movie.title}: ${window.location.href}`);
+                            navigator.clipboard.writeText(`Check out ${displayMovie.title}: ${window.location.href}`);
                             alert('Link copied to clipboard!');
                         }
                     }} />
@@ -275,12 +368,12 @@ export default function MovieDetailsPage({
                                         onClick={() => setIsSeasonOpen(!isSeasonOpen)}
                                         style={{ background: '#333', padding: '12px 16px', borderRadius: '4px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
                                     >
-                                        {selectedSeason ? selectedSeason.name : (movie.seasons && movie.seasons.length > 0 ? movie.seasons[0].name : 'Season 1')} <ChevronDown size={16} />
+                                        {selectedSeason ? selectedSeason.name : (displayMovie.seasons && displayMovie.seasons.length > 0 ? displayMovie.seasons[0].name : 'Season 1')} <ChevronDown size={16} />
                                     </button>
 
-                                    {isSeasonOpen && movie.seasons && (
+                                    {isSeasonOpen && displayMovie.seasons && (
                                         <div style={{ position: 'absolute', top: '100%', left: 0, width: '200px', background: '#222', borderRadius: '4px', zIndex: 10, marginTop: '8px', overflow: 'hidden' }}>
-                                            {movie.seasons.map(season => (
+                                            {displayMovie.seasons.map(season => (
                                                 <div
                                                     key={season.id || season.seasonNumber}
                                                     onClick={() => { setSelectedSeason(season); setIsSeasonOpen(false); }}
@@ -295,7 +388,7 @@ export default function MovieDetailsPage({
 
                                 {/* Episodes List */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {(selectedSeason ? selectedSeason.episodes : (movie.episodes || [])).map((ep, index) => (
+                                    {(selectedSeason ? selectedSeason.episodes : (displayMovie.episodes || [])).map((ep, index) => (
                                         <div
                                             key={ep.id || index}
                                             onClick={() => {
@@ -308,7 +401,7 @@ export default function MovieDetailsPage({
                                         >
                                             <div style={{ position: 'relative', width: '120px', height: '68px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                                                 <img
-                                                    src={getImageUrl(ep.image || movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
+                                                    src={getImageUrl(ep.image || displayMovie.backdrop?.url || displayMovie.backdrop || displayMovie.poster?.url || displayMovie.image)}
                                                     alt={ep.title}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     onError={(e) => { e.target.src = `https://placehold.co/300x170/333/FFF?text=Ep` }}
@@ -337,8 +430,8 @@ export default function MovieDetailsPage({
                                 transition={{ duration: 0.3 }}
                                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}
                             >
-                                {recommendedContent.length > 0 ? (
-                                    recommendedContent.slice(0, 9).map(item => (
+                                {displayRecommendations.length > 0 ? (
+                                    displayRecommendations.slice(0, 9).map(item => (
                                         <motion.div
                                             key={item._id || item.id}
                                             whileTap={{ scale: 0.95 }}

@@ -175,7 +175,9 @@ const getUserProfile = async (userId) => {
     // Hydrate everything in userObj
     if (userObj.avatar && userObj.avatar.startsWith('/')) {
       const backendUrl = process.env.BACKEND_URL;
-      userObj.avatar = `${backendUrl}${userObj.avatar}`;
+      if (backendUrl) {
+        userObj.avatar = `${backendUrl}${userObj.avatar}`;
+      }
     }
 
     if (userObj.myList && Array.isArray(userObj.myList)) {
@@ -238,7 +240,9 @@ const updateUserProfile = async (userId, updateData) => {
   const userObj = user.toObject();
   if (userObj.avatar && userObj.avatar.startsWith('/')) {
     const backendUrl = process.env.BACKEND_URL;
-    userObj.avatar = `${backendUrl}${userObj.avatar}`;
+    if (backendUrl) {
+      userObj.avatar = `${backendUrl}${userObj.avatar}`;
+    }
   }
   return userObj;
 };
@@ -340,7 +344,9 @@ const updateUserAvatar = async (userId, avatarUrl) => {
   const userObj = user.toObject();
   if (userObj.avatar && userObj.avatar.startsWith('/')) {
     const backendUrl = process.env.BACKEND_URL;
-    userObj.avatar = `${backendUrl}${userObj.avatar}`;
+    if (backendUrl) {
+      userObj.avatar = `${backendUrl}${userObj.avatar}`;
+    }
   }
   return userObj;
 };

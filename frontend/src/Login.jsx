@@ -77,15 +77,15 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <h2 style={{
-              fontSize: '1.75rem',
+              fontSize: '2rem',
               fontWeight: '800',
               color: 'white',
               marginBottom: '8px',
-              fontFamily: 'var(--font-display)'
+              letterSpacing: '-0.5px'
             }}>
               Welcome Back
             </h2>
-            <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+            <p style={{ color: '#9ca3af', fontSize: '0.95rem', fontWeight: '500' }}>
               Sign in to continue watching
             </p>
           </div>
@@ -93,13 +93,13 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
           {/* Form */}
           <form onSubmit={handleSubmit}>
             {/* Email Field */}
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <label style={{
                 display: 'block',
-                color: '#e5e7eb',
+                color: '#fff',
                 fontSize: '0.9rem',
                 fontWeight: '600',
-                marginBottom: '8px'
+                marginBottom: '10px'
               }}>
                 Email
               </label>
@@ -109,7 +109,7 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                   left: '16px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#6b7280'
+                  color: '#888'
                 }} />
                 <input
                   type="email"
@@ -121,28 +121,34 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                   style={{
                     width: '100%',
                     padding: '16px 16px 16px 48px',
-                    background: '#2a2a2a',
-                    border: '1px solid #374151',
-                    borderRadius: '12px',
+                    background: '#242424',
+                    border: '1px solid #333',
+                    borderRadius: '16px',
                     color: 'white',
                     fontSize: '1rem',
                     outline: 'none',
-                    transition: 'border-color 0.3s ease'
+                    transition: 'all 0.3s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#46d369'}
-                  onBlur={(e) => e.target.style.borderColor = '#374151'}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#ff0a16';
+                    e.target.style.background = '#2a2a2a';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#333';
+                    e.target.style.background = '#242424';
+                  }}
                 />
               </div>
             </div>
 
             {/* Password Field */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '32px' }}>
               <label style={{
                 display: 'block',
-                color: '#e5e7eb',
+                color: '#fff',
                 fontSize: '0.9rem',
                 fontWeight: '600',
-                marginBottom: '8px'
+                marginBottom: '10px'
               }}>
                 Password
               </label>
@@ -152,7 +158,7 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                   left: '16px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#6b7280'
+                  color: '#888'
                 }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -164,16 +170,22 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                   style={{
                     width: '100%',
                     padding: '16px 48px 16px 48px',
-                    background: '#2a2a2a',
-                    border: '1px solid #374151',
-                    borderRadius: '12px',
+                    background: '#242424',
+                    border: '1px solid #333',
+                    borderRadius: '16px',
                     color: 'white',
                     fontSize: '1rem',
                     outline: 'none',
-                    transition: 'border-color 0.3s ease'
+                    transition: 'all 0.3s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#46d369'}
-                  onBlur={(e) => e.target.style.borderColor = '#374151'}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#ff0a16';
+                    e.target.style.background = '#2a2a2a';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#333';
+                    e.target.style.background = '#242424';
+                  }}
                 />
                 <button
                   type="button"
@@ -185,8 +197,10 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: '#6b7280',
-                    cursor: 'pointer'
+                    color: '#888',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
                   }}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -197,13 +211,15 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
             {/* Error Message */}
             {error && (
               <div style={{
-                background: '#dc2626',
-                color: 'white',
+                background: 'rgba(220, 38, 38, 0.1)',
+                border: '1px solid rgba(220, 38, 38, 0.2)',
+                color: '#ef4444',
                 padding: '12px',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 marginBottom: '20px',
-                fontSize: '0.9rem',
-                textAlign: 'center'
+                fontSize: '0.85rem',
+                textAlign: 'center',
+                fontWeight: '500'
               }}>
                 {error}
               </div>
@@ -216,46 +232,43 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
               whileTap={{ scale: 0.98 }}
               style={{
                 width: '100%',
-                background: '#ff4d4d',
+                background: '#ff0a16',
                 color: 'white',
                 border: 'none',
-                borderRadius: '12px',
-                padding: '16px',
-                fontSize: '1rem',
+                borderRadius: '16px',
+                padding: '18px',
+                fontSize: '1.1rem',
                 fontWeight: '700',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
                 opacity: isLoading ? 0.7 : 1,
                 transition: 'all 0.3s ease',
-                marginBottom: '20px'
+                marginBottom: '24px',
+                boxShadow: '0 8px 24px rgba(255, 10, 22, 0.3)'
               }}
-              onMouseEnter={(e) => !isLoading && (e.target.style.backgroundColor = '#e63946')}
-              onMouseLeave={(e) => !isLoading && (e.target.style.backgroundColor = '#ff4d4d')}
             >
               {isLoading ? 'Signing In...' : 'Sign In'}
             </motion.button>
 
             {/* Switch to Signup */}
             <div style={{ textAlign: 'center' }}>
-              <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+              <p style={{ color: '#9ca3af', fontSize: '0.95rem' }}>
                 Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={onSwitchToSignup}
                   style={{
-                    color: '#ff4d4d',
+                    color: '#ff0a16',
                     background: 'none',
                     border: 'none',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
+                    fontSize: '0.95rem',
+                    fontWeight: '700',
                     cursor: 'pointer',
-                    textDecoration: 'underline'
+                    padding: '0 4px'
                   }}
-                  onMouseEnter={(e) => e.target.style.color = '#e63946'}
-                  onMouseLeave={(e) => e.target.style.color = '#ff4d4d'}
                 >
                   Sign up
                 </button>
-              </span>
+              </p>
             </div>
           </form>
         </motion.div>
