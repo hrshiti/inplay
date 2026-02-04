@@ -453,8 +453,31 @@ const removeFCMToken = async (userId, token, platform = 'web') => {
     user.fcm_mobile = user.fcm_mobile.filter(t => t !== token);
   }
 
-  await user.save();
   return { success: true, message: 'FCM token removed' };
+};
+
+// Remove from watch history
+const removeFromHistory = async (userId, contentId) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+
+  // Remove the history entry matching the contentId
+  user.watchHistory = user.watchHistory.filter(
+    entry => entry.content && entry.content.toString() !== contentId.toString()
+  );
+
+  await user.save();
+  return { message: 'Item removed from history' };
+};
+
+// Clear all watch history
+const clearHistory = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+
+  user.watchHistory = [];
+  await user.save();
+  return { message: 'History cleared' };
 };
 
 module.exports = {
@@ -468,6 +491,8 @@ module.exports = {
   addToMyList,
   removeFromMyList,
   getWatchHistory,
+  removeFromHistory,
+  clearHistory,
   logoutUser,
   toggleLike,
   saveFCMToken,

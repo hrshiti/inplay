@@ -176,3 +176,26 @@ exports.deleteEpisode = async (req, res, next) => {
         next(err);
     }
 };
+// @desc    Increment view count
+// @route   POST /api/audio-series/:id/view
+// @access  Public
+exports.incrementViews = async (req, res, next) => {
+    try {
+        const series = await AudioSeries.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { totalViews: 1 } },
+            { new: true }
+        );
+
+        if (!series) {
+            return res.status(404).json({ success: false, message: 'Audio Series not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            views: series.totalViews
+        });
+    } catch (err) {
+        next(err);
+    }
+};

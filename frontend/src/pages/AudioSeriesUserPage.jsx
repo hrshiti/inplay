@@ -1,49 +1,35 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Pause, SkipBack, SkipForward, X, Mic, Heart, Clock, ChevronLeft } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, X, Clock, ChevronLeft } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUtils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAudioPlayer } from '../contexts/AudioPlayerContext';
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/';
-// Remove trailing slash if exists and ensure /api suffix
 const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 const API_URL = API_Base + '/audio-series';
 
 export default function AudioSeriesUserPage({ onBack }) {
     const [seriesList, setSeriesList] = useState([]);
     const [selectedSeries, setSelectedSeries] = useState(null);
-    const [currentEpisode, setCurrentEpisode] = useState(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [duration, setDuration] = useState(0);
-    const [currentTime, setCurrentTime] = useState(0)
-    // Audio Ref
-    const audioRef = useRef(null);
+
+    // Use global audio player context
+    const {
+        currentEpisode,
+        isPlaying,
+        currentTime,
+        duration,
+        playEpisode: playEpisodeContext,
+        togglePlay,
+        seekTo,
+        skipForward,
+        skipBackward
+    } = useAudioPlayer();
 
     useEffect(() => {
         fetchSeries();
     }, []);
-
-
-
-    // Audio Playback Effect
-    useEffect(() => {
-        if (currentEpisode && audioRef.current) {
-            audioRef.current.src = getImageUrl(currentEpisode.audioUrl);
-            audioRef.current.volume = 1.0;
-            audioRef.current.play()
-                .then(() => setIsPlaying(true))
-                .catch(error => {
-                    console.error("Playback failed:", error);
-                    setIsPlaying(false);
-                });
-        } else if (audioRef.current && !currentEpisode) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            setIsPlaying(false);
-        }
-    }, [currentEpisode]);
-
 
     const fetchSeries = async () => {
         try {
@@ -58,21 +44,11 @@ export default function AudioSeriesUserPage({ onBack }) {
         }
     };
 
-    const togglePlay = () => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-            } else {
-                audioRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
-        }
-    };
-
     const playEpisode = (episode, series) => {
-        // Determine episode image
-        const episodeWithImage = { ...episode, coverImage: series.coverImage, seriesTitle: series.title };
-        setCurrentEpisode(episodeWithImage);
+        // Update local selected series for context
+        setSelectedSeries(series);
+        // Use context to play
+        playEpisodeContext(episode, series);
     };
 
     if (loading) return <div style={{ color: 'white', padding: '20px' }}>Loading Audio Series...</div>;
@@ -160,7 +136,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                 </motion.div>
             )}
 
-            {/* Floating Player */}
+            {/* Floating Player - Only show when on Audio Series page */}
             <AnimatePresence>
                 {currentEpisode && (
                     <motion.div
@@ -190,13 +166,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                                     size={20}
                                     color="#ccc"
                                     style={{ cursor: 'pointer' }}
-                                    onClick={() => {
-                                        if (audioRef.current) {
-                                            const newTime = Math.max(0, audioRef.current.currentTime - 5);
-                                            audioRef.current.currentTime = newTime;
-                                            setCurrentTime(newTime);
-                                        }
-                                    }}
+                                    onClick={() => skipBackward(10)}
                                 />
                                 <button
                                     onClick={togglePlay}
@@ -208,13 +178,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                                     size={20}
                                     color="#ccc"
                                     style={{ cursor: 'pointer' }}
-                                    onClick={() => {
-                                        if (audioRef.current) {
-                                            const newTime = Math.min(duration, audioRef.current.currentTime + 5);
-                                            audioRef.current.currentTime = newTime;
-                                            setCurrentTime(newTime);
-                                        }
-                                    }}
+                                    onClick={() => skipForward(10)}
                                 />
                             </div>
                         </div>
@@ -227,13 +191,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                                 min="0"
                                 max={duration || 100}
                                 value={currentTime}
-                                onChange={(e) => {
-                                    const time = Number(e.target.value);
-                                    if (audioRef.current) {
-                                        audioRef.current.currentTime = time;
-                                        setCurrentTime(time);
-                                    }
-                                }}
+                                onChange={(e) => seekTo(Number(e.target.value))}
                                 style={{
                                     flex: 1, height: '4px', appearance: 'none', background: '#444',
                                     borderRadius: '2px', cursor: 'pointer', outline: 'none'
@@ -244,38 +202,6 @@ export default function AudioSeriesUserPage({ onBack }) {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Debug URL - Remove later */}
-            {/* <div style={{position: 'fixed', top: 0, left: 0, background: 'red', zIndex: 9999, color: 'white', padding: '4px', fontSize: '10px'}}>{currentEpisode?.audioUrl}</div> */}
-
-            {/* Hidden Audio Element - Always Rendered */}
-            <audio
-                ref={audioRef}
-                onTimeUpdate={() => {
-                    if (audioRef.current) {
-                        setCurrentTime(audioRef.current.currentTime);
-                    }
-                }}
-                onLoadedMetadata={() => {
-                    if (audioRef.current) {
-                        setDuration(audioRef.current.duration);
-                    }
-                }}
-                onError={(e) => {
-                    console.error("Audio playback error", e);
-                    setIsPlaying(false);
-                }}
-                onEnded={() => {
-                    setIsPlaying(false);
-                    // Auto-play next
-                    if (selectedSeries?.episodes && currentEpisode) {
-                        const idx = selectedSeries.episodes.findIndex(e => e._id === currentEpisode._id);
-                        if (idx !== -1 && idx < selectedSeries.episodes.length - 1) {
-                            playEpisode(selectedSeries.episodes[idx + 1], selectedSeries);
-                        }
-                    }
-                }}
-            />
         </div>
     );
 }

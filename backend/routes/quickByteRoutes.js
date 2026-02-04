@@ -6,6 +6,7 @@ const { protect, authorize } = require('../middlewares/auth');
 // Public routes (for user side)
 router.get('/', quickByteController.getAllQuickBytes);
 router.get('/:id/comments', quickByteController.getComments);
+router.post('/:id/view', quickByteController.incrementViews);
 
 // Protected User routes
 router.post('/:id/like', protect, quickByteController.toggleLike);

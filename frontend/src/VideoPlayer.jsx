@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, Plus, Check, ThumbsUp, Download } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
+import { SpeedSheet, QualitySheet } from './PlayerSheets';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
     // User logic: Playing all content as movie content (Standard Landscape Player)
@@ -66,8 +67,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     }, []);
 
     // Define Icon Sizes based on mode
-    const playIconSize = isFullScreen ? 72 : 48;
-    const skipIconSize = isFullScreen ? 40 : 32;
+    const playIconSize = isFullScreen ? 48 : 48; // Kept scaled down to prevent oversized icons on PC fullscreen
+    const skipIconSize = isFullScreen ? 32 : 32;
 
     if (!videoSrc) {
         return (
@@ -163,6 +164,42 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         };
     }, []);
 
+    // Track view count when video loads and starts playing
+    useEffect(() => {
+        let viewCounted = false;
+        const video = videoRef.current;
+        if (!video) return;
+
+        const trackView = async () => {
+            if (viewCounted) return;
+            viewCounted = true;
+
+            const contentId = movie._id || movie.id;
+            const contentType = isQuickBite ? 'quickbytes' : 'content';
+
+            try {
+                await contentService.incrementContentView(contentId, contentType);
+                console.log('View count incremented for:', contentId);
+            } catch (error) {
+                console.error('Failed to track view:', error);
+            }
+        };
+
+        // Track view after user watches for 3 seconds (to avoid accidental clicks)
+        const onTimeUpdate = () => {
+            if (video.currentTime >= 3 && !viewCounted) {
+                trackView();
+                video.removeEventListener('timeupdate', onTimeUpdate);
+            }
+        };
+
+        video.addEventListener('timeupdate', onTimeUpdate);
+
+        return () => {
+            video.removeEventListener('timeupdate', onTimeUpdate);
+        };
+    }, [currentIndex, movie]);
+
     // Reset progress on item change
     useEffect(() => {
         setProgress(0);
@@ -249,6 +286,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const [showControls, setShowControls] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [videoQuality, setVideoQuality] = useState('Auto');
+    const [activeSheet, setActiveSheet] = useState(null); // 'speed' | 'quality' | null
     const controlsTimeoutRef = useRef(null);
 
     // Auto-hide controls
@@ -273,22 +311,39 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         setShowControls(prev => !prev);
     };
 
-    const changeSpeed = (e) => {
+    const changeSpeed = (e) => { // Kept for reference but unused in new UI
         e.stopPropagation();
-        const speeds = [0.5, 1, 1.25, 1.5, 2];
-        const nextIndex = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
-        const newSpeed = speeds[nextIndex];
-        setPlaybackSpeed(newSpeed);
+        // Legacy toggle
+    };
+
+    const openSpeedSheet = (e) => {
+        e.stopPropagation();
+        setActiveSheet('speed');
+        setShowControls(false); // Hide main controls when sheet is open
+    };
+
+    const openQualitySheet = (e) => {
+        e.stopPropagation();
+        setActiveSheet('quality');
+        setShowControls(false);
+    };
+
+    const handleSheetClose = () => {
+        setActiveSheet(null);
+        setShowControls(true);
+    };
+
+    // Actual Handlers passed to sheets
+    const applySpeed = (speed) => {
+        setPlaybackSpeed(speed);
         if (videoRef.current) {
-            videoRef.current.playbackRate = newSpeed;
+            videoRef.current.playbackRate = speed;
         }
     };
 
-    const changeQuality = (e) => {
-        e.stopPropagation();
-        const qualities = ['Auto', '1080p', '720p', '480p'];
-        const nextIndex = (qualities.indexOf(videoQuality) + 1) % qualities.length;
-        setVideoQuality(qualities[nextIndex]);
+    const applyQuality = (quality) => {
+        setVideoQuality(quality);
+        // Mock Quality Change logic (Real would switch HLS levels)
     };
 
     const handleShare = async () => {
@@ -329,6 +384,25 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
     };
 
+    const handleRotate = async (e) => {
+        e.stopPropagation();
+        try {
+            if (!document.fullscreenElement && mainContainerRef.current) {
+                await mainContainerRef.current.requestFullscreen();
+            }
+            if (screen.orientation && screen.orientation.lock) {
+                const type = screen.orientation.type;
+                if (type.startsWith('portrait')) {
+                    await screen.orientation.lock('landscape');
+                } else {
+                    await screen.orientation.unlock();
+                }
+            }
+        } catch (error) {
+            console.log("Rotation failed:", error);
+        }
+    };
+
     if (isQuickBite) {
         return (
             <div
@@ -357,7 +431,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             {/* Speed Control */}
                             <button
-                                onClick={changeSpeed}
+                                onClick={openSpeedSheet}
                                 style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
                             >
                                 {playbackSpeed}x
@@ -365,10 +439,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
                             {/* Quality Control */}
                             <button
-                                onClick={changeQuality}
+                                onClick={openQualitySheet}
                                 style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
                             >
-                                {videoQuality}
+                                {videoQuality === 'Auto' ? 'Auto' : videoQuality}
                             </button>
 
                             {/* Close Button */}
@@ -534,10 +608,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 >
                                     <div style={{ width: '120px', height: '68px', background: '#333', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
                                         <img
-                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image)}
-                                            alt={ep.title}
+                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.thumbnail?.url || movie.thumbnail?.secure_url || movie.poster?.url || movie.image)}
+                                            alt={ep.title || `Episode ${index + 1}`}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => e.target.style.display = 'none'}
+                                            onError={(e) => { e.target.src = 'https://placehold.co/120x68/333/FFF?text=Ep+' + (index + 1); }}
                                         />
                                         {currentIndex === index && (
                                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -582,6 +656,22 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 <style>{`
                     .nav-btn:hover { background: rgba(0,0,0,0.8) !important; transform: translateY(-50%) scale(1.1) !important; }
                 `}</style>
+
+                {/* Render Sheets */}
+                {activeSheet === 'speed' && (
+                    <SpeedSheet
+                        currentSpeed={playbackSpeed}
+                        onClose={handleSheetClose}
+                        onApply={applySpeed}
+                    />
+                )}
+                {activeSheet === 'quality' && (
+                    <QualitySheet
+                        currentQuality={videoQuality}
+                        onClose={handleSheetClose}
+                        onApply={applyQuality}
+                    />
+                )}
             </div>
         );
     }
@@ -600,6 +690,22 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 flexDirection: 'column'
             }}
         >
+            {/* Render Sheets for Standard Player */}
+            {activeSheet === 'speed' && (
+                <SpeedSheet
+                    currentSpeed={playbackSpeed}
+                    onClose={handleSheetClose}
+                    onApply={applySpeed}
+                />
+            )}
+            {activeSheet === 'quality' && (
+                <QualitySheet
+                    currentQuality={videoQuality}
+                    onClose={handleSheetClose}
+                    onApply={applyQuality}
+                />
+            )}
+
             {/* Video Container */}
             {/* When fullscreen is requested on this div, it takes up the whole screen, hiding siblings (details) */}
             <div
@@ -660,10 +766,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 >
                                     <div style={{ width: '120px', height: '68px', background: '#333', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
                                         <img
-                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image)}
-                                            alt={ep.title}
+                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.thumbnail?.url || movie.thumbnail?.secure_url || movie.poster?.url || movie.image)}
+                                            alt={ep.title || `Episode ${index + 1}`}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => e.target.style.display = 'none'}
+                                            onError={(e) => { e.target.src = 'https://placehold.co/120x68/333/FFF?text=Ep+' + (index + 1); }}
                                         />
                                         {currentIndex === index && (
                                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -690,8 +796,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                             <ArrowLeft size={28} onClick={async (e) => { e.stopPropagation(); await syncProgress(); onClose(); }} style={{ cursor: 'pointer' }} />
                             <h2 style={{ flex: 1, margin: 0, fontSize: '1rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{movie.title}</h2>
                             <div style={{ display: 'flex', gap: '16px' }}>
-                                <button onClick={changeSpeed} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{playbackSpeed}x</button>
-                                <button onClick={changeQuality} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{videoQuality}</button>
+                                <button onClick={openSpeedSheet} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{playbackSpeed}x</button>
+                                <button onClick={openQualitySheet} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{videoQuality}</button>
                             </div>
                         </div>
 
@@ -702,7 +808,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 <span style={{ color: 'white', fontSize: '10px', fontWeight: 'bold' }}>10</span>
                             </div>
 
-                            <div onClick={(e) => { e.stopPropagation(); togglePlay(e) }} style={{ cursor: 'pointer', transform: isFullScreen ? 'scale(1.2)' : 'scale(1)' }}>
+                            <div onClick={(e) => { e.stopPropagation(); togglePlay(e) }} style={{ cursor: 'pointer', transform: 'scale(1)' }}>
                                 {isPlaying ? <Pause size={playIconSize} fill="white" /> : <Play size={playIconSize} fill="white" />}
                             </div>
 
@@ -748,6 +854,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                         <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Episodes</span>
                                     </div>
                                 )}
+                                <div onClick={handleRotate} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'white' }}>
+                                    <Smartphone size={24} style={{ transform: 'rotate(90deg)' }} />
+                                </div>
                                 <Maximize2 size={24} color="white" onClick={toggleFullScreen} style={{ cursor: 'pointer' }} />
                             </div>
                         </div>
@@ -823,9 +932,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 >
                                     <div style={{ width: '130px', height: '74px', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                                         <img
-                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.poster?.url || movie.image)}
+                                            src={getImageUrl(ep.image || ep.poster?.url || ep.poster || movie.thumbnail?.url || movie.thumbnail?.secure_url || movie.poster?.url || movie.image)}
+                                            alt={ep.title || `Episode ${index + 1}`}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => e.target.style.display = 'none'}
+                                            onError={(e) => { e.target.src = 'https://placehold.co/130x74/333/FFF?text=Ep+' + (index + 1); }}
                                         />
                                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <Play size={20} fill="white" stroke="none" />
@@ -833,7 +943,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                         <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>{index + 1}. {ep.title}</span>
-                                        <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>{Math.floor((ep.duration || 1200) / 60)}m</span>
+                                        <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>{ep.duration ? `${Math.floor(ep.duration / 60)}m` : '0m'}</span>
                                         <p style={{ color: '#666', fontSize: '0.8rem', margin: '4px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                             {ep.description || movie.description}
                                         </p>

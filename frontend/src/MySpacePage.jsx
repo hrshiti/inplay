@@ -9,9 +9,9 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
     const containerRef = useRef(null);
     const navigate = useNavigate();
 
-    // Use actual user data or fallback to mock data
+    // Use actual user data or fallback to mock data (only if no user)
     const userName = currentUser?.name || MY_SPACE_DATA.user.name;
-    const userAvatar = currentUser?.avatar || MY_SPACE_DATA.user.avatar;
+    const userAvatar = currentUser?.avatar; // Don't fallback to mock so we can show default icon
     const userPlan = currentUser?.subscription?.plan?.name || MY_SPACE_DATA.user.plan;
 
     return (
@@ -31,11 +31,26 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
                     style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, cursor: 'pointer' }}
                 >
                     <div style={{ position: 'relative' }}>
-                        <img
-                            src={getImageUrl(userAvatar)}
-                            alt="Profile"
-                            style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)', objectFit: 'cover' }}
-                        />
+                        {userAvatar ? (
+                            <img
+                                src={getImageUrl(userAvatar)}
+                                alt="Profile"
+                                style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                border: '2px solid var(--accent)',
+                                background: '#ff0a16',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                <User size={32} color="white" />
+                            </div>
+                        )}
                         <div style={{
                             position: 'absolute', bottom: 0, right: 0,
                             background: 'var(--accent)', borderRadius: '50%', width: '20px', height: '20px',
@@ -83,7 +98,11 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
 
             {/* Liked Videos Section */}
             {likedVideos && likedVideos.length > 0 && (
-                <Section title="Liked Videos" icon={<ThumbsUp size={16} />}>
+                <Section
+                    title="Liked Videos"
+                    icon={<ThumbsUp size={16} />}
+                    onHeaderClick={() => navigate('/liked-videos')}
+                >
                     <div className="horizontal-list hide-scrollbar" style={{ padding: 0 }}>
                         {likedVideos.map((movie) => (
                             <SpaceCard key={movie._id || movie.id} item={movie} type="poster" onClick={() => onMovieClick(movie)} />

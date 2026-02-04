@@ -341,8 +341,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
 
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+    <div style={{ maxWidth: '750px', margin: '0 auto', padding: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <button
           onClick={onCancel}
           style={{
@@ -357,7 +357,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '4px', color: '#111827' }}>
             {content ? 'Edit Content' : 'Add New Content'}
           </h1>
           <p style={{ color: '#666', fontSize: '0.95rem' }}>
@@ -366,8 +366,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
               Title *
@@ -380,7 +380,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               placeholder="Enter content title"
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: `1px solid ${errors.title ? '#ef4444' : '#d1d5db'}`,
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -420,7 +420,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
               Dynamic Tab (Optional)
@@ -431,7 +431,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               onChange={handleInputChange}
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -457,7 +457,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               disabled={!formData.dynamicTabId}
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -485,7 +485,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
             rows={4}
             style={{
               width: '100%',
-              padding: '10px 12px',
+              padding: '8px 12px',
               border: `1px solid ${errors.description ? '#ef4444' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '0.9rem',
@@ -496,7 +496,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
           {errors.description && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.description}</p>}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
               Genre *
@@ -509,7 +509,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               placeholder="Action, Drama, etc."
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: `1px solid ${errors.genre ? '#ef4444' : '#d1d5db'}`,
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -532,7 +532,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               max={new Date().getFullYear() + 1}
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -556,7 +556,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               placeholder="0.0"
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: `1px solid ${errors.rating ? '#ef4444' : '#d1d5db'}`,
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -576,7 +576,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               onChange={handleInputChange}
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -592,7 +592,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         </div>
 
         {/* New Fields: Cast, Producer, Production, Release Date */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
               Cast
@@ -605,7 +605,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               placeholder="Star Cast names"
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -626,7 +626,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               placeholder="Producer name"
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -647,7 +647,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               placeholder="Production House"
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -667,7 +667,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               onChange={handleInputChange}
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
@@ -679,11 +679,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
 
         {/* Improved Monetization Section */}
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151' }}>Monetization Strategy</h3>
+          <div style={{ padding: '12px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', margin: 0 }}>Monetization Strategy</h3>
           </div>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', gap: '32px', marginBottom: formData.isPaid ? '24px' : '0' }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', gap: '32px', marginBottom: formData.isPaid ? '16px' : '0' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.95rem', cursor: 'pointer', color: 'black' }}>
                 <input
                   type="radio"
@@ -743,8 +743,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         </div>
 
         {/* Display Categories */}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', background: '#f9fafb' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>Display Categories</h3>
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', background: '#f9fafb' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>Display Categories</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px' }}>
             {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular', 'isBroadcast', 'isMms', 'isShortFilm', 'isAudioSeries', 'isCrimeShow'].map(key => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer' }}>
@@ -775,8 +775,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         </div>
 
         {/* Media Files */}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>Media Assets</h3>
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>Media Assets</h3>
 
           <div style={{ display: 'grid', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -786,7 +786,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <input type="file" accept="image/*" onChange={(e) => handleFileUpload('image', e)} style={{ display: 'none' }} id="poster-upload" />
                   <label htmlFor="poster-upload" style={{
-                    flex: 1, padding: '12px', border: '2px dashed #d1d5db', borderRadius: '6px',
+                    flex: 1, padding: '10px', border: '2px dashed #d1d5db', borderRadius: '6px',
                     cursor: 'pointer', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', background: '#f9fafb'
                   }}>
                     <Upload size={16} style={{ marginBottom: '4px', margin: '0 auto', display: 'block' }} />
@@ -802,7 +802,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <input type="file" accept="image/*" onChange={(e) => handleFileUpload('backdrop', e)} style={{ display: 'none' }} id="backdrop-upload" />
                   <label htmlFor="backdrop-upload" style={{
-                    flex: 1, padding: '12px', border: '2px dashed #d1d5db', borderRadius: '6px',
+                    flex: 1, padding: '10px', border: '2px dashed #d1d5db', borderRadius: '6px',
                     cursor: 'pointer', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', background: '#f9fafb'
                   }}>
                     <Upload size={16} style={{ marginBottom: '4px', margin: '0 auto', display: 'block' }} />
@@ -816,8 +816,8 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
             {/* Conditional Video Upload vs Episodes */}
             {formData.type === 'hindi_series' ? (
               <div style={{ marginTop: '24px', borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#374151' }}>Seasons & Episodes</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', margin: 0 }}>Seasons & Episodes</h3>
                   <button type="button" onClick={handleAddSeason} style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
                     padding: '6px 12px', background: '#eff6ff', color: '#2563eb',
@@ -960,7 +960,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                     htmlFor="video-upload"
                     style={{
                       flex: 1,
-                      padding: '12px',
+                      padding: '10px',
                       border: '2px dashed #d1d5db',
                       borderRadius: '6px',
                       cursor: 'pointer',

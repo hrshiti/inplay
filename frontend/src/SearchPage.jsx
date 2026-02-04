@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft, Search, X, Clock, TrendingUp, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import contentService from './services/api/contentService'; // Add import
@@ -10,8 +10,38 @@ const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [searching, setSearching] = useState(false);
+    const [history, setHistory] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('inplay_search_history') || '[]');
+        } catch {
+            return [];
+        }
+    });
     const navigate = useNavigate();
     const inputRef = useRef(null);
+
+    const addToHistory = (term) => {
+        if (!term) return;
+        const newHistory = [term, ...history.filter(h => h !== term)].slice(0, 10);
+        setHistory(newHistory);
+        localStorage.setItem('inplay_search_history', JSON.stringify(newHistory));
+    };
+
+    const removeFromHistory = (term, e) => {
+        e?.stopPropagation();
+        const newHistory = history.filter(h => h !== term);
+        setHistory(newHistory);
+        localStorage.setItem('inplay_search_history', JSON.stringify(newHistory));
+    };
+
+    const handleResultClick = (item) => {
+        if (query.trim()) {
+            addToHistory(query.trim());
+        }
+        onMovieClick(item);
+    };
+
+    const trendingTags = ["Action", "Romance", "Web Series", "Bhojpuri Hits", "New Movies", "Comedy"];
 
     useEffect(() => {
         // Auto-focus input on mount
@@ -112,7 +142,7 @@ const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch
                                 key={item._id || item.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                onClick={() => onMovieClick(item)}
+                                onClick={() => handleResultClick(item)}
                                 style={{ display: 'flex', gap: '12px', cursor: 'pointer' }}
                             >
                                 <div style={{
@@ -155,8 +185,88 @@ const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch
                         ))}
                     </div>
                 ) : (
-                    <div style={{ textAlign: 'center', color: '#666', marginTop: '40px' }}>
-                        {query ? 'No results found' : 'Search for movies, shows, and more'}
+                    <div style={{ marginTop: '20px' }}>
+                        {!query && (
+                            <>
+                                {/* Search History */}
+                                {history.length > 0 && (
+                                    <div style={{ marginBottom: '32px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                            <h3 style={{ color: '#eee', fontSize: '1rem', fontWeight: '600' }}>Recent Searches</h3>
+                                            <button
+                                                onClick={() => {
+                                                    setHistory([]);
+                                                    localStorage.removeItem('inplay_search_history');
+                                                }}
+                                                style={{ color: '#666', fontSize: '0.8rem', background: 'none', border: 'none', cursor: 'pointer' }}
+                                            >
+                                                Clear All
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            {history.map((term, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => setQuery(term)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        padding: '12px 0',
+                                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <Clock size={16} color="#888" style={{ marginRight: '16px' }} />
+                                                    <span style={{ color: '#ccc', flex: 1, fontSize: '0.95rem' }}>{term}</span>
+                                                    <button
+                                                        onClick={(e) => removeFromHistory(term, e)}
+                                                        style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer' }}
+                                                    >
+                                                        <X size={16} color="#666" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Trending / Most Searched */}
+                                <div>
+                                    <h3 style={{ color: '#eee', fontSize: '1rem', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <TrendingUp size={18} color="#ff4d4d" />
+                                        Most Searched
+                                    </h3>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                        {trendingTags.map((tag) => (
+                                            <button
+                                                key={tag}
+                                                onClick={() => setQuery(tag)}
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    borderRadius: '20px',
+                                                    background: 'rgba(255,255,255,0.1)',
+                                                    border: '1px solid rgba(255,255,255,0.05)',
+                                                    color: '#e5e5e5',
+                                                    fontSize: '0.9rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Empty State Text only if no history and query is present but no results (handled by logic above, 
+                            but we need to show 'No results' if query is present) */}
+                        {query && (
+                            <div style={{ textAlign: 'center', color: '#666', marginTop: '40px' }}>
+                                No results found for "{query}"
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

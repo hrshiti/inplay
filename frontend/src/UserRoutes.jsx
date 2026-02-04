@@ -18,6 +18,7 @@ import SplashScreen from './SplashScreen';
 import VideoPlayer from './VideoPlayer';
 import Login from './Login';
 import Signup from './Signup';
+import CategoryPage from './pages/CategoryPage';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -41,6 +42,7 @@ function HomePage({
   handlePlay,
   showToast
 }) {
+  const navigate = useNavigate();
   const heroRef = useRef(null);
   const [quickBites, setQuickBites] = useState([]);
 
@@ -444,7 +446,7 @@ function HomePage({
                 <section className="section">
                   <div className="section-header">
                     <h2 className="section-title">Hindi Series</h2>
-                    <a href="#" className="section-link">Show all</a>
+                    <span className="section-link" onClick={() => navigate('/category/hindi-series')}>Show all</span>
                   </div>
                   <div className="horizontal-list hide-scrollbar">
                     {HINDI_SERIES.map(movie => (
@@ -482,7 +484,7 @@ function HomePage({
                 <section className="section">
                   <div className="section-header">
                     <h2 className="section-title">Bhojpuri World</h2>
-                    <a href="#" className="section-link">Show all</a>
+                    <span className="section-link" onClick={() => navigate('/category/bhojpuri-world')}>Show all</span>
                   </div>
                   <div className="horizontal-list hide-scrollbar">
                     {BHOJPURI_CONTENT.map(movie => (
@@ -520,7 +522,7 @@ function HomePage({
                 <section className="section">
                   <div className="section-header">
                     <h2 className="section-title">Trending Songs</h2>
-                    <a href="#" className="section-link">Show all</a>
+                    <span className="section-link" onClick={() => navigate('/category/trending-songs')}>Show all</span>
                   </div>
                   <div className="horizontal-list hide-scrollbar">
                     {SONGS.map(song => (
@@ -561,7 +563,7 @@ function HomePage({
                 <section className="section">
                   <div className="section-header">
                     <h2 className="section-title">Trending Now</h2>
-                    <a href="#" className="section-link">Show all</a>
+                    <span className="section-link" onClick={() => navigate('/category/trending-now')}>Show all</span>
                   </div>
                   <div className="horizontal-list hide-scrollbar">
                     {TRENDING_NOW.map(movie => (
@@ -599,7 +601,7 @@ function HomePage({
                 <section className="section" style={{ paddingBottom: '100px' }}>
                   <div className="section-header">
                     <h2 className="section-title">Action Blockbusters</h2>
-                    <a href="#" className="section-link">Show all</a>
+                    <span className="section-link" onClick={() => navigate('/category/action-blockbusters')}>Show all</span>
                   </div>
                   <div className="horizontal-list hide-scrollbar">
                     {ACTION_MOVIES.map(movie => (
@@ -938,6 +940,15 @@ export default function UserRoutes({
                     likedVideos={likedVideos}
                   />
                 </motion.div>
+              }
+            />
+            <Route
+              path="/category/:slug"
+              element={
+                <CategoryPage
+                  setSelectedMovie={setSelectedMovie}
+                  purchasedContent={purchasedContent}
+                />
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -44,11 +44,20 @@ const getDashboardAnalytics = async (startDate, endDate) => {
   // Recent activity
   const recentActivity = await getRecentActivity();
 
+  // Calculate Global Total Views
+  const globalTotalViews =
+    (contentAnalytics.overview.totalViews || 0) +
+    (quickByteAnalytics.totalViews || 0) +
+    (audioSeriesAnalytics.totalViews || 0) +
+    (forYouAnalytics.totalViews || 0);
+
+  // Update content overview to reflect global total if that's what's displayed as "Total Views"
+  contentAnalytics.overview.globalTotalViews = globalTotalViews;
+
   return {
     period: { start, end },
     users: userAnalytics,
     content: contentAnalytics,
-    revenue: revenueAnalytics,
     revenue: revenueAnalytics,
     subscriptions: subscriptionAnalytics,
     quickBites: quickByteAnalytics,

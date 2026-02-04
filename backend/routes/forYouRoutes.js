@@ -7,6 +7,7 @@ const { protect, authorize } = require('../middlewares/auth');
 // Public routes
 router.get('/', forYouController.getAllForYou);
 router.get('/:id/comments', forYouController.getComments);
+router.post('/:id/view', forYouController.incrementViews);
 
 // Protected User routes
 router.post('/:id/like', protect, userAuthController.toggleLike);

@@ -1,3 +1,4 @@
+const Content = require('../models/Content');
 const userContentService = require('../services/userContentService');
 const streamingService = require('../services/streamingService');
 const downloadService = require('../services/downloadService');
@@ -386,6 +387,36 @@ const getNewReleases = async (req, res) => {
   }
 };
 
+// @desc    Increment view count
+// @route   POST /api/content/:id/view
+// @access  Public
+const incrementViews = async (req, res) => {
+  try {
+    const content = await Content.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        message: 'Content not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      views: content.views
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllContent,
   getContent,
@@ -398,5 +429,6 @@ module.exports = {
   getNewReleases,
   getContentByCategory,
   getUserDownloads,
-  revokeDownload
+  revokeDownload,
+  incrementViews
 };

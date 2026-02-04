@@ -7,7 +7,8 @@ const {
     updateAudioSeries,
     deleteAudioSeries,
     addEpisode,
-    deleteEpisode
+    deleteEpisode,
+    incrementViews
 } = require('../controllers/audioSeries.controller');
 
 const { protect, authorize } = require('../middlewares/auth');
@@ -15,6 +16,7 @@ const { protect, authorize } = require('../middlewares/auth');
 // Public routes
 router.get('/', getAllAudioSeries);
 router.get('/:id', getAudioSeries);
+router.post('/:id/view', incrementViews);
 
 // Admin protected routes
 router.use(protect);

@@ -18,7 +18,23 @@ import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
 import AdPromotionPage from './pages/AdPromotionPage';
 import LegalPages from './pages/LegalPages';
 import TabManagementPage from './pages/TabManagementPage';
-import { getImageUrl } from '../../utils/imageUtils';
+const getImageUrl = (path) => {
+  if (!path) return "https://placehold.co/300x450/111/FFF?text=No+Image";
+  // Fallback to the utility if available, or just use the same logic
+  let sanitizedPath = String(path).replace(/^undefined\//, '/');
+  if (sanitizedPath.startsWith('http://') || sanitizedPath.startsWith('https://')) return sanitizedPath;
+  const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
+  const serverRoot = rawApiUrl.replace(/\/$/, '').replace(/\/api$/, '');
+  const cleanPath = sanitizedPath.startsWith('/') ? sanitizedPath : `/${sanitizedPath}`;
+  return `${serverRoot}${cleanPath}`;
+};
+
+const InfoItem = ({ label, value, color }) => (
+  <div style={{ marginBottom: '8px' }}>
+    <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em' }}>{label}</p>
+    <p style={{ margin: '4px 0 0', fontSize: '0.95rem', fontWeight: '600', color: color || '#1f2937' }}>{value}</p>
+  </div>
+);
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -145,7 +161,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Total Views"
-          value={`${(content.overview.totalViews / 1000).toFixed(1)}K`}
+          value={(content.overview.globalTotalViews || content.overview.totalViews).toLocaleString()}
           subtext="Lifetime content views"
           icon={Video}
           color="#7c3aed"
@@ -153,7 +169,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Revenue"
-          value={`₹${(revenue.overview.totalRevenue / 100000).toFixed(2)}L`}
+          value={`₹${revenue.overview.totalRevenue.toLocaleString()}`}
           subtext="Total lifetime revenue"
           icon={Shield}
           color="#d97706"
@@ -163,7 +179,7 @@ const Dashboard = () => {
 
       {/* Secondary Stats Row - Module Breakdowns */}
       <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: '#374151' }}>Module Overview</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '32px' }}>
         <StatCard
           title="Quick Bites"
           value={qbTotal}
@@ -306,18 +322,28 @@ const ContentLibrary = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [contentList, setContentList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationInfo, setPaginationInfo] = useState({
+    totalItems: 0,
+    totalPages: 1,
+    currentPage: 1,
+    limit: 10
+  });
 
 
 
   useEffect(() => {
-    fetchContent();
-  }, []);
+    fetchContent(currentPage);
+  }, [currentPage]);
 
-  const fetchContent = async () => {
+  const fetchContent = async (page = 1) => {
     try {
       setLoading(true);
-      const data = await adminContentService.getAllContent();
-      setContentList(data);
+      // Fetch a large enough limit to allow client-side filtering and pagination for now
+      // This is the most reliable way to keep all tabs working without backend changes
+      const response = await adminContentService.getAllContent({ page: 1, limit: 1000 });
+      const rawData = response.data || [];
+      setContentList(rawData);
     } catch (error) {
       console.error("Failed to fetch content", error);
     } finally {
@@ -340,6 +366,19 @@ const ContentLibrary = () => {
     if (activeTab === 'Short Film') return item.isShortFilm;
     return true;
   });
+
+  // Client-side pagination logic
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredContent.length / itemsPerPage);
+  const paginatedContent = filteredContent.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const columns = [
     { key: 'image', label: 'Poster', sortable: false, render: (value, row) => <img src={getImageUrl(row.poster?.url || row.image)} alt="poster" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} /> },
@@ -389,7 +428,7 @@ const ContentLibrary = () => {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '4px', marginTop: 0, color: '#111827' }}>Content Library</h1>
           <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>Manage your movies, series, and other content</p>
           <div style={{ background: '#e7f5e7', border: '1px solid #46d369', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.85rem' }}>
-            <strong style={{ color: '#064e3b' }}>Real Data:</strong> <span style={{ color: '#065f46' }}>{contentList.length} items</span>
+            <strong style={{ color: '#064e3b' }}>Total Items:</strong> <span style={{ color: '#065f46' }}>{filteredContent.length} items (Page {currentPage} of {Math.max(1, totalPages)})</span>
           </div>
         </div>
         <button
@@ -438,17 +477,60 @@ const ContentLibrary = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>Loading content...</div>
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading content library...</div>
       ) : (
-        <DataTable
-          data={filteredContent}
-          columns={columns}
-          title={`${activeTab === 'All' ? 'All Content' : activeTab}`}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onView={handleView}
-          emptyMessage={`No ${activeTab.toLowerCase()} content found.`}
-        />
+        <>
+          <DataTable
+            data={paginatedContent}
+            columns={columns}
+            title={`${activeTab === 'All' ? 'All Content' : activeTab}`}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onView={handleView}
+            emptyMessage={`No ${activeTab.toLowerCase()} content found.`}
+          />
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px', paddingBottom: '24px' }}>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  background: currentPage === 1 ? '#f3f4f6' : 'white',
+                  color: currentPage === 1 ? '#9ca3af' : '#374151',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: '500'
+                }}
+              >
+                Previous
+              </button>
+              <div style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: '500' }}>
+                Page <span style={{ color: '#111827' }}>{currentPage}</span> of {totalPages}
+              </div>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  background: currentPage === totalPages ? '#f3f4f6' : 'white',
+                  color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: '500'
+                }}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
 
@@ -490,10 +572,10 @@ const EditContent = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading content details...</div>;
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 5000, overflowY: 'auto' }}>
+    <div style={{ padding: '20px' }}>
       <ContentForm
         content={content}
         onSave={handleUpdate}
@@ -524,35 +606,166 @@ const ViewContent = () => {
     if (id) fetch();
   }, [id, navigate]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#6b7280' }}>
+      Loading content details...
+    </div>
+  );
   if (!content) return null;
 
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+      backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      padding: '20px', backdropFilter: 'blur(4px)'
     }}>
-      <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative' }}>
-        <button onClick={() => navigate('/admin/content/library')} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'transparent', cursor: 'pointer' }}>
-          <X size={24} />
-        </button>
-        <h2 style={{ marginBottom: '16px', fontSize: '1.5rem', fontWeight: 'bold' }}>{content.title}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div style={{
+        background: 'white', borderRadius: '16px', width: '100%', maxWidth: '900px',
+        maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+      }}>
+        {/* Header */}
+        <div style={{
+          position: 'sticky', top: 0, background: 'white', padding: '20px 24px',
+          borderBottom: '1px solid #f3f4f6', zIndex: 10, display: 'flex',
+          justifyContent: 'space-between', alignItems: 'center'
+        }}>
           <div>
-            <img src={getImageUrl(content.poster?.url || content.image)} alt="Poster" style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }} />
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {content.genre?.map(g => <span key={g} style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{g}</span>)}
+            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>{content.title}</h2>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>{content.type}</span>
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>{content.status}</span>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <p><strong>Description:</strong> {content.description}</p>
-            <p><strong>Type:</strong> {content.type}</p>
-            <p><strong>Year:</strong> {content.year}</p>
-            <p><strong>Rating:</strong> {content.rating}/10</p>
-            <p><strong>Status:</strong> {content.status}</p>
-            <p><strong>Views:</strong> {content.views}</p>
-            <p><strong>Monetization:</strong> {content.isPaid ? `Paid (₹${content.price})` : 'Free'}</p>
+          <button
+            onClick={() => navigate('/admin/content/library')}
+            style={{
+              background: '#f3f4f6', border: 'none', cursor: 'pointer',
+              padding: '8px', borderRadius: '50%', color: '#374151', display: 'flex'
+            }}
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr) 2fr', gap: '32px' }}>
+            {/* Left Column: Media & Genres */}
+            <div>
+              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '16px' }}>
+                <img
+                  src={getImageUrl(content.poster?.url || content.image)}
+                  alt="Poster"
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+                <div style={{
+                  position: 'absolute', top: '12px', right: '12px',
+                  background: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 8px',
+                  borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold'
+                }}>
+                  {content.rating > 0 ? `★ ${content.rating}` : 'No Rating'}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151', marginBottom: '8px' }}>Genres</h4>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {content.genre?.map(g => (
+                    <span key={g} style={{ background: '#ecfdf5', color: '#065f46', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}>
+                      {g}
+                    </span>
+                  ))}
+                  {(!content.genre || content.genre.length === 0) && <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>No genres added</span>}
+                </div>
+              </div>
+
+              {content.tags?.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151', marginBottom: '8px' }}>Tags</h4>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {content.tags.map(tag => (
+                      <span key={tag} style={{ color: '#6b7280', fontSize: '0.75rem', border: '1px solid #e5e7eb', padding: '2px 6px', borderRadius: '4px' }}>
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Information */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151', marginBottom: '8px', borderBottom: '2px solid #46d369', display: 'inline-block' }}>Description</h4>
+                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: '#4b5563' }}>{content.description || 'No description available.'}</p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f9fafb', padding: '20px', borderRadius: '12px' }}>
+                <InfoItem label="Release Year" value={content.year} />
+                <InfoItem label="Language" value={content.language || 'N/A'} />
+                <InfoItem label="Monetization" value={content.isPaid ? `Paid (₹${content.price})` : 'Free'} color={content.isPaid ? '#b45309' : '#059669'} />
+                <InfoItem label="View Count" value={content.views?.toLocaleString() || 0} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <InfoItem label="Director" value={content.director?.join(', ') || content.director || 'N/A'} />
+                <InfoItem label="Producer" value={content.producer || 'N/A'} />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <InfoItem label="Main Cast" value={content.cast || 'N/A'} />
+                </div>
+              </div>
+
+              {content.video?.url && (
+                <div style={{ marginTop: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '20px' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151', marginBottom: '12px' }}>Video Source</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <a
+                      href={content.video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        flex: 1, textDecoration: 'none', background: '#111827', color: 'white',
+                        padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '8px', fontWeight: '600'
+                      }}
+                    >
+                      <Film size={18} /> Open Video Link
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Series Episodes Section */}
+          {(content.type === 'series' || content.type === 'hindi_series') && content.seasons?.length > 0 && (
+            <div style={{ marginTop: '32px', borderTop: '1px solid #f3f4f6', paddingTop: '24px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#111827', marginBottom: '20px' }}>Seasons & Episodes</h3>
+              {content.seasons.map((season) => (
+                <div key={season._id} style={{ marginBottom: '24px', background: '#f9fafb', borderRadius: '12px', padding: '20px' }}>
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: '700', color: '#111827', display: 'flex', justifyContent: 'space-between' }}>
+                    Season {season.seasonNumber}: {season.title || 'Untitled Season'}
+                    <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'normal' }}>{season.episodes?.length || 0} Episodes</span>
+                  </h4>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {season.episodes?.map((episode) => (
+                      <div key={episode._id} style={{ background: 'white', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                        <div>
+                          <span style={{ fontWeight: '700', color: '#46d369', marginRight: '8px' }}>E{episode.episodeNumber}</span>
+                          <span style={{ fontWeight: '600', color: '#374151' }}>{episode.title}</span>
+                          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6b7280' }}>{episode.description?.substring(0, 100)}{episode.description?.length > 100 ? '...' : ''}</p>
+                        </div>
+                        {episode.video?.url && (
+                          <a href={episode.video.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none' }}>
+                            View Video
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -649,7 +862,6 @@ const Users = () => {
     { key: 'plan', label: 'Plan', sortable: true },
     { key: 'status', label: 'Status', sortable: true },
     { key: 'totalWatchTime', label: 'Watch Time (hrs)', sortable: true },
-    { key: 'favoriteGenre', label: 'Favorite Genre', sortable: true },
     { key: 'joinDate', label: 'Join Date', sortable: true },
     { key: 'lastLogin', label: 'Last Login', sortable: true }
   ];
@@ -807,7 +1019,7 @@ const Users = () => {
                   style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #46d369' }}
                 />
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>{selectedUser.name}</h3>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#111827' }}>{selectedUser.name}</h3>
                   <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.9rem' }}>{selectedUser.email}</p>
                 </div>
               </div>
@@ -818,7 +1030,7 @@ const Users = () => {
                   <InfoItem label="Role" value={selectedUser.role} />
                   <InfoItem label="Plan" value={selectedUser.subscription?.plan?.name || 'Free'} />
                   <InfoItem label="Joined On" value={new Date(selectedUser.createdAt).toLocaleDateString()} />
-                  <InfoItem label="Last Login" value={selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString() : 'Never'} />
+                  <InfoItem label="Last Login" value={selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleDateString() : 'Never'} />
                   <InfoItem label="Phone" value={selectedUser.phone || 'N/A'} />
                 </div>
               ) : (
@@ -890,12 +1102,6 @@ const Users = () => {
   );
 };
 
-const InfoItem = ({ label, value, color }) => (
-  <div style={{ marginBottom: '8px' }}>
-    <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em' }}>{label}</p>
-    <p style={{ margin: '4px 0 0', fontSize: '0.95rem', fontWeight: '600', color: color || '#1f2937' }}>{value}</p>
-  </div>
-);
 
 const Monetization = () => {
   const [plans, setPlans] = useState([]);
@@ -1062,7 +1268,7 @@ const Monetization = () => {
       ) : (
         <>
           {/* Pay-Per-View Content Table (New Section) */}
-          <div>
+          <div style={{ marginBottom: '40px' }}>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px', color: '#374151' }}>Pay-Per-View Content Performance</h2>
             <DataTable
               data={paidContent}

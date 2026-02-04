@@ -193,6 +193,7 @@
   color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+  cursor: pointer;
 }
 
 /* Horizontal Scroll List */
@@ -639,8 +640,8 @@
 
 /* Right Sidebar Actions */
 .reel-actions {
-  position: absolute;
-  bottom: 100px;
+  /* Increased to clear 80px bottom nav + some spacing */
+  bottom: 156px;
   right: 12px;
   display: flex;
   flex-direction: column;
@@ -668,8 +669,8 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 20px 16px 90px 16px;
-  /* 90px bottom padding to clear bottom nav */
+  padding: 20px 16px 140px 16px;
+  /* Increased from 90px to 140px to safely clear the bottom nav */
   background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
   z-index: 10;
   display: flex;

@@ -257,6 +257,36 @@ const toggleCommentLike = async (req, res) => {
     }
 };
 
+// @desc    Increment view count
+// @route   POST /api/foryou/:id/view
+// @access  Public
+const incrementViews = async (req, res) => {
+    try {
+        const forYou = await ForYou.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+
+        if (!forYou) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reel not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            views: forYou.views
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllForYou,
     createForYou: [
@@ -272,5 +302,6 @@ module.exports = {
     addComment,
     getComments,
     deleteComment,
-    toggleCommentLike
+    toggleCommentLike,
+    incrementViews
 };

@@ -435,6 +435,37 @@ const toggleCommentLike = async (req, res) => {
 };
 
 
+// @desc    Increment view count
+// @route   POST /api/quickbytes/:id/view
+// @access  Public
+const incrementViews = async (req, res) => {
+    try {
+        const quickByte = await QuickByte.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+
+        if (!quickByte) {
+            return res.status(404).json({
+                success: false,
+                message: 'Quick Bite not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            views: quickByte.views
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
 module.exports = {
     getAllQuickBytes,
     createQuickByte: [
@@ -460,5 +491,6 @@ module.exports = {
     addComment,
     getComments,
     deleteComment,
-    toggleCommentLike
+    toggleCommentLike,
+    incrementViews
 };

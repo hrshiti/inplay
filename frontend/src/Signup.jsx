@@ -16,10 +16,22 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
   const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    // Special handling for phone to only allow numbers and max 10
+    if (name === 'phone') {
+      const numericValue = value.replace(/\D/g, '');
+      if (numericValue.length <= 10) {
+        setFormData({
+          ...formData,
+          [name]: numericValue
+        });
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
     setError('');
     setSuccess('');
   };
@@ -280,7 +292,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Create a password (min 6 characters)"
+                  placeholder="Password (min 6 chars)"
                   required
                   style={{
                     width: '100%',

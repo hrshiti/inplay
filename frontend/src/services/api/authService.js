@@ -184,6 +184,32 @@ const authService = {
         return data.data;
     },
 
+    async removeFromHistory(contentId) {
+        const token = localStorage.getItem('inplay_token');
+        if (!token) throw new Error('No token found');
+
+        const response = await fetch(`${API_URL}/user/auth/history/${contentId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        return data.data;
+    },
+
+    async clearHistory() {
+        const token = localStorage.getItem('inplay_token');
+        if (!token) throw new Error('No token found');
+
+        const response = await fetch(`${API_URL}/user/auth/history`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        return data.data;
+    },
+
     logout() {
         localStorage.removeItem('inplay_token');
         localStorage.removeItem('inplay_current_user');

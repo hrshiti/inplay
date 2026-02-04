@@ -64,6 +64,20 @@ const contentService = {
         return data.data || [];
     },
 
+    // Fetch single Quick Byte details
+    async getQuickByteById(id) {
+        const response = await fetch(`${API_URL}/quickbytes/${id}`, {
+            method: 'GET',
+        });
+        if (!response.ok) {
+            // If not found in quickbytes, throw error so caller can try next strategy or fail
+            throw new Error('Failed to fetch quick byte details');
+        }
+        const data = await response.json();
+        // Force type to be quick_byte for vertical player handling
+        return { ...data.data, type: 'quick_byte', isVertical: true };
+    },
+
     async getForYouReels() {
         const response = await fetch(`${API_URL}/foryou?status=published`, {
             method: 'GET'
@@ -110,6 +124,23 @@ const contentService = {
         const response = await fetch(`${API_URL}/public/dynamic-content?${queryParams.toString()}`);
         const data = await response.json();
         return data.data || [];
+    },
+
+    async incrementContentView(contentId, contentType = 'content') {
+        try {
+            const response = await fetch(`${API_URL}/${contentType}/${contentId}/view`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            });
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to increment view count:', error);
+        }
     }
 };
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
@@ -22,9 +22,11 @@ import ForYouPage from './ForYouPage';
 import SplashScreen from './SplashScreen';
 import HistoryPage from './HistoryPage';
 import MyListPage from './MyListPage';
+import LikedVideosPage from './LikedVideosPage';
 import DownloadsPage from './DownloadsPage';
 import SearchPage from './SearchPage';
 import SettingsPage from './SettingsPage';
+import CategoryPage from './pages/CategoryPage';
 import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
 import DynamicTabPage from './DynamicTabPage';
 
@@ -44,6 +46,8 @@ import { getImageUrl } from './utils/imageUtils';
 import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission } from './services/pushNotificationService';
 
 import Header from './Header';
+import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
+import FloatingAudioPlayer from './components/FloatingAudioPlayer';
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -78,6 +82,42 @@ function App() {
   const [qbContinueWatching, setQbContinueWatching] = useState([]);
   const [dynamicStructure, setDynamicStructure] = useState([]);
 
+  // Keyboard Detection for Mobile
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    // Only run on mobile devices
+    if (window.innerWidth > 768) return;
+
+    const initialHeight = window.innerHeight;
+
+    const handleResize = () => {
+      // If current height is significantly smaller (e.g. < 80% of original), keyboard is likely open
+      if (window.innerHeight < initialHeight * 0.8) {
+        setIsKeyboardOpen(true);
+      } else {
+        setIsKeyboardOpen(false);
+      }
+    };
+
+    // Use VisualViewport API if available (more reliable on modern mobile browsers)
+    if (window.visualViewport) {
+      const handleVisualResize = () => {
+        if (window.visualViewport.height < initialHeight * 0.8) {
+          setIsKeyboardOpen(true);
+        } else {
+          setIsKeyboardOpen(false);
+        }
+      };
+      window.visualViewport.addEventListener('resize', handleVisualResize);
+      return () => window.visualViewport.removeEventListener('resize', handleVisualResize);
+    }
+
+    // Fallback to window resize
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const updateQuickByteProgress = () => {
     if (quickBites.length > 0) {
       try {
@@ -86,7 +126,12 @@ function App() {
           const contentId = item._id || item.id;
           const prog = progress[contentId];
           if (prog && prog.watchedSeconds > 0) {
-            return { ...item, ...prog };
+            // Merge the full QuickByte item with progress data
+            // This ensures we have thumbnail, episodes, etc. from the original item
+            return {
+              ...item,  // Full QuickByte data (including thumbnail, episodes, etc.)
+              ...prog   // Progress data (watchedSeconds, episodeIndex, timestamp, duration)
+            };
           }
           return null;
         })
@@ -131,67 +176,27 @@ function App() {
   const [allContent, setAllContent] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const categoryMatch = location.pathname.match(/^\/category\/(.+)/);
+  const categorySlug = categoryMatch ? categoryMatch[1] : null;
 
   // Track the source tab for correct "More Like This" recommendations
   const [selectedSourceTab, setSelectedSourceTab] = useState(null);
 
   const handleContentSelect = (movie, sourceTab = null) => {
-    navigate(`/content/${movie._id || movie.id}`, { state: { movie, sourceTab } });
+    // Check if content is 'For You' style (Quick Byte/Vertical)
+    if (movie.type === 'quick_byte' || movie.isVertical || (movie.category === 'Quick Bites')) {
+      navigate(`/watch/${movie._id || movie.id}`, {
+        state: {
+          movie: { ...movie, isVertical: true, type: 'quick_byte' },
+          episode: null
+        }
+      });
+    } else {
+      navigate(`/content/${movie._id || movie.id}`, { state: { movie, sourceTab } });
+    }
   };
 
-  useEffect(() => {
-    // Check if the current path is a content detail path
-    const match = location.pathname.match(/^\/content\/([^/]+)$/);
-    if (match) {
-      const id = match[1];
 
-      // Restore source tab from navigation state if available
-      if (location.state?.sourceTab) {
-        setSelectedSourceTab(location.state.sourceTab);
-      } else {
-        // If deep linking without state, we might lose context, which is expected behavior for direct links
-        // We could try to infer it from current filter if it matches a dynamic tab, but safer to respect state.
-        if (!location.state) setSelectedSourceTab(null);
-      }
-
-      if (location.state?.movie) {
-        setSelectedMovie(location.state.movie);
-        return;
-      }
-
-      // If we don't have a selected movie or it doesn't match the URL ID, fetch/set it
-      if (!selectedMovie || (selectedMovie._id !== id && selectedMovie.id !== id)) {
-        // Optimization: Try to find in existing lists first to show immediately
-        let found = null;
-        if (allContent.length > 0) found = allContent.find(i => (i._id === id || i.id === id));
-        if (!found && heroMovies.length > 0) found = heroMovies.find(i => (i._id === id || i.id === id));
-
-        if (found) {
-          setSelectedMovie(found);
-        } else {
-          // Fetch from API
-          // We'll set a loading flag for the modal if needed, but for now just fetch
-          contentService.getContentById(id)
-            .then(data => {
-              if (data) setSelectedMovie(data);
-            })
-            .catch(err => {
-              console.error("Failed to load content from URL", err);
-              navigate('/'); // Redirect to home on failure
-            });
-        }
-      }
-    } else {
-      // If NOT in a content route, ensure selectedMovie is null (close modal)
-      if (location.pathname !== `/content/${selectedMovie?._id}` && location.pathname !== `/content/${selectedMovie?.id}`) {
-        // Only clear if we really moved away (double check path)
-        if (selectedMovie) {
-          setSelectedMovie(null);
-          setSelectedSourceTab(null);
-        }
-      }
-    }
-  }, [location.pathname, allContent, location.state]); // Depend on location and content list
 
 
   const loadUserProfile = async () => {
@@ -315,7 +320,12 @@ function App() {
     'mms': 'Mms',
     'crime-show': 'Crime Show',
     'audio-series': 'Audio Series',
-    'short-film': 'Short Film'
+    'short-film': 'Short Film',
+    // Added missing categories
+    'bhojpuri': 'Bhojpuri',
+    'hindi-series': 'Hindi Series',
+    'trending-sound': 'Trending Sound',
+    'action': 'Action'
   };
 
   const reverseFilterMap = {
@@ -329,14 +339,49 @@ function App() {
     'Crime Show': 'crime-show',
     'Mms': 'mms',
     'Audio Series': 'audio-series',
-    'Short Film': 'short-film'
+    'Short Film': 'short-film',
+    // Added missing categories
+    'Bhojpuri': 'bhojpuri',
+    'Hindi Series': 'hindi-series',
+    'Trending Sound': 'trending-sound',
+    'Action': 'action'
+  };
+
+  // Helper to slugify any string: "My Category Name" -> "my-category-name"
+  const slugify = (text) => {
+    return text.toString().toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')     // Replace spaces with -
+      .replace(/[^\w-]+/g, '')  // Remove all non-word chars
+      .replace(/--+/g, '-');    // Replace multiple - with single -
+  };
+
+  // Helper to deslugify: "my-category-name" -> "My Category Name" (approximate)
+  const deslugify = (slug) => {
+    return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   const handleFilterChange = (cat) => {
     setActiveFilter(cat);
+
+    // 1. Check Dynamic Tabs from Backend
     const dynamicTab = dynamicStructure.find(t => t.name === cat);
-    const slug = dynamicTab ? dynamicTab.slug : (reverseFilterMap[cat] || '');
-    navigate(`/${slug}`);
+    if (dynamicTab) {
+      navigate(`/${dynamicTab.slug}`);
+      return;
+    }
+
+    // 2. Check Static Map
+    const staticSlug = reverseFilterMap[cat];
+    if (staticSlug !== undefined) {
+      navigate(`/${staticSlug}`);
+      return;
+    }
+
+    // 3. Fallback: Dynamic Slug Generation (Future Proofing)
+    // If a new category appears that isn't in maps, we create a slug for it
+    const dynamicSlug = slugify(cat);
+    navigate(`/${dynamicSlug}`);
   };
 
   // Sync state with URL on mount and location change
@@ -346,28 +391,47 @@ function App() {
     // Normalize path: remove leading and trailing slashes
     const path = location.pathname ? location.pathname.replace(/^\/|\/$/g, '') : '';
 
-    // 1. Check Static Routes
+    // 1. Check Static Routes (Explicit Map)
     if (filterMap[path]) {
       setActiveFilter(filterMap[path]);
       setActiveTab('Home');
-    } else if (path === '' || path === 'home') {
+    }
+    else if (path === '' || path === 'home') {
       setActiveFilter('Popular');
       setActiveTab('Home');
-    } else if (path === 'for-you') {
+    }
+    else if (path === 'for-you') {
       setActiveTab('For You');
     } else if (path === 'my-space') {
       setActiveTab('My Space');
     } else if (path === 'search') {
       setActiveTab('Search');
-    } else if (['history', 'my-list', 'downloads', 'settings'].includes(path)) {
+    } else if (['history', 'my-list', 'liked-videos', 'downloads', 'settings'].includes(path)) {
       setActiveTab('My Space');
     }
-    // 2. Check Dynamic Tab Slugs
+    else if (path.startsWith('category/')) {
+      setActiveTab('Category'); // Custom tab state implies viewing a category
+    }
+    // 2. Check Dynamic Tab Slugs (Backend)
     else if (dynamicStructure.length > 0) {
       const dynamicTab = dynamicStructure.find(t => t.slug === path);
       if (dynamicTab) {
         setActiveFilter(dynamicTab.name);
         setActiveTab('Home');
+      }
+      // 3. Fallback for Generated Slugs (e.g. /my-new-category)
+      // If we are here, it might be a valid slug not in our static map yet.
+      // We try to match it against available content sections or just set it.
+      else {
+        // Attempt to convert slug back to Title Case for display
+        // This ensures if user lands on /custom-category, the filter becomes "Custom Category"
+        // Note: This relies on the filter name matching how we display it
+        const guessedFilter = deslugify(path);
+        // Only set it if it looks valid (not empty)
+        if (guessedFilter) {
+          setActiveFilter(guessedFilter);
+          setActiveTab('Home');
+        }
       }
     }
   }, [location.pathname, dynamicStructure]);
@@ -446,8 +510,9 @@ function App() {
       setShowAuth('login');
       return;
     }
-    setPlayingMovie(movie);
-    setPlayingEpisode(episode);
+    const contentId = movie._id || movie.id;
+    // Navigate to watch route, passing movie/episode object to avoid re-fetch if possible
+    navigate(`/watch/${contentId}`, { state: { movie, episode } });
   };
 
   const handleToggleMyList = async (movie) => {
@@ -708,6 +773,30 @@ function App() {
     <Routes>
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/*" element={<ProtectedRoute><AdminRoutes /></ProtectedRoute>} />
+
+      {/* Dedicated Routes for Deep Linking */}
+      <Route path="/content/:id" element={
+        <ContentDetailsRoute
+          allContent={allContent}
+          handlePlay={handlePlay}
+          myList={myList}
+          likedVideos={likedVideos}
+          handleToggleMyList={handleToggleMyList}
+          handleToggleLike={handleToggleLike}
+          purchasedContent={purchasedContent}
+          handlePurchase={handlePurchase}
+        />
+      } />
+      <Route path="/watch/:id" element={
+        <WatchPageRoute
+          allContent={allContent}
+          handleToggleMyList={handleToggleMyList}
+          handleToggleLike={handleToggleLike}
+          myList={myList}
+          likedVideos={likedVideos}
+        />
+      } />
+
       <Route path="/*" element={
         <div className="app-container">
           <AnimatePresence mode="wait">
@@ -718,24 +807,9 @@ function App() {
             <>
 
 
-              <AnimatePresence>
-                {selectedMovie && (
-                  <MovieDetailsPage
-                    movie={selectedMovie}
-                    onClose={() => navigate(-1)}
-                    onPlay={handlePlay}
-                    myList={myList}
-                    likedVideos={likedVideos}
-                    onToggleMyList={toggleMyList}
-                    onToggleLike={toggleLike}
-                    isPurchased={purchasedContent.includes(selectedMovie.id)}
-                    onPurchase={handlePurchase}
-                    sourceTab={selectedSourceTab}
-                  />
-                )}
-              </AnimatePresence>
 
-              {activeTab === 'Home' && !selectedMovie && (
+
+              {activeTab === 'Home' && !selectedMovie && !playingMovie && !showAuth && (
                 <>
                   <Header currentUser={currentUser} onLoginClick={() => setShowAuth('login')} />
                   <div className="category-tabs-container hide-scrollbar">
@@ -925,11 +999,7 @@ function App() {
                                             whileTap={{ scale: 0.95 }}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              if (movie.isPaid && !purchasedContent.includes(movie.id)) {
-                                                handleContentSelect(movie); // Open details to buy
-                                              } else {
-                                                handlePlay(movie);
-                                              }
+                                              handleContentSelect(movie);
                                             }}
                                             style={{
                                               flex: 1, height: '40px', borderRadius: '12px', border: 'none',
@@ -1235,7 +1305,28 @@ function App() {
                             </div>
                             <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 20px' }}>
                               {qbContinueWatching.map((item, index) => {
-                                const image = item.thumbnail?.url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
+                                // Get the proper image from the QuickByte data
+                                const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
+
+                                // Get the episode duration from episodes array
+                                let episodeDuration = item.duration || 0;
+                                if (item.episodes && item.episodes[item.episodeIndex]) {
+                                  episodeDuration = item.episodes[item.episodeIndex].duration || episodeDuration;
+                                } else if (item.video?.duration) {
+                                  episodeDuration = item.video.duration;
+                                }
+
+                                // Calculate formatted duration for display
+                                const formatDuration = (seconds) => {
+                                  if (!seconds) return '0m';
+                                  const mins = Math.floor(seconds / 60);
+                                  const secs = Math.floor(seconds % 60);
+                                  if (mins > 0) {
+                                    return `${mins}m ${secs}s`;
+                                  }
+                                  return `${secs}s`;
+                                };
+
                                 return (
                                   <motion.div
                                     key={item._id || item.id || index}
@@ -1263,6 +1354,7 @@ function App() {
                                         src={getImageUrl(image)}
                                         alt={item.title}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        onError={(e) => { e.target.src = 'https://placehold.co/150x267/333/FFF?text=' + (item.title || 'InPlay')?.substring(0, 5) }}
                                       />
 
                                       <div style={{
@@ -1279,13 +1371,15 @@ function App() {
                                             <Play size={10} fill="white" stroke="none" />
                                           </div>
                                           <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
-                                            Ep {item.episodeIndex + 1}
+                                            {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
                                           </span>
                                         </div>
 
-                                        <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
-                                          <div style={{ width: `${(item.watchedSeconds / item.duration) * 100}%`, height: '100%', background: '#e50914' }}></div>
-                                        </div>
+                                        {episodeDuration && item.watchedSeconds !== undefined && (
+                                          <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                                            <div style={{ width: `${Math.min((item.watchedSeconds / episodeDuration) * 100, 100)}%`, height: '100%', background: '#e50914' }}></div>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
 
@@ -1303,7 +1397,7 @@ function App() {
                                         {item.title}
                                       </span>
                                       <span style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
-                                        {item.genre || 'Short'} • {item.year || '2026'}
+                                        {item.genre || 'Short'} • {formatDuration(episodeDuration)}
                                       </span>
                                     </div>
                                   </motion.div>
@@ -1351,7 +1445,7 @@ function App() {
                         <section className="section">
                           <div className="section-header">
                             <h2 className="section-title">Hindi Series</h2>
-                            <a href="#" className="section-link">Show all</a>
+                            <span className="section-link" onClick={() => navigate('/category/hindi-series')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
                             {(contentSections?.hindi_series || []).map(movie => (
@@ -1389,7 +1483,7 @@ function App() {
                         <section className="section">
                           <div className="section-header">
                             <h2 className="section-title">Bhojpuri World</h2>
-                            <a href="#" className="section-link">Show all</a>
+                            <span className="section-link" onClick={() => navigate('/category/bhojpuri-world')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
                             {(contentSections?.bhojpuri || []).map(movie => (
@@ -1423,11 +1517,10 @@ function App() {
                           </div>
                         </section>
 
-                        {/* Songs Section */}
                         <section className="section">
                           <div className="section-header">
                             <h2 className="section-title">Trending Songs</h2>
-                            <a href="#" className="section-link">Show all</a>
+                            <span className="section-link" onClick={() => navigate('/category/trending-songs')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
                             {contentSections.trending_song.map(song => (
@@ -1468,7 +1561,7 @@ function App() {
                         <section className="section">
                           <div className="section-header">
                             <h2 className="section-title">Trending Now</h2>
-                            <a href="#" className="section-link">Show all</a>
+                            <span className="section-link" onClick={() => navigate('/category/trending-now')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
                             {contentSections.trending_now.map(movie => (
@@ -1506,7 +1599,7 @@ function App() {
                         <section className="section">
                           <div className="section-header">
                             <h2 className="section-title">Broadcast</h2>
-                            <a href="#" className="section-link" onClick={(e) => { e.preventDefault(); handleFilterChange('Broadcast'); }}>Show all</a>
+                            <span className="section-link" onClick={() => navigate('/category/broadcast')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
                             {(contentSections?.broadcast || []).length === 0 ? (
@@ -1517,7 +1610,7 @@ function App() {
                                   key={movie.id || movie._id}
                                   className="movie-card"
                                   whileTap={{ scale: 0.95 }}
-                                  onClick={() => setSelectedMovie(movie)}
+                                  onClick={() => handleContentSelect(movie)}
                                   style={{ cursor: 'pointer' }}
                                 >
                                   <div className="poster-container">
@@ -1548,7 +1641,7 @@ function App() {
                         <section className="section" style={{ paddingBottom: '40px' }}>
                           <div className="section-header">
                             <h2 className="section-title">Action Blockbusters</h2>
-                            <a href="#" className="section-link">Show all</a>
+                            <span className="section-link" onClick={() => navigate('/category/action-blockbusters')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
                             {contentSections.action.map(movie => (
@@ -1556,7 +1649,7 @@ function App() {
                                 key={movie.id}
                                 className="movie-card"
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedMovie(movie)}
+                                onClick={() => handleContentSelect(movie)}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <div className="poster-container">
@@ -1587,12 +1680,12 @@ function App() {
                       dynamicStructure.some(t => t.name === activeFilter) ? (
                         <DynamicTabPage
                           tab={dynamicStructure.find(t => t.name === activeFilter)}
-                          onMovieClick={setSelectedMovie}
+                          onMovieClick={handleContentSelect}
                         />
                       ) : (
                         <CategoryGridView
                           activeFilter={activeFilter}
-                          setSelectedMovie={setSelectedMovie}
+                          setSelectedMovie={handleContentSelect}
                           purchasedContent={purchasedContent}
                           originalsData={contentSections.originals}
                           trendingData={contentSections.trending_now}
@@ -1616,7 +1709,7 @@ function App() {
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 100 }}
                   >
                     <ForYouPage
-                      onBack={() => setActiveTab('Home')}
+                      onBack={() => navigate('/')}
                       likedVideos={likedVideos}
                       onToggleLike={handleToggleLike}
                     />
@@ -1635,10 +1728,10 @@ function App() {
                   >
                     <MySpacePage
                       currentUser={currentUser}
-                      onMovieClick={(movie) => setSelectedMovie(movie)}
+                      onMovieClick={handleContentSelect}
                       myList={myList}
-                      likedVideos={likedVideos}
-                      watchHistory={watchHistory}
+                      likedVideos={likedVideos.filter(i => i.type !== 'reel' && i.type !== 'quick_byte')}
+                      watchHistory={watchHistory.filter(i => i.type !== 'reel' && i.type !== 'quick_byte')}
                       continueWatching={continueWatching}
                       onToggleMyList={handleToggleMyList}
                       onToggleLike={handleToggleLike}
@@ -1655,8 +1748,8 @@ function App() {
                     transition={{ duration: 0.3 }}
                   >
                     <HistoryPage
-                      watchHistory={watchHistory}
-                      onMovieClick={(movie) => setSelectedMovie(movie)}
+                      watchHistory={watchHistory.filter(i => i.type !== 'reel' && i.type !== 'quick_byte')}
+                      onMovieClick={handleContentSelect}
                       onRefresh={loadUserProfile}
                     />
                   </motion.div>
@@ -1672,10 +1765,26 @@ function App() {
                   >
                     <MyListPage
                       myList={myList}
-                      onMovieClick={(movie) => setSelectedMovie(movie)}
+                      onMovieClick={handleContentSelect}
                     />
                   </motion.div>
                 )}
+
+                {location.pathname === '/liked-videos' && (
+                  <motion.div
+                    key="liked-videos"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <LikedVideosPage
+                      likedVideos={likedVideos}
+                      onMovieClick={handleContentSelect}
+                    />
+                  </motion.div>
+                )}
+
 
                 {location.pathname === '/downloads' && (
                   <motion.div
@@ -1686,7 +1795,7 @@ function App() {
                     transition={{ duration: 0.3 }}
                   >
                     <DownloadsPage
-                      onMovieClick={(movie) => setSelectedMovie(movie)}
+                      onMovieClick={handleContentSelect}
                     />
                   </motion.div>
                 )}
@@ -1701,7 +1810,7 @@ function App() {
                   >
                     <SearchPage
                       allContent={allContent}
-                      onMovieClick={(movie) => setSelectedMovie(movie)}
+                      onMovieClick={handleContentSelect}
                     />
                   </motion.div>
                 )}
@@ -1718,6 +1827,22 @@ function App() {
                       currentUser={currentUser}
                       onUpdateUser={setCurrentUser}
                       onLogout={handleLogout}
+                    />
+                  </motion.div>
+                )}
+
+                {location.pathname.startsWith('/category/') && categorySlug && (
+                  <motion.div
+                    key="category"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <CategoryPage
+                      slug={categorySlug}
+                      setSelectedMovie={setSelectedMovie}
+                      purchasedContent={purchasedContent}
                     />
                   </motion.div>
                 )}
@@ -1776,7 +1901,7 @@ function App() {
               </AnimatePresence>
 
               {/* Bottom Navigation */}
-              {activeTab !== 'For You' && (
+              {!isKeyboardOpen && (
                 <nav className="bottom-nav" style={{ justifyContent: 'space-around' }}>
                   <NavItem
                     icon={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
@@ -1795,25 +1920,7 @@ function App() {
             </>
           )
           }
-          {/* Video Player Overlay */}
-          <AnimatePresence>
-            {playingMovie && (
-              <VideoPlayer
-                movie={{ ...playingMovie, video: playingMovie.video?.url || playingMovie.video }}
-                episode={playingEpisode}
-                onClose={() => {
-                  setPlayingMovie(null);
-                  setPlayingEpisode(null);
-                  loadUserProfile();
-                  updateQuickByteProgress();
-                }}
-                onToggleMyList={handleToggleMyList}
-                onToggleLike={handleToggleLike}
-                myList={myList}
-                likedVideos={likedVideos}
-              />
-            )}
-          </AnimatePresence>
+
 
           {/* Authentication Modals */}
           <AnimatePresence>
@@ -1835,6 +1942,132 @@ function App() {
         </div >
       } />
     </Routes >
+  );
+}
+
+
+// ----------------------------------------------------------------------
+// ROUTE WRAPPERS
+// ----------------------------------------------------------------------
+
+function ContentDetailsRoute({
+  allContent,
+  handlePlay,
+  myList,
+  likedVideos,
+  handleToggleMyList,
+  handleToggleLike,
+  purchasedContent,
+  handlePurchase
+}) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [movie, setMovie] = useState(null);
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    // 1. Try finding in loaded content
+    let found = allContent.find(i => (i._id === id || i.id === id));
+    if (found) {
+      setMovie(found);
+      return;
+    }
+
+    // 2. Fetch if not found
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      contentService.getContentById(id)
+        .then(data => {
+          if (data) setMovie(data);
+          else navigate('/', { replace: true });
+        })
+        .catch(() => navigate('/', { replace: true }));
+    }
+  }, [id, allContent, navigate]);
+
+  if (!movie) return null; // Or a loading spinner
+
+  return (
+    <AnimatePresence>
+      <MovieDetailsPage
+        movie={movie}
+        onClose={() => navigate(-1)} // Standard Back
+        onPlay={handlePlay}
+        myList={myList}
+        likedVideos={likedVideos}
+        onToggleMyList={handleToggleMyList}
+        onToggleLike={handleToggleLike}
+        isPurchased={purchasedContent.includes(movie.id)}
+        onPurchase={handlePurchase}
+        onSelectMovie={(m) => navigate(`/content/${m._id || m.id}`)}
+        recommendedContent={allContent.filter(item =>
+          item.type === movie.type && (item._id || item.id) !== (movie._id || movie.id)
+        )}
+      />
+    </AnimatePresence>
+  );
+}
+
+function WatchPageRoute({
+  allContent,
+  handleToggleMyList,
+  handleToggleLike,
+  myList,
+  likedVideos
+}) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [movie, setMovie] = useState(location.state?.movie || null);
+  const [episode, setEpisode] = useState(location.state?.episode || null);
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    if (movie) return;
+
+    // 1. Try finding in loaded content
+    let found = allContent.find(i => (i._id === id || i.id === id));
+    if (found) {
+      setMovie(found);
+      return;
+    }
+
+    // 2. Fetch if not found in loaded content or passed via state
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+
+      // Try fetching as standard content first
+      contentService.getContentById(id)
+        .then(data => {
+          if (data) setMovie(data);
+          else throw new Error("Not standard content");
+        })
+        .catch(() => {
+          // If 404 or fail, try fetching as Quick Byte
+          contentService.getQuickByteById(id)
+            .then(qbData => {
+              if (qbData) setMovie(qbData);
+              else navigate('/', { replace: true });
+            })
+            .catch(() => navigate('/', { replace: true }));
+        });
+    }
+  }, [id, allContent, navigate, movie]);
+
+  if (!movie) return <div style={{ background: 'black', height: '100vh' }} />;
+
+  return (
+    <AnimatePresence>
+      <VideoPlayer
+        movie={{ ...movie, video: movie.video?.url || movie.video }}
+        episode={episode}
+        onClose={() => navigate(-1)}
+        onToggleMyList={handleToggleMyList}
+        onToggleLike={handleToggleLike}
+        myList={myList}
+        likedVideos={likedVideos}
+      />
+    </AnimatePresence>
   );
 }
 
@@ -2189,4 +2422,15 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
   );
 }
 
-export default App;
+// Wrap App with AudioPlayerProvider for global audio state
+function AppWithAudioProvider() {
+  return (
+    <AudioPlayerProvider>
+      <App />
+      <FloatingAudioPlayer />
+    </AudioPlayerProvider>
+  );
+}
+
+export default AppWithAudioProvider;
+

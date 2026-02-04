@@ -2,12 +2,20 @@ const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/a
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
 const adminContentService = {
-    // Get all content
-    async getAllContent() {
+    // Get all content with pagination and filters
+    async getAllContent(params = {}) {
         const token = localStorage.getItem('adminToken');
         if (!token) throw new Error('No admin token found');
 
-        const response = await fetch(`${API_URL}/admin/content`, {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+        if (params.search) queryParams.append('search', params.search);
+        if (params.status) queryParams.append('status', params.status);
+        if (params.type) queryParams.append('type', params.type);
+        if (params.category) queryParams.append('category', params.category);
+
+        const response = await fetch(`${API_URL}/admin/content?${queryParams.toString()}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -20,7 +28,7 @@ const adminContentService = {
         }
 
         const data = await response.json();
-        return data.data;
+        return data; // Return full response including pagination metadata
     },
 
     // Get single content

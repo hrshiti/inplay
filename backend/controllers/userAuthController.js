@@ -342,6 +342,47 @@ const removeFCMToken = async (req, res) => {
   }
 };
 
+// @desc    Remove item from watch history
+// @route   DELETE /api/user/auth/history/:contentId
+// @access  Private
+const removeFromHistory = async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const result = await userAuthService.removeFromHistory(req.user._id, contentId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Item removed from history',
+      data: result
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Clear all watch history
+// @route   DELETE /api/user/auth/history
+// @access  Private
+const clearHistory = async (req, res) => {
+  try {
+    const result = await userAuthService.clearHistory(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'History cleared successfully',
+      data: result
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -353,6 +394,8 @@ module.exports = {
   addToMyList,
   removeFromMyList,
   getWatchHistory,
+  removeFromHistory,
+  clearHistory,
   logoutUser,
   toggleLike,
   saveFCMToken,

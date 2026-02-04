@@ -6,7 +6,10 @@ import contentService from './services/api/contentService';
 import authService from './services/api/authService';
 
 // Initialize Socket outside component to prevent multiple connections
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/';
+// Initialize Socket outside component to prevent multiple connections
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
+// Remove trailing slash if exists and ensure /api suffix
+const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 const socket = io(API_URL.replace('/api', ''), {
     autoConnect: false
 });
@@ -72,6 +75,13 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
     const [likes, setLikes] = useState(reel.likes || 0);
     const [isLiked, setIsLiked] = useState(isAlreadyLiked);
     const [showComments, setShowComments] = useState(false);
+    const viewCounted = useRef(false);
+
+    // Fix: Use ref to access latest isPlaying state inside Observer without re-triggering effect
+    const isPlayingRef = useRef(isPlaying);
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
 
     // Sync isLiked with global state if it changes
     useEffect(() => {
@@ -81,6 +91,9 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
     // Watch History Tracking
     const syncProgress = async (completed = false) => {
         if (!videoRef.current) return;
+        // Ensure reel ID exists
+        if (!reel?._id) return;
+
         const currentTime = videoRef.current.currentTime;
         const duration = videoRef.current.duration;
         if (!duration || duration < 1) return;
@@ -118,13 +131,36 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
                         videoRef.current.currentTime = 0;
                         videoRef.current.play().catch(e => console.log("Autoplay blocked", e));
                     }
+
+                    // Track View after 3 seconds
+                    const video = videoRef.current;
+                    const onTimeUpdate = async () => {
+                        if (video && video.currentTime >= 3 && !viewCounted.current) {
+                            viewCounted.current = true;
+                            try {
+                                await contentService.incrementContentView(reel._id, 'foryou');
+                                console.log('Reel view counted:', reel._id);
+                            } catch (e) {
+                                console.error("Failed to track reel view", e);
+                            }
+                            video.removeEventListener('timeupdate', onTimeUpdate);
+                        }
+                    };
+                    if (video) video.addEventListener('timeupdate', onTimeUpdate);
+
+                    // Cleanup timeupdate listener if scrolled away
+                    entry.target._viewListener = onTimeUpdate;
                 } else {
-                    if (isPlaying) {
+                    // Use ref to check if it was playing
+                    if (isPlayingRef.current) {
                         syncProgress(false);
                     }
                     setIsPlaying(false);
                     if (videoRef.current) {
                         videoRef.current.pause();
+                        if (entry.target._viewListener) {
+                            videoRef.current.removeEventListener('timeupdate', entry.target._viewListener);
+                        }
                     }
                 }
             });
@@ -138,10 +174,10 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
             if (videoRef.current) {
                 observer.unobserve(videoRef.current);
                 // Last sync on unmount/scroll
-                if (isPlaying) syncProgress(false);
+                if (isPlayingRef.current) syncProgress(false);
             }
         };
-    }, [reel._id, setActiveReelId, isPlaying]);
+    }, [reel._id, setActiveReelId]); // Removed isPlaying dependency
 
     const handlePlayPause = () => {
         if (videoRef.current) {
@@ -164,10 +200,13 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
                 // Fallback for isolated use
                 const token = localStorage.getItem('inplay_token');
                 if (token) {
-                    await fetch(`${import.meta.env.VITE_API_BASE_URL}/foryou/${reel._id}/like`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    const token = localStorage.getItem('inplay_token');
+                    if (token) {
+                        await fetch(`${API_URL}/foryou/${reel._id}/like`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                    }
                 }
             }
         } catch (error) {
@@ -255,14 +294,14 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
             </button>
 
             {/* Right Sidebar Actions */}
-            <div style={{ position: 'absolute', bottom: '100px', right: '10px', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', zIndex: 20 }}>
+            <div style={{ position: 'absolute', bottom: '156px', right: '10px', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', zIndex: 20 }}>
                 <div onClick={handleLike} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                     <Heart size={32} fill={isLiked ? "#ef4444" : "white"} color={isLiked ? "#ef4444" : "white"} strokeWidth={1.5} />
                     <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>{likes}</span>
                 </div>
                 <div onClick={() => setShowComments(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                     <MessageCircle size={32} fill="white" color="white" strokeWidth={1.5} />
-                    <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>Typing..</span>
+                    <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>Comments</span>
                 </div>
                 <div onClick={handleShare} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                     <Share2 size={32} fill="white" color="white" strokeWidth={1.5} />
@@ -271,11 +310,11 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
             </div>
 
             {/* Bottom Info */}
-            <div style={{ position: 'absolute', bottom: '20px', left: '16px', right: '80px', color: 'white', zIndex: 20, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+            <div style={{ position: 'absolute', bottom: '100px', left: '16px', right: '80px', color: 'white', zIndex: 20, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                     {/* Placeholder Avatar if none */}
                     <img src={getImageUrl(reel.thumbnail?.url) || 'https://via.placeholder.com/40'} alt="User" style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px', border: '2px solid white' }} />
-                    <h4 style={{ margin: 0 }}>InPlay Official <span style={{ fontWeight: 400, opacity: 0.8 }}>• Follow</span></h4>
+                    <h4 style={{ margin: 0 }}>InPlay Official</h4>
                 </div>
                 <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', lineHeight: '1.4' }}>{reel.title} {reel.description}</p>
                 {reel.audio && (
@@ -319,7 +358,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
         // Fetch existing comments
         const fetchComments = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/foryou/${reelId}/comments`);
+                const res = await fetch(`${API_URL}/foryou/${reelId}/comments`);
                 const data = await res.json();
                 if (data.success) setComments(data.data);
             } catch (e) { console.error(e); }
@@ -365,7 +404,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
                 body.parentComment = replyTo._id;
             }
 
-            await fetch(`${import.meta.env.VITE_API_BASE_URL}/foryou/${reelId}/comments`, {
+            await fetch(`${API_URL}/foryou/${reelId}/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -386,7 +425,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
 
         if (confirm('Are you sure you want to delete this comment?')) {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/foryou/comments/${commentId}`, {
+                const res = await fetch(`${API_URL}/foryou/comments/${commentId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -404,7 +443,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
         if (!token) return alert('Please login to like comments');
 
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/foryou/comments/${commentId}/like`, {
+            const res = await fetch(`${API_URL}/foryou/comments/${commentId}/like`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

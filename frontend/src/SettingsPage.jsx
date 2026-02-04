@@ -85,7 +85,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     // Use actual user data or fallback to mock data
     const userName = currentUser?.name || MY_SPACE_DATA.user.name;
     const userEmail = currentUser?.email || 'john.doe@example.com';
-    const userAvatar = currentUser?.avatar || MY_SPACE_DATA.user.avatar;
+    const userAvatar = currentUser?.avatar; // No fallback to mock
     const userPlan = currentUser?.subscription?.plan?.name || MY_SPACE_DATA.user.plan;
 
     const handleSaveProfile = async () => {
@@ -219,11 +219,26 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                     border: '1px solid rgba(255,255,255,0.05)',
                     marginBottom: '32px'
                 }}>
-                    <img
-                        src={getImageUrl(userAvatar)}
-                        alt="Profile"
-                        style={{ width: '70px', height: '70px', borderRadius: '50%', border: '2px solid #ff0000', objectFit: 'cover' }}
-                    />
+                    {userAvatar ? (
+                        <img
+                            src={getImageUrl(userAvatar)}
+                            alt="Profile"
+                            style={{ width: '70px', height: '70px', borderRadius: '50%', border: '2px solid #ff0000', objectFit: 'cover' }}
+                        />
+                    ) : (
+                        <div style={{
+                            width: '70px',
+                            height: '70px',
+                            borderRadius: '50%',
+                            border: '2px solid #ff0000',
+                            background: '#ff0a16',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <User size={34} color="white" />
+                        </div>
+                    )}
                     <div>
                         <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{userName}</h3>
                         <span style={{ fontSize: '0.9rem', color: '#888' }}>{userEmail}</span>
@@ -396,17 +411,32 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                                 overflow: 'hidden',
                                                 border: '4px solid #1a1a1a'
                                             }}>
-                                                <img
-                                                    src={getImageUrl(userAvatar)}
-                                                    alt="Profile"
-                                                    style={{
+                                                {userAvatar ? (
+                                                    <img
+                                                        src={getImageUrl(userAvatar)}
+                                                        alt="Profile"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            opacity: isUploading ? 0.3 : 1,
+                                                            transition: 'opacity 0.3s ease'
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div style={{
                                                         width: '100%',
                                                         height: '100%',
-                                                        objectFit: 'cover',
+                                                        background: '#ff0a16',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
                                                         opacity: isUploading ? 0.3 : 1,
                                                         transition: 'opacity 0.3s ease'
-                                                    }}
-                                                />
+                                                    }}>
+                                                        <User size={60} color="white" />
+                                                    </div>
+                                                )}
                                                 {isUploading && (
                                                     <div style={{
                                                         position: 'absolute',
@@ -687,30 +717,6 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                             {/* HELP CENTER CONTENT */}
                             {activeModal === 'help' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <div style={{
-                                        background: 'rgba(255, 77, 77, 0.05)',
-                                        border: '1px solid rgba(255, 77, 77, 0.1)',
-                                        borderRadius: '16px',
-                                        padding: '20px',
-                                        textAlign: 'center'
-                                    }}>
-                                        <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '16px' }}>{appSettings?.helpCenter?.chatSupportText || 'Need assistance? Our support team is here to help you 24/7.'}</p>
-                                        <motion.button
-                                            whileTap={{ scale: 0.95 }}
-                                            style={{
-                                                background: '#ff4d4d',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '12px 24px',
-                                                borderRadius: '12px',
-                                                fontWeight: '700',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={() => window.open(`https://wa.me/91XXXXXXXXXX`, '_blank')}
-                                        >
-                                            Chat Support
-                                        </motion.button>
-                                    </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         <h3 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '8px' }}>Frequently Asked Questions</h3>
                                         {(appSettings?.helpCenter?.faqs || [
