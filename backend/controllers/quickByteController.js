@@ -195,14 +195,14 @@ const updateQuickByteHandler = async (req, res) => {
         if (!quickByte) return res.status(404).json({ success: false, message: 'Not found' });
 
         // Update basic fields
-        if (title) quickByte.title = title;
-        if (status) quickByte.status = status;
-        if (description) quickByte.description = description;
-        if (genre) quickByte.genre = genre;
-        if (year) quickByte.year = year;
-        if (rating) quickByte.rating = rating;
+        if (title !== undefined) quickByte.title = title;
+        if (status !== undefined) quickByte.status = status;
+        if (description !== undefined) quickByte.description = description;
+        if (genre !== undefined) quickByte.genre = genre;
+        if (year !== undefined) quickByte.year = year;
+        if (rating !== undefined) quickByte.rating = rating;
         if (isPaid !== undefined) quickByte.isPaid = isPaid === 'true' || isPaid === true;
-        if (price) quickByte.price = price;
+        if (price !== undefined) quickByte.price = price;
         if (isNewAndHot !== undefined) quickByte.isNewAndHot = isNewAndHot === 'true' || isNewAndHot === true;
         if (isOriginal !== undefined) quickByte.isOriginal = isOriginal === 'true' || isOriginal === true;
         if (isRanking !== undefined) quickByte.isRanking = isRanking === 'true' || isRanking === true;
@@ -219,6 +219,19 @@ const updateQuickByteHandler = async (req, res) => {
             }
             const result = transformFileToResponse(files.video[0]);
             quickByte.video = result;
+        }
+
+        // Handle Multiple Videos (Episodes)
+        if (files.videos && files.videos.length > 0) {
+            if (!quickByte.episodes) quickByte.episodes = [];
+            for (const file of files.videos) {
+                const result = transformFileToResponse(file);
+                quickByte.episodes.push(result);
+            }
+            // If no primary video is set, make the first episode the primary video
+            if (!quickByte.video || !quickByte.video.url) {
+                quickByte.video = quickByte.episodes[0];
+            }
         }
 
         // Transform uploaded thumbnail
@@ -482,6 +495,7 @@ module.exports = {
     updateQuickByte: [
         uploadMixed.fields([
             { name: 'video', maxCount: 1 },
+            { name: 'videos', maxCount: 20 },
             { name: 'poster', maxCount: 1 },
             { name: 'audio', maxCount: 1 }
         ]),

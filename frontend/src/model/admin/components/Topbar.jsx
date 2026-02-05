@@ -57,39 +57,7 @@ export default function Topbar({ onMenuClick }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
 
 
-        {/* Notifications */}
-        <button
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '8px',
-            borderRadius: '8px',
-            position: 'relative',
-            color: '#666'
-          }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-        >
-          <Bell size={20} />
-          <span style={{
-            position: 'absolute',
-            top: '6px',
-            right: '6px',
-            backgroundColor: '#ef4444',
-            color: 'white',
-            borderRadius: '50%',
-            width: '16px',
-            height: '16px',
-            fontSize: '0.7rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: '600'
-          }}>
-            3
-          </span>
-        </button>
+
 
         {/* User Profile */}
         <div

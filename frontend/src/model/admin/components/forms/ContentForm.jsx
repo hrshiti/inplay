@@ -25,8 +25,6 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
 
     isPopular: content?.isPopular || false,
     isBroadcast: content?.isBroadcast || false,
-    isMms: content?.isMms || false,
-    isShortFilm: content?.isShortFilm || false,
     isAudioSeries: content?.isAudioSeries || false,
     isCrimeShow: content?.isCrimeShow || false,
     cast: content?.cast || '',
@@ -110,8 +108,6 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         isTV: content.isTV || false,
         isPopular: content.isPopular || false,
         isBroadcast: content.isBroadcast || false,
-        isMms: content.isMms || false,
-        isShortFilm: content.isShortFilm || false,
         isAudioSeries: content.isAudioSeries || false,
         isCrimeShow: content.isCrimeShow || false,
         cast: content.cast || '',
@@ -130,10 +126,27 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    setFormData(prev => {
+      let newData = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+
+      // If a Dynamic Tab is selected, clear the static Type
+      if (name === 'dynamicTabId' && value !== "") {
+        newData.type = "";
+      }
+
+      // If a static Type is selected, clear dynamic fields
+      if (name === 'type' && value !== "") {
+        newData.dynamicTabId = "";
+        newData.dynamicCategoryId = "";
+      }
+
+      return newData;
+    });
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -398,6 +411,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
+              disabled={!!formData.dynamicTabId}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -405,9 +419,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                 borderRadius: '6px',
                 fontSize: '0.9rem',
                 outline: 'none',
-                background: 'white'
+                background: !!formData.dynamicTabId ? '#f3f4f6' : 'white',
+                cursor: !!formData.dynamicTabId ? 'not-allowed' : 'default'
               }}
             >
+              <option value="">None / Dynamic Only</option>
               <option value="bhojpuri">Bhojpuri World</option>
               <option value="trending_song">Trending Song</option>
               <option value="trending_now">Trending Now</option>
@@ -746,7 +762,7 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', background: '#f9fafb' }}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>Display Categories</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px' }}>
-            {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular', 'isBroadcast', 'isMms', 'isShortFilm', 'isAudioSeries', 'isCrimeShow'].map(key => (
+            {['isNewAndHot', 'isOriginal', 'isRanking', 'isMovie', 'isTV', 'isPopular', 'isBroadcast', 'isAudioSeries', 'isCrimeShow'].map(key => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer' }}>
                 <input
                   type="checkbox"

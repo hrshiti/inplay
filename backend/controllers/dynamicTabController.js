@@ -5,7 +5,18 @@ const Category = require('../models/Category');
 // @route   GET /api/admin/tabs
 const getAllTabs = async (req, res) => {
     try {
-        const tabs = await Tab.find().sort({ order: 1 });
+        const tabs = await Tab.aggregate([
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: '_id',
+                    foreignField: 'tabId',
+                    as: 'categories'
+                }
+            },
+            { $sort: { order: 1 } }
+        ]);
+
         res.status(200).json({ success: true, data: tabs });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

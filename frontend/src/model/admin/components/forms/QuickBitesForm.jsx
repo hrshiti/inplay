@@ -180,10 +180,10 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                     <ArrowLeft size={20} />
                 </button>
                 <div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '4px' }}>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '4px', color: '#111827' }}>
                         {content ? 'Edit Quick Bite' : 'Add New Quick Bite'}
                     </h1>
-                    <p style={{ color: '#666', fontSize: '0.95rem' }}>
+                    <p style={{ color: '#4b5563', fontSize: '0.95rem' }}>
                         Add short, vertical video content for the Quick Bites section.
                     </p>
                 </div>

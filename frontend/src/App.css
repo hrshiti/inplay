@@ -814,3 +814,29 @@
   border-radius: 50%;
   border: 1px solid #0b1120;
 }
+
+/* Admin Modal Scrollbar */
+.admin-modal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-modal-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.admin-modal-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+  border: 2px solid #f3f4f6;
+}
+
+.admin-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Firefox fallback */
+.admin-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}

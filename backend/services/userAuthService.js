@@ -102,6 +102,16 @@ const getUserProfile = async (userId) => {
       throw new Error('User not found');
     }
 
+    // Fetch purchased content
+    const Payment = require('../models/Payment');
+    const purchases = await Payment.find({
+      user: userId,
+      status: 'completed',
+      type: 'content_purchase'
+    }).select('content');
+
+    const purchasedContentIds = purchases.map(p => p.content?.toString()).filter(Boolean);
+
     // Convert to object for manipulation
     const userObj = user.toObject();
 
@@ -129,6 +139,7 @@ const getUserProfile = async (userId) => {
 
     userObj.myList = await resolveContentList(user.myList);
     userObj.likedContent = await resolveContentList(user.likedContent);
+    userObj.purchasedContent = purchasedContentIds;
 
     // 3. Resolve watchHistory for Continue Watching and History
     const sevenDaysAgo = new Date();

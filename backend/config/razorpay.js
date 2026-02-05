@@ -14,13 +14,13 @@ if (!process.env.RAZORPAY_KEY_SECRET) console.error("FATAL: RAZORPAY_KEY_SECRET 
 const createSubscriptionOrder = async (plan, user) => {
   try {
     const options = {
-      amount: plan.price * 100, // Razorpay expects amount in paisa
-      currency: plan.currency,
-      receipt: `sub_${user._id}_${Date.now()}`,
+      amount: Math.round(plan.price * 100), // Ensure integer (amount in paisa)
+      currency: plan.currency || 'INR',
+      receipt: `sub_${user._id}_${Date.now()}`.substring(0, 40),
       notes: {
         userId: user._id.toString(),
         planId: plan._id.toString(),
-        planName: plan.name,
+        planName: (plan.name || '').substring(0, 30),
         type: 'subscription'
       }
     };
@@ -28,8 +28,9 @@ const createSubscriptionOrder = async (plan, user) => {
     const order = await razorpay.orders.create(options);
     return order;
   } catch (error) {
-    console.error("Razorpay Subscription Error:", error);
-    throw new Error(`Failed to create subscription order: ${error.message}`);
+    console.error("Razorpay Subscription Error Details:", JSON.stringify(error, null, 2));
+    const msg = error.error ? error.error.description : (error.message || 'Unknown Razorpay error');
+    throw new Error(`Failed to create subscription order: ${msg}`);
   }
 };
 

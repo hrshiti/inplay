@@ -18,6 +18,7 @@ import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
 import AdPromotionPage from './pages/AdPromotionPage';
 import LegalPages from './pages/LegalPages';
 import TabManagementPage from './pages/TabManagementPage';
+import adminTabService from '../../services/api/adminTabService';
 const getImageUrl = (path) => {
   if (!path) return "https://placehold.co/300x450/111/FFF?text=No+Image";
   // Fallback to the utility if available, or just use the same logic
@@ -286,7 +287,7 @@ const Dashboard = () => {
                         <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{plan.subscriberCount} {plan.isOneTimePurchase ? 'purchases' : 'active subscribers'}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>₹{(plan.revenue / 100000).toFixed(2)}L</p>
+                        <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>₹{Number(plan.revenue).toLocaleString()}</p>
                       </div>
                     </div>
                     {/* Progress Bar */}
@@ -322,6 +323,7 @@ const ContentLibrary = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [contentList, setContentList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tabsData, setTabsData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationInfo, setPaginationInfo] = useState({
     totalItems: 0,
@@ -333,8 +335,21 @@ const ContentLibrary = () => {
 
 
   useEffect(() => {
-    fetchContent(currentPage);
+    const init = async () => {
+      await fetchTabs();
+      await fetchContent(currentPage);
+    };
+    init();
   }, [currentPage]);
+
+  const fetchTabs = async () => {
+    try {
+      const data = await adminTabService.getAllTabs();
+      setTabsData(data || []);
+    } catch (error) {
+      console.error("Failed to fetch tabs", error);
+    }
+  };
 
   const fetchContent = async (page = 1) => {
     try {
@@ -351,19 +366,10 @@ const ContentLibrary = () => {
     }
   };
 
-  const tabs = ['All', 'Popular', 'New & Hot', 'Original', 'Ranking', 'Movies', 'TV', 'Broadcast', 'Mms', 'Short Film'];
+  const tabs = ['All'];
 
   const filteredContent = contentList.filter(item => {
     if (activeTab === 'All') return true;
-    if (activeTab === 'Popular') return item.isPopular;
-    if (activeTab === 'New & Hot') return item.isNewAndHot;
-    if (activeTab === 'Original') return item.isOriginal;
-    if (activeTab === 'Ranking') return item.isRanking;
-    if (activeTab === 'Movies') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'bhojpuri' || item.type === 'new_release';
-    if (activeTab === 'TV') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
-    if (activeTab === 'Broadcast') return item.isBroadcast;
-    if (activeTab === 'Mms') return item.isMms;
-    if (activeTab === 'Short Film') return item.isShortFilm;
     return true;
   });
 
@@ -383,7 +389,16 @@ const ContentLibrary = () => {
   const columns = [
     { key: 'image', label: 'Poster', sortable: false, render: (value, row) => <img src={getImageUrl(row.poster?.url || row.image)} alt="poster" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} /> },
     { key: 'title', label: 'Title', sortable: true },
-    { key: 'type', label: 'Type', sortable: true },
+    {
+      key: 'type', label: 'Type', sortable: true, render: (val, row) => {
+        if (val && val !== '-') return val;
+        if (row.dynamicTabId) {
+          const tab = tabsData.find(t => t._id === row.dynamicTabId);
+          return tab ? tab.name : '-';
+        }
+        return '-';
+      }
+    },
     { key: 'genre', label: 'Genre', sortable: true },
     { key: 'rating', label: 'Rating', sortable: true },
     { key: 'year', label: 'Year', sortable: true },
@@ -619,10 +634,13 @@ const ViewContent = () => {
       backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
       padding: '20px', backdropFilter: 'blur(4px)'
     }}>
-      <div style={{
-        background: 'white', borderRadius: '16px', width: '100%', maxWidth: '900px',
-        maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
-      }}>
+      <div
+        className="admin-modal-scroll"
+        style={{
+          background: 'white', borderRadius: '16px', width: '100%', maxWidth: '900px',
+          maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+        }}
+      >
         {/* Header */}
         <div style={{
           position: 'sticky', top: 0, background: 'white', padding: '20px 24px',
@@ -823,7 +841,7 @@ const Users = () => {
         email: user.email,
         plan: user.subscription?.plan?.name || 'Free',
         status: user.isActive ? 'active' : 'inactive',
-        totalWatchTime: user.watchHistory?.length || 0,
+        totalWatchTime: ((user.watchHistory?.reduce((acc, entry) => acc + (entry.watchedSeconds || 0), 0) || 0) / 3600).toFixed(1),
         fullData: user,
         favoriteGenre: user.preferences?.favoriteGenres?.[0] || 'N/A',
         joinDate: new Date(user.createdAt).toLocaleDateString(),
@@ -983,16 +1001,19 @@ const Users = () => {
           zIndex: 1000,
           padding: '20px'
         }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '500px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            position: 'relative'
-          }}>
+          <div
+            className="admin-modal-scroll"
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+              position: 'relative'
+            }}
+          >
             <div style={{
               padding: '20px 24px',
               borderBottom: '1px solid #f3f4f6',
@@ -1159,7 +1180,7 @@ const Monetization = () => {
     { key: 'name', label: 'Plan Name', sortable: true },
     { key: 'price', label: 'Price (₹)', sortable: true, render: (value) => `₹${value}` },
     { key: 'subscriberCount', label: 'Subscribers', sortable: true },
-    { key: 'revenue', label: 'Revenue (₹)', sortable: true, render: (value) => `₹${(value / 100000).toFixed(1)}L` },
+    { key: 'revenue', label: 'Revenue (₹)', sortable: true, render: (value) => `₹${Number(value).toLocaleString()}` },
     { key: 'features', label: 'Features', sortable: false, render: (value) => value.length > 0 ? value.slice(0, 2).join(', ') + (value.length > 2 ? '...' : '') : 'N/A' }
   ];
 
@@ -1267,7 +1288,6 @@ const Monetization = () => {
         <div style={{ textAlign: 'center', padding: '40px', color: '#dc2626' }}>{error}</div>
       ) : (
         <>
-          {/* Pay-Per-View Content Table (New Section) */}
           <div style={{ marginBottom: '40px' }}>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px', color: '#374151' }}>Pay-Per-View Content Performance</h2>
             <DataTable
@@ -1277,6 +1297,34 @@ const Monetization = () => {
               hideSearch={false}
               onEdit={handleEditContent} // Enable Edit action
               emptyMessage="No paid content found. enable 'Add Purchase Plan' when editing content."
+            />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0, color: '#374151' }}>Membership Plans</h2>
+              <button
+                onClick={handleAddNew}
+                style={{
+                  background: '#46d369',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Add New Membership Plan
+              </button>
+            </div>
+            <DataTable
+              data={plans}
+              columns={planColumns}
+              title=""
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
           </div>
         </>
@@ -1431,18 +1479,21 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
       padding: '20px',
       overflow: 'auto'
     }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        width: '100%',
-        maxWidth: '600px',
-        maxHeight: '90vh',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-        position: 'relative',
-        margin: 'auto'
-      }}>
+      <div
+        className="admin-modal-scroll"
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+          position: 'relative',
+          margin: 'auto'
+        }}
+      >
         <div style={{
           padding: '20px 24px',
           borderBottom: '1px solid #f3f4f6',
@@ -1479,6 +1530,9 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
               break;
             case 'quarterly':
               durationInDays = 90;
+              break;
+            case 'half-yearly':
+              durationInDays = 180;
               break;
             case 'yearly':
               durationInDays = 365;
@@ -1552,8 +1606,9 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
                 >
                   <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="yearly">Yearly</option>
+                  <option value="quarterly">Quarterly (3 Months)</option>
+                  <option value="half-yearly">Half-Yearly (6 Months)</option>
+                  <option value="yearly">Yearly (12 Months)</option>
                 </select>
               </div>
 
@@ -1735,7 +1790,7 @@ const QuickBites = () => {
     }
   };
 
-  const handleView = (item) => window.open(item.video?.url, '_blank');
+  const handleView = (item) => navigate(`/admin/quick-bytes/view/${item._id || item.id}`);
 
   return (
     <div style={{ padding: '12px' }}>
@@ -1780,6 +1835,106 @@ const QuickBites = () => {
           emptyMessage="No vertical clips found."
         />
       )}
+    </div>
+  );
+};
+
+const ViewQuickBite = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const data = await adminQuickByteService.getReelById(id);
+        setContent(data);
+      } catch (e) {
+        console.error(e);
+        navigate('/admin/quick-bytes');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetch();
+  }, [id, navigate]);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#6b7280' }}>
+      Loading Quick Bite details...
+    </div>
+  );
+  if (!content) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      padding: '20px', backdropFilter: 'blur(4px)'
+    }}>
+      <div
+        className="custom-scrollbar"
+        style={{
+          background: 'white', borderRadius: '16px', width: '100%', maxWidth: '800px',
+          maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#46d369 #f3f4f6'
+        }}
+      >
+        <div style={{
+          position: 'sticky', top: 0, background: 'white', padding: '20px 24px',
+          borderBottom: '1px solid #f3f4f6', zIndex: 10, display: 'flex',
+          justifyContent: 'space-between', alignItems: 'center'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>{content.title}</h2>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>{content.type || 'Quick Bite'}</span>
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>{content.status}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/admin/quick-bytes')}
+            style={{
+              background: '#f3f4f6', border: 'none', cursor: 'pointer',
+              padding: '8px', borderRadius: '50%', color: '#374151', display: 'flex'
+            }}
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr) 2fr', gap: '32px' }}>
+            <div>
+              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '16px' }}>
+                <img
+                  src={getImageUrl(content.thumbnail?.url || content.poster?.url || content.image)}
+                  alt="Poster"
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+              </div>
+              <InfoItem label="Total Micro Videos" value={content.episodes?.length || (content.video ? 1 : 0)} color="#46d369" />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151', marginBottom: '8px', borderBottom: '2px solid #46d369', display: 'inline-block' }}>Description</h4>
+                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: '#4b5563' }}>{content.description || 'No description available.'}</p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f9fafb', padding: '20px', borderRadius: '12px' }}>
+                <InfoItem label="Genre" value={content.genre || 'Entertainment'} />
+                <InfoItem label="Year" value={content.year} />
+                <InfoItem label="Monetization" value={content.isPaid ? `Paid (₹${content.price})` : 'Free'} color={content.isPaid ? '#b45309' : '#059669'} />
+                <InfoItem label="Views" value={content.views?.toLocaleString() || 0} />
+                <InfoItem label="Rating" value={`★ ${content.rating || 0}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -2074,6 +2229,7 @@ export default function AdminRoutes() {
         <Route path="quick-bytes" element={<QuickBites />} />
         <Route path="quick-bytes/add" element={<AddQuickBite />} />
         <Route path="quick-bytes/edit/:id" element={<EditQuickBite />} />
+        <Route path="quick-bytes/view/:id" element={<ViewQuickBite />} />
         <Route path="for-you" element={<ForYouReels />} />
         <Route path="users" element={<Users />} />
         <Route path="audio-series" element={<AudioSeriesPage />} />

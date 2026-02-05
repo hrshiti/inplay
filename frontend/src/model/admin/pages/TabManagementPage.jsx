@@ -77,8 +77,8 @@ export default function TabManagementPage() {
         <div style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Dynamic Tabs Management</h1>
-                    <p style={{ color: '#666', fontSize: '0.9rem' }}>Create and organize dynamic navigation tabs and content categories</p>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>Dynamic Tabs Management</h1>
+                    <p style={{ color: '#4b5563', fontSize: '0.9rem' }}>Create and organize dynamic navigation tabs and content categories</p>
                 </div>
                 <button
                     onClick={() => setShowAddTab(true)}
@@ -93,7 +93,7 @@ export default function TabManagementPage() {
                     <h3 style={{ marginBottom: '16px', fontWeight: 'bold' }}>New Tab</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: '16px', alignItems: 'end' }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>Name</label>
+                            <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Name</label>
                             <input
                                 type="text"
                                 value={newTab.name}
@@ -103,7 +103,7 @@ export default function TabManagementPage() {
                             />
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>Slug</label>
+                            <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Slug</label>
                             <input
                                 type="text"
                                 value={newTab.slug}
@@ -125,12 +125,12 @@ export default function TabManagementPage() {
                         <div style={{ padding: '16px', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <GripVertical size={18} color="#94a3b8" />
-                                <h3 style={{ fontWeight: 'bold' }}>{tab.name} <span style={{ fontWeight: 'normal', color: '#94a3b8', fontSize: '0.85rem' }}>/{tab.slug}</span></h3>
+                                <h3 style={{ fontWeight: 'bold', color: '#1e293b' }}>{tab.name} <span style={{ fontWeight: 'normal', color: '#64748b', fontSize: '0.85rem' }}>/{tab.slug}</span></h3>
                             </div>
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button
                                     onClick={() => setEditingTabId(editingTabId === tab._id ? null : tab._id)}
-                                    style={{ background: 'transparent', border: '1px solid #d1d5db', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                                    style={{ background: 'transparent', border: '1px solid #d1d5db', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', color: '#334155' }}
                                 >
                                     {editingTabId === tab._id ? 'Close' : 'Manage Categories'}
                                 </button>
@@ -140,7 +140,7 @@ export default function TabManagementPage() {
 
                         {editingTabId === tab._id && (
                             <div style={{ padding: '20px', background: '#fff' }}>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '12px' }}>Categories in {tab.name}</h4>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '12px', color: '#334155' }}>Categories in {tab.name}</h4>
                                 <div style={{ marginBottom: '20px', display: 'flex', gap: '12px' }}>
                                     <input
                                         type="text"
@@ -167,12 +167,12 @@ export default function TabManagementPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {tab.categories && tab.categories.map((cat) => (
                                         <div key={cat._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f1f5f9', borderRadius: '8px' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{cat.name} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>({cat.slug})</span></span>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#1e293b' }}>{cat.name} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>({cat.slug})</span></span>
                                             <button onClick={() => handleDeleteCategory(cat._id)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}><Trash size={16} /></button>
                                         </div>
                                     ))}
                                     {(!tab.categories || tab.categories.length === 0) && (
-                                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem', padding: '10px' }}>No categories yet</div>
+                                        <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem', padding: '10px' }}>No categories yet</div>
                                     )}
                                 </div>
                             </div>

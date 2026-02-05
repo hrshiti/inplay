@@ -14,7 +14,7 @@ const contentSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    required: [true, 'Please specify content type']
+    required: false
   },
   dynamicTabs: [{
     type: String

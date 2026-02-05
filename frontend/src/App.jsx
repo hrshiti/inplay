@@ -29,6 +29,7 @@ import SettingsPage from './SettingsPage';
 import CategoryPage from './pages/CategoryPage';
 import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
 import DynamicTabPage from './DynamicTabPage';
+import MembershipPlansPage from './pages/MembershipPlansPage';
 
 import VideoPlayer from './VideoPlayer';
 import { AdminRoutes } from './model/admin';
@@ -183,6 +184,10 @@ function App() {
   const [selectedSourceTab, setSelectedSourceTab] = useState(null);
 
   const handleContentSelect = (movie, sourceTab = null) => {
+    if (!currentUser) {
+      setShowAuth('login');
+      return;
+    }
     // Check if content is 'For You' style (Quick Byte/Vertical)
     if (movie.type === 'quick_byte' || movie.isVertical || (movie.category === 'Quick Bites')) {
       navigate(`/watch/${movie._id || movie.id}`, {
@@ -209,12 +214,23 @@ function App() {
       setLikedVideos(profile.likedContent || []);
       setContinueWatching(profile.continueWatching || []);
       setWatchHistory(profile.history || []);
+      setPurchasedContent(profile.purchasedContent || []);
       return profile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
     }
   };
 
+  const handleAuthSuccess = () => {
+    const savedUser = localStorage.getItem('inplay_current_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setMyList(user.myList || []);
+      setLikedVideos(user.likedContent || []);
+      setPurchasedContent(user.purchasedContent || []);
+    }
+  };
   // Use Trending Now content for Hero Slideshow
   const heroMovies = contentSections.trending_now.length > 0 ? contentSections.trending_now : [];
 
@@ -362,6 +378,10 @@ function App() {
   };
 
   const handleFilterChange = (cat) => {
+    if (!currentUser && cat !== 'Popular') {
+      setShowAuth('login');
+      return;
+    }
     setActiveFilter(cat);
 
     // 1. Check Dynamic Tabs from Backend
@@ -437,7 +457,7 @@ function App() {
   }, [location.pathname, dynamicStructure]);
 
   const handleTabChange = (tab) => {
-    if (tab === 'My Space' && !currentUser) {
+    if (tab !== 'Home' && !currentUser) {
       setShowAuth('login');
       return;
     }
@@ -447,6 +467,7 @@ function App() {
     else if (tab === 'For You') navigate('/for-you');
     else if (tab === 'My Space') navigate('/my-space');
     else if (tab === 'Search') navigate('/search');
+    else if (tab === 'Audio') navigate('/audio-series');
   };
 
   const heroRef = useRef(null);
@@ -604,7 +625,28 @@ function App() {
       // 1. Create Order
       const { order, content } = await paymentService.createContentOrder(contentId);
 
-      // 2. Options
+      // Handle Mock Order (if Razorpay keys are failed on backend)
+      if (order.isMock) {
+        showToast("Processing Internal Payment...");
+        const verificationData = {
+          razorpay_order_id: order.id,
+          isMock: true
+        };
+
+        await paymentService.verifyContentPayment(verificationData);
+
+        showToast("Purchase Successful (Mock)!");
+        setPurchasedContent(prev => [...prev, contentId]);
+
+        // Refresh profile to sync
+        try {
+          await authService.getProfile();
+        } catch (e) { console.error("Profile sync failed", e); }
+
+        return; // Success, skip Razorpay modal
+      }
+
+      // 2. Options (Real Razorpay Flow)
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,
@@ -660,15 +702,7 @@ function App() {
     }
   };
 
-  const handleAuthSuccess = () => {
-    const savedUser = localStorage.getItem('inplay_current_user');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setCurrentUser(user);
-      setMyList(user.myList || []);
-      setLikedVideos(user.likedContent || []);
-    }
-  };
+
 
   const handleLogout = () => {
     authService.logout();
@@ -773,6 +807,7 @@ function App() {
     <Routes>
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/*" element={<ProtectedRoute><AdminRoutes /></ProtectedRoute>} />
+      <Route path="/membership-plans" element={<MembershipPlansPage currentUser={currentUser} onLoginClick={() => setShowAuth('login')} showToast={(m) => setToast(m)} />} />
 
       {/* Dedicated Routes for Deep Linking */}
       <Route path="/content/:id" element={
@@ -1008,8 +1043,8 @@ function App() {
                                               cursor: 'pointer', boxShadow: '0 4px 20px rgba(255,255,255,0.2)'
                                             }}
                                           >
-                                            {movie.isPaid && !purchasedContent.includes(movie.id) ? <Crown size={20} fill="#eab308" stroke="none" /> : <Play size={20} fill="black" />}
-                                            {movie.isPaid && !purchasedContent.includes(movie.id) ? "Unlock Now" : "Watch Now"}
+                                            {movie.isPaid && !purchasedContent.includes(movie._id || movie.id) ? <Crown size={20} fill="#eab308" stroke="none" /> : <Play size={20} fill="black" />}
+                                            {movie.isPaid && !purchasedContent.includes(movie._id || movie.id) ? "Unlock Now" : "Watch Now"}
                                           </motion.button>
 
                                           <motion.button
@@ -1858,7 +1893,7 @@ function App() {
                     likedVideos={likedVideos}
                     onToggleMyList={handleToggleMyList}
                     onToggleLike={handleToggleLike}
-                    isPurchased={purchasedContent.includes(selectedMovie.id)}
+                    isPurchased={purchasedContent.includes(selectedMovie._id || selectedMovie.id)}
                     onPurchase={handlePurchase}
                     onSelectMovie={setSelectedMovie}
                     recommendedContent={allContent.filter(item =>
@@ -1911,10 +1946,9 @@ function App() {
                     isPill
                   />
                   <NavItem icon={<Clapperboard size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
-                  <NavItem icon={<Search size={24} />} label="Search" active={activeTab === 'Search'} onClick={() => handleTabChange('Search')} />
-                  <NavItem icon={<Headphones size={24} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => navigate('/audio-series')} />
-                  {/* <NavItem icon={<Crown size={24} />} label="Premium" active={activeTab === 'Premium'} onClick={() => setActiveTab('Premium')} /> */}
-                  <NavItem icon={<User size={24} />} label="My Space" active={activeTab === 'My Space'} onClick={() => handleTabChange('My Space')} />
+                  <NavItem icon={<Headphones size={24} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
+                  <NavItem icon={<Search size={24} />} label="Search" active={location.pathname === '/search'} onClick={() => handleTabChange('Search')} />
+                  <NavItem icon={<User size={24} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
               )}
             </>
@@ -1997,7 +2031,7 @@ function ContentDetailsRoute({
         likedVideos={likedVideos}
         onToggleMyList={handleToggleMyList}
         onToggleLike={handleToggleLike}
-        isPurchased={purchasedContent.includes(movie.id)}
+        isPurchased={purchasedContent.includes(movie._id || movie.id)}
         onPurchase={handlePurchase}
         onSelectMovie={(m) => navigate(`/content/${m._id || m.id}`)}
         recommendedContent={allContent.filter(item =>

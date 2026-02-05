@@ -50,6 +50,39 @@ const paymentService = {
             method: 'GET',
         });
         return data.data;
+    },
+
+    // --- Subscription / Membership Plan Methods ---
+
+    // Get All Active Subscription Plans
+    getPlans: async () => {
+        const response = await fetch(`${API_URL}/payment/plans`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to fetch plans');
+        return data.data;
+    },
+
+    // Create Subscription Order
+    createSubscriptionOrder: async (planId) => {
+        const data = await authFetch('/payment/subscription/create-order', {
+            method: 'POST',
+            body: JSON.stringify({ planId }),
+        });
+        return data.data; // Expecting { order, plan }
+    },
+
+    // Verify Subscription Payment
+    verifySubscriptionPayment: async (paymentData) => {
+        const data = await authFetch('/payment/subscription/verify-payment', {
+            method: 'POST',
+            body: JSON.stringify(paymentData),
+        });
+        return data.data;
     }
 };
 

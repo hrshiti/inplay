@@ -28,7 +28,7 @@ export default function AdminLayout({ children }) {
       }}>
         <Topbar onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-        <main className="admin-content" style={{
+        <main className="admin-content custom-scrollbar" style={{
           flex: 1,
           padding: '0',
           overflowY: 'auto'

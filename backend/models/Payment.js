@@ -61,7 +61,11 @@ const paymentSchema = new mongoose.Schema({
     of: String
   },
   // Payment gateway response
-  gatewayResponse: mongoose.Schema.Types.Mixed
+  gatewayResponse: mongoose.Schema.Types.Mixed,
+  isMock: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });
@@ -74,13 +78,13 @@ paymentSchema.index({ status: 1 });
 paymentSchema.index({ type: 1 });
 
 // Virtual for formatted amount
-paymentSchema.virtual('formattedAmount').get(function() {
+paymentSchema.virtual('formattedAmount').get(function () {
   return `${this.currency} ${this.amount}`;
 });
 
 // Virtual for payment status text
-paymentSchema.virtual('statusText').get(function() {
-  switch(this.status) {
+paymentSchema.virtual('statusText').get(function () {
+  switch (this.status) {
     case 'pending': return 'Payment Pending';
     case 'completed': return 'Payment Completed';
     case 'failed': return 'Payment Failed';
@@ -90,7 +94,7 @@ paymentSchema.virtual('statusText').get(function() {
 });
 
 // Static method to get user's payment history
-paymentSchema.statics.getUserPaymentHistory = function(userId, limit = 10) {
+paymentSchema.statics.getUserPaymentHistory = function (userId, limit = 10) {
   return this.find({ user: userId })
     .populate('subscriptionPlan', 'name price')
     .populate('content', 'title type')
@@ -99,7 +103,7 @@ paymentSchema.statics.getUserPaymentHistory = function(userId, limit = 10) {
 };
 
 // Static method to get revenue stats
-paymentSchema.statics.getRevenueStats = function(startDate, endDate) {
+paymentSchema.statics.getRevenueStats = function (startDate, endDate) {
   return this.aggregate([
     {
       $match: {

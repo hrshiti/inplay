@@ -345,11 +345,7 @@ export default function MovieDetailsPage({
                             active={activeTab === 'More Like This'}
                             onClick={() => setActiveTab('More Like This')}
                         />
-                        <TabButton
-                            label="Trailers & More"
-                            active={activeTab === 'Trailers'}
-                            onClick={() => setActiveTab('Trailers')}
-                        />
+
                     </div>
 
                     <AnimatePresence mode='wait'>
@@ -459,18 +455,7 @@ export default function MovieDetailsPage({
                         )}
 
                         {/* Trailers Tab Content (Placeholder) */}
-                        {activeTab === 'Trailers' && (
-                            <motion.div
-                                key="trailers"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.3 }}
-                                style={{ padding: '20px 0', color: '#aaa', textAlign: 'center' }}
-                            >
-                                No trailers available currently.
-                            </motion.div>
-                        )}
+
                     </AnimatePresence>
                 </div>
             </div>

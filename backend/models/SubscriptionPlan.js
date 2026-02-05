@@ -22,7 +22,7 @@ const subscriptionPlanSchema = new mongoose.Schema({
   },
   duration: {
     type: String,
-    enum: ['monthly', 'quarterly', 'yearly'],
+    enum: ['monthly', 'quarterly', 'half-yearly', 'yearly'],
     default: 'monthly'
   },
   durationInDays: {
@@ -91,28 +91,32 @@ subscriptionPlanSchema.index({ isActive: 1 });
 subscriptionPlanSchema.index({ displayOrder: 1 });
 
 // Virtual for formatted price
-subscriptionPlanSchema.virtual('formattedPrice').get(function() {
+subscriptionPlanSchema.virtual('formattedPrice').get(function () {
   return `${this.currency} ${this.price}`;
 });
 
 // Virtual for duration text
-subscriptionPlanSchema.virtual('durationText').get(function() {
-  switch(this.duration) {
+subscriptionPlanSchema.virtual('durationText').get(function () {
+  switch (this.duration) {
     case 'monthly': return 'per month';
     case 'quarterly': return 'per 3 months';
+    case 'half-yearly': return 'per 6 months';
     case 'yearly': return 'per year';
     default: return '';
   }
 });
 
 // Pre-save middleware to set durationInDays
-subscriptionPlanSchema.pre('save', function(next) {
-  switch(this.duration) {
+subscriptionPlanSchema.pre('save', function (next) {
+  switch (this.duration) {
     case 'monthly':
       this.durationInDays = 30;
       break;
     case 'quarterly':
       this.durationInDays = 90;
+      break;
+    case 'half-yearly':
+      this.durationInDays = 180;
       break;
     case 'yearly':
       this.durationInDays = 365;

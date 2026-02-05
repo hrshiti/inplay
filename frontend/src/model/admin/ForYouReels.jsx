@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Heart, MessageCircle, Music, Trash2, X, Upload, Play, Pause } from 'lucide-react';
+import { Plus, Heart, Music, Trash2, X, Upload, Play, Pause } from 'lucide-react';
 import adminForYouService from '../../services/api/adminForYouService';
 
 const ForYouReels = () => {
@@ -76,8 +76,6 @@ const ForYouReels = () => {
 const AdminReelCard = ({ reel, onDelete }) => {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [comments, setComments] = useState([]);
-    const [showComments, setShowComments] = useState(false);
 
     // Simple play on hover
     const handleMouseEnter = () => {
@@ -134,29 +132,24 @@ const AdminReelCard = ({ reel, onDelete }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ef4444', fontWeight: '600' }}>
                     <Heart size={18} fill="#ef4444" /> {reel.likes || 0}
                 </div>
-                <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#3b82f6', cursor: 'pointer' }}
-                    onClick={() => setShowComments(!showComments)}
-                >
-                    <MessageCircle size={18} /> Comments
-                </div>
             </div>
 
-            {/* Comments Section (Mini) */}
-            {showComments && (
-                <div style={{ padding: '12px', background: '#f9fafb', maxHeight: '200px', overflowY: 'auto' }}>
-                    <p style={{ fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>
-                        Real-time comments will appear here on the user side.
-                        <br />(Socket.io integration enabled)
-                    </p>
-                </div>
-            )}
+
         </div>
     );
 };
 
 const AddReelModal = ({ onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
+    const [previews, setPreviews] = useState({ video: null, poster: null });
+
+    const handleFileChange = (e) => {
+        const { name, files } = e.target;
+        if (files && files[0]) {
+            const url = URL.createObjectURL(files[0]);
+            setPreviews(prev => ({ ...prev, [name]: url }));
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -185,7 +178,14 @@ const AddReelModal = ({ onClose, onSuccess }) => {
             background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
             backdropFilter: 'blur(4px)'
         }}>
-            <div style={{ background: 'white', borderRadius: '20px', padding: '30px', width: '550px', maxWidth: '95%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div
+                className="custom-scrollbar"
+                style={{
+                    background: 'white', borderRadius: '20px', padding: '30px', width: '550px', maxWidth: '95%',
+                    maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                    position: 'relative'
+                }}
+            >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Create New Reel</h2>
                     <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', cursor: 'pointer', borderRadius: '50%', padding: '8px', display: 'flex' }}><X size={20} color="#374151" /></button>
@@ -209,24 +209,36 @@ const AddReelModal = ({ onClose, onSuccess }) => {
                             <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: '#374151', fontSize: '0.9rem' }}>Reel Video</label>
                             <label style={{
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                border: '2px dashed #d1d5db', borderRadius: '12px', padding: '20px', cursor: 'pointer',
-                                background: '#f9fafb', transition: 'border-color 0.2s'
+                                border: '2px dashed #d1d5db', borderRadius: '12px', padding: previews.video ? '0' : '20px', cursor: 'pointer',
+                                background: '#f9fafb', transition: 'border-color 0.2s', height: '120px', overflow: 'hidden', position: 'relative'
                             }}>
-                                <Upload size={24} color="#6b7280" style={{ marginBottom: '8px' }} />
-                                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Click to upload Video</span>
-                                <input type="file" name="video" accept="video/*" required style={{ display: 'none' }} />
+                                {previews.video ? (
+                                    <video src={previews.video} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <>
+                                        <Upload size={24} color="#6b7280" style={{ marginBottom: '8px' }} />
+                                        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Click to upload Video</span>
+                                    </>
+                                )}
+                                <input type="file" name="video" accept="video/*" required onChange={handleFileChange} style={{ display: 'none' }} />
                             </label>
                         </div>
                         <div>
                             <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: '#374151', fontSize: '0.9rem' }}>Reel Poster (Avatar)</label>
                             <label style={{
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                border: '2px dashed #d1d5db', borderRadius: '12px', padding: '20px', cursor: 'pointer',
-                                background: '#f9fafb', transition: 'border-color 0.2s'
+                                border: '2px dashed #d1d5db', borderRadius: '12px', padding: previews.poster ? '0' : '20px', cursor: 'pointer',
+                                background: '#f9fafb', transition: 'border-color 0.2s', height: '120px', overflow: 'hidden'
                             }}>
-                                <Upload size={24} color="#6b7280" style={{ marginBottom: '8px' }} />
-                                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Click to upload Image</span>
-                                <input type="file" name="poster" accept="image/*" required style={{ display: 'none' }} />
+                                {previews.poster ? (
+                                    <img src={previews.poster} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <>
+                                        <Upload size={24} color="#6b7280" style={{ marginBottom: '8px' }} />
+                                        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Click to upload Image</span>
+                                    </>
+                                )}
+                                <input type="file" name="poster" accept="image/*" required onChange={handleFileChange} style={{ display: 'none' }} />
                             </label>
                         </div>
                     </div>
