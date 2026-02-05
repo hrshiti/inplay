@@ -39,7 +39,11 @@ export default function AdminLogin() {
       // Navigate to dashboard
       navigate('/admin/dashboard');
     } catch (err) {
-      setError(err.message || 'Invalid credentials. Please try again.');
+      const msg = err.message || 'Invalid credentials. Please try again.';
+      if (msg === 'Admin already available') {
+        alert('Admin already available. Only the existing admin can access this panel.');
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }

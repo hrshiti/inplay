@@ -1,13 +1,29 @@
 const Admin = require('../models/Admin');
 const { generateToken, sendTokenResponse } = require('../middlewares/auth');
 
-// Admin login service
 const adminLogin = async (email, password) => {
-  // Find admin user in Admin model
+  // Check if ANY admin exists in the system
+  const adminExists = await Admin.findOne({});
+
+  if (!adminExists) {
+    // FIRST TIME: Act as registration
+    // Create the first admin
+    const firstAdmin = await Admin.create({
+      name: 'InPlay Admin',
+      email,
+      password, // Password will be hashed by Admin model pre-save hook
+      isActive: true
+    });
+    return firstAdmin;
+  }
+
+  // SUBSEQUENT TIMES: Act as login
+  // Find the specific admin with this email
   const admin = await Admin.findOne({ email }).select('+password');
 
   if (!admin) {
-    throw new Error('Invalid credentials');
+    // If admin exists but not with this email
+    throw new Error('Admin already available');
   }
 
   // Check if account is active
