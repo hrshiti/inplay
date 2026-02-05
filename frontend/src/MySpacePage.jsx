@@ -61,14 +61,6 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
                     </div>
                     <div>
                         <h2 style={{ fontSize: '1.25rem', marginBottom: '4px' }}>{userName}</h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{
-                                fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)',
-                                padding: '2px 8px', borderRadius: '4px', color: '#ffd700'
-                            }}>
-                                {userPlan} Member
-                            </span>
-                        </div>
                     </div>
                 </motion.div>
 
