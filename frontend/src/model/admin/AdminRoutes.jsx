@@ -1746,16 +1746,6 @@ const QuickBites = () => {
     { key: 'genre', label: 'Genre', sortable: true },
     { key: 'year', label: 'Year', sortable: true },
     { key: 'rating', label: 'Rating', sortable: true, render: (r) => `★ ${r || 0}` },
-    {
-      key: 'isPaid',
-      label: 'Monetization',
-      sortable: true,
-      render: (isPaid, row) => (
-        <span style={{ color: isPaid ? '#b45309' : '#166534', fontWeight: 'bold' }}>
-          {isPaid ? `Paid (₹${row.price || 0})` : 'Free'}
-        </span>
-      )
-    },
     { key: 'views', label: 'Views', sortable: true, render: (v) => v?.toLocaleString() || 0 },
     {
       key: 'status',

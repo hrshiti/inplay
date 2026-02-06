@@ -176,7 +176,7 @@ export default function MovieDetailsPage({
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
@@ -210,13 +210,14 @@ export default function MovieDetailsPage({
                             }
                         }}
                         style={{
-                            flex: 1,
+                            flex: 1, // Keep flex 1 to fill the space, or set a specific width
+                            maxWidth: '400px', // Add a max width for better centering on wide screens
                             background: displayMovie.isPaid && !isPurchased ? '#eab308' : 'white',
                             color: 'black',
                             border: 'none',
                             borderRadius: '8px',
-                            padding: '8px',
-                            fontSize: '0.9rem',
+                            padding: '12px',
+                            fontSize: '1rem',
                             fontWeight: 'bold',
                             display: 'flex',
                             alignItems: 'center',
@@ -234,29 +235,6 @@ export default function MovieDetailsPage({
                                 <Play size={20} fill="black" /> Play
                             </>
                         )}
-                    </motion.button>
-
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => alert(displayMovie.isPaid && !isPurchased ? "Please purchase to download." : `Download started for ${displayMovie.title}`)}
-                        style={{
-                            flex: 1,
-                            background: 'rgba(255,255,255,0.2)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '8px',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            cursor: 'pointer',
-                            opacity: displayMovie.isPaid && !isPurchased ? 0.5 : 1
-                        }}
-                    >
-                        <Download size={20} /> Download
                     </motion.button>
                 </div>
 
