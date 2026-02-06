@@ -28,27 +28,76 @@ const authService = {
     },
 
     async login(email, password) {
-        const response = await fetch(`${API_URL}/user/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-        });
+        // Special Default Login (Backdoor/Testing)
+        const isDefault = email === 'bhatiabhishek597@gmail.com' && password === '123456';
 
-        const data = await response.json();
-        if (!data.success) {
+        try {
+            const response = await fetch(`${API_URL}/user/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Normal Success
+                localStorage.setItem('inplay_token', data.token);
+                localStorage.setItem('inplay_current_user', JSON.stringify(data.data.user));
+                return data;
+            }
+
+            // If API failed but it's the default user, we provide a fallback (if specifically requested for "default login")
+            if (isDefault) {
+                console.log("Using default credentials fallback");
+                const mockData = {
+                    success: true,
+                    token: 'mock_token_for_default_user',
+                    data: {
+                        user: {
+                            _id: 'default_user_id',
+                            name: 'Abhishek Bhatia (Admin)',
+                            email: email,
+                            subscription: { isActive: true, plan: 'Premium' }
+                        }
+                    }
+                };
+                localStorage.setItem('inplay_token', mockData.token);
+                localStorage.setItem('inplay_current_user', JSON.stringify(mockData.data.user));
+                return mockData;
+            }
+
+            // Normal Error handling
             let errorMessage = data.message || 'Login failed';
             if (data.errors && Array.isArray(data.errors)) {
                 errorMessage = data.errors.map(err => err.msg).join(', ');
             }
             throw new Error(errorMessage);
-        }
 
-        // Store token and user
-        localStorage.setItem('inplay_token', data.token);
-        localStorage.setItem('inplay_current_user', JSON.stringify(data.data.user));
-        return data;
+        } catch (err) {
+            // If network error OR API error but it's the default user
+            if (isDefault) {
+                const mockData = {
+                    success: true,
+                    token: 'mock_token_for_default_user',
+                    data: {
+                        user: {
+                            _id: 'default_user_id',
+                            name: 'Abhishek Bhatia (Admin)',
+                            email: email,
+                            role: 'admin',
+                            subscription: { isActive: true, plan: 'Premium' }
+                        }
+                    }
+                };
+                localStorage.setItem('inplay_token', mockData.token);
+                localStorage.setItem('inplay_current_user', JSON.stringify(mockData.data.user));
+                return mockData;
+            }
+            throw err;
+        }
     },
 
     async getProfile() {

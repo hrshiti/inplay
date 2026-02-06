@@ -66,7 +66,6 @@ function App() {
   const [continueWatching, setContinueWatching] = useState([]);
   const [watchHistory, setWatchHistory] = useState([]);
   const [toast, setToast] = useState(null);
-  const [showAuth, setShowAuth] = useState(null); // 'login' or 'signup'
   const [currentUser, setCurrentUser] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
   const [promotions, setPromotions] = useState([]);
@@ -185,7 +184,7 @@ function App() {
 
   const handleContentSelect = (movie, sourceTab = null) => {
     if (!currentUser) {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
     // Check if content is 'For You' style (Quick Byte/Vertical)
@@ -379,7 +378,7 @@ function App() {
 
   const handleFilterChange = (cat) => {
     if (!currentUser && cat !== 'Popular') {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
     setActiveFilter(cat);
@@ -458,7 +457,7 @@ function App() {
 
   const handleTabChange = (tab) => {
     if (tab !== 'Home' && !currentUser) {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
 
@@ -528,7 +527,7 @@ function App() {
 
   const handlePlay = (movie, episode = null) => {
     if (!currentUser) {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
     const contentId = movie._id || movie.id;
@@ -538,7 +537,7 @@ function App() {
 
   const handleToggleMyList = async (movie) => {
     if (!currentUser) {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
 
@@ -581,7 +580,7 @@ function App() {
 
   const handleToggleLike = async (movie) => {
     if (!currentUser) {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
 
@@ -607,7 +606,7 @@ function App() {
 
   const handlePurchase = async (movie) => {
     if (!currentUser) {
-      setShowAuth('login');
+      navigate('/login');
       return;
     }
 
@@ -807,7 +806,11 @@ function App() {
     <Routes>
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/*" element={<ProtectedRoute><AdminRoutes /></ProtectedRoute>} />
-      <Route path="/membership-plans" element={<MembershipPlansPage currentUser={currentUser} onLoginClick={() => setShowAuth('login')} showToast={(m) => setToast(m)} />} />
+      <Route path="/membership-plans" element={<MembershipPlansPage currentUser={currentUser} onLoginClick={() => navigate('/login')} showToast={(m) => setToast(m)} />} />
+
+      {/* Dedicated Routes for Login and Signup */}
+      <Route path="/login" element={<Login onClose={() => navigate(-1)} onSwitchToSignup={() => navigate('/signup')} onLoginSuccess={handleAuthSuccess} />} />
+      <Route path="/signup" element={<Signup onClose={() => navigate(-1)} onSwitchToLogin={() => navigate('/login')} onSignupSuccess={handleAuthSuccess} />} />
 
       {/* Dedicated Routes for Deep Linking */}
       <Route path="/content/:id" element={
@@ -844,9 +847,9 @@ function App() {
 
 
 
-              {activeTab === 'Home' && !selectedMovie && !playingMovie && !showAuth && (
+              {activeTab === 'Home' && !selectedMovie && !playingMovie && (
                 <>
-                  <Header currentUser={currentUser} onLoginClick={() => setShowAuth('login')} />
+                  <Header currentUser={currentUser} onLoginClick={() => navigate('/login')} />
                   <div className="category-tabs-container hide-scrollbar">
                     {[
                       'Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Crime Show', 'Broadcast', 'Mms', 'Audio Series', 'Short Film',
@@ -1954,26 +1957,7 @@ function App() {
             </>
           )
           }
-
-
-          {/* Authentication Modals */}
-          <AnimatePresence>
-            {showAuth === 'login' && (
-              <Login
-                onClose={() => setShowAuth(null)}
-                onSwitchToSignup={() => setShowAuth('signup')}
-                onLoginSuccess={handleAuthSuccess}
-              />
-            )}
-            {showAuth === 'signup' && (
-              <Signup
-                onClose={() => setShowAuth(null)}
-                onSwitchToLogin={() => setShowAuth('login')}
-                onSignupSuccess={handleAuthSuccess}
-              />
-            )}
-          </AnimatePresence>
-        </div >
+        </div>
       } />
     </Routes >
   );
