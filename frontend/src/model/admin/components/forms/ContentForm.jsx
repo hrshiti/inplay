@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Upload, X, Save, ArrowLeft, Plus, Trash, ChevronDown, ChevronUp } from 'lucide-react';
 import adminTabService from '../../../../services/api/adminTabService';
 
-export default function ContentForm({ content = null, onSave, onCancel }) {
+export default function ContentForm({ content = null, onSave, onCancel, isUploading = false }) {
   const [formData, setFormData] = useState({
     title: content?.title || '',
     description: content?.description || '',
@@ -809,7 +809,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                     {formData.image ? 'Change Poster' : 'Upload Poster'}
                   </label>
                 </div>
-                {formData.image && <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ {getFileDisplay(formData.image)}</p>}
+                {formData.image && (
+                  <div style={{ marginTop: '10px' }}>
+                    <img src={formData.image} alt="Poster Preview" style={{ width: '120px', height: '180px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                )}
               </div>
 
               {/* Backdrop */}
@@ -825,7 +829,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                     {formData.backdrop ? 'Change Backdrop' : 'Upload Backdrop'}
                   </label>
                 </div>
-                {formData.backdrop && <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ {getFileDisplay(formData.backdrop)}</p>}
+                {formData.backdrop && (
+                  <div style={{ marginTop: '10px' }}>
+                    <img src={formData.backdrop} alt="Backdrop Preview" style={{ width: '100%', height: 'auto', maxHeight: '150px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -916,7 +924,11 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                                   }}>
                                     {getFileDisplay(episode.video) ? 'Change Video' : 'Upload Video'}
                                   </label>
-                                  {getFileDisplay(episode.video) && <div style={{ fontSize: '0.7rem', color: '#46d369', marginTop: '2px', textAlign: 'center' }}>✓ Uploaded</div>}
+                                  {episode.video && episode.video.url && (
+                                    <div style={{ marginTop: '5px' }}>
+                                      <video controls src={episode.video.url} style={{ width: '100%', maxHeight: '150px', borderRadius: '4px', backgroundColor: 'black' }} />
+                                    </div>
+                                  )}
                                 </div>
 
                                 <button
@@ -990,7 +1002,9 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
                   </label>
                 </div>
                 {formData.video && (
-                  <p style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '4px' }}>✓ Video uploaded: {getFileDisplay(formData.video)}</p>
+                  <div style={{ marginTop: '10px' }}>
+                    <video controls src={formData.video} style={{ width: '100%', maxHeight: '300px', borderRadius: '6px', backgroundColor: 'black' }} />
+                  </div>
                 )}
               </div>
             )}
@@ -1016,22 +1030,23 @@ export default function ContentForm({ content = null, onSave, onCancel }) {
           </button>
           <button
             type="submit"
+            disabled={isUploading}
             style={{
               padding: '10px 20px',
               border: 'none',
               borderRadius: '6px',
-              background: '#46d369',
+              background: isUploading ? '#9ca3af' : '#46d369',
               color: 'white',
               fontSize: '0.9rem',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: isUploading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}
           >
             <Save size={16} />
-            {content ? 'Update Content' : 'Save Content'}
+            {isUploading ? 'Uploading...' : (content ? 'Update Content' : 'Save Content')}
           </button>
         </div>
       </form >

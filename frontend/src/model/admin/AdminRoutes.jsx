@@ -560,6 +560,7 @@ const EditContent = () => {
   const navigate = useNavigate();
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -577,6 +578,9 @@ const EditContent = () => {
   }, [id, navigate]);
 
   const handleUpdate = async (formData) => {
+    setLoading(true); // Reuse loading state or create specific one, but `loading` controls the whole page view here?
+    // The previous loading state was for fetching. Let's create a new one to avoid hiding the form.
+    setIsUploading(true);
     try {
       await adminContentService.updateContent(id, formData);
       alert('Content updated successfully!');
@@ -584,6 +588,9 @@ const EditContent = () => {
     } catch (err) {
       console.error("Failed to update content", err);
       alert('Failed to update content: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
+      setLoading(false); // Just in case
     }
   };
 
@@ -595,6 +602,7 @@ const EditContent = () => {
         content={content}
         onSave={handleUpdate}
         onCancel={() => navigate('/admin/content/library')}
+        isUploading={isUploading}
       />
     </div>
   );
@@ -793,7 +801,10 @@ const ViewContent = () => {
 const AddContent = () => {
   const navigate = useNavigate();
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleSave = async (data) => {
+    setIsUploading(true);
     try {
       await adminContentService.createContent(data);
       alert('Content saved successfully!');
@@ -801,6 +812,8 @@ const AddContent = () => {
     } catch (err) {
       console.error("Failed to save content", err);
       alert('Failed to save content: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -808,6 +821,7 @@ const AddContent = () => {
     <ContentForm
       onSave={handleSave}
       onCancel={() => navigate('/admin/content/library')}
+      isUploading={isUploading}
     />
   );
 };
