@@ -94,8 +94,8 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '10gb' }));
+app.use(express.urlencoded({ extended: true, limit: '10gb' }));
 
 // Logging
 app.use(morgan('combined'));
@@ -309,6 +309,9 @@ const startServer = async () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     console.log('Scheduled tasks started');
   });
+
+  // Increase timeout to 4 hours for large file uploads (10GB)
+  server.setTimeout(4 * 60 * 60 * 1000);
 
   // Socket.IO Setup
   const { Server } = require('socket.io');
