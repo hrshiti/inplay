@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const multer = require("multer");
 const path = require("path");
-const { parseFile } = require('music-metadata');
+const mm = require('music-metadata');
 
 // Load environment variables FIRST
 require('dotenv').config();
@@ -185,7 +185,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   // Calculate duration if audio
   if (req.file.mimetype.startsWith("audio")) {
     try {
-      const metadata = await parseFile(req.file.path);
+      const metadata = await mm.parseFile(req.file.path);
       responseData.duration = metadata.format.duration; // Duration in seconds
     } catch (err) {
       console.error("Error parsing audio metadata:", err.message);
