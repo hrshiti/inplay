@@ -60,7 +60,7 @@ export default function AudioSeriesUserPage({ onBack }) {
             {!selectedSeries ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Audio Series</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
                         {seriesList.map(series => (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer' }}>
                                 <div style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px' }}>
@@ -82,7 +82,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                     </button>
 
                     <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                        <img src={getImageUrl(selectedSeries.coverImage)} alt={selectedSeries.title} style={{ width: '140px', height: '140px', borderRadius: '12px', objectFit: 'cover' }} />
+                        <img src={getImageUrl(selectedSeries.coverImage)} alt={selectedSeries.title} style={{ width: '100px', height: '100px', borderRadius: '12px', objectFit: 'cover' }} />
                         <div style={{ flex: 1 }}>
                             <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '8px' }}>{selectedSeries.title}</h1>
                             <p style={{ color: '#ccc', fontSize: '0.9rem', lineHeight: '1.4', marginBottom: '16px' }}>{selectedSeries.description}</p>

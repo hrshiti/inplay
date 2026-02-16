@@ -26,6 +26,7 @@ export default function MovieDetailsPage({
     const [selectedSeason, setSelectedSeason] = useState(isSeries && movie.seasons && movie.seasons.length > 0 ? movie.seasons[0] : null);
     const [isSeasonOpen, setIsSeasonOpen] = useState(false);
     const [fullMovie, setFullMovie] = useState(null);
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     const [similarContent, setSimilarContent] = useState([]);
 
@@ -238,9 +239,33 @@ export default function MovieDetailsPage({
                     </motion.button>
                 </div>
 
-                <p style={{ fontSize: '0.82rem', lineHeight: '1.5', color: '#bbb', marginBottom: '20px' }}>
+                <p style={{
+                    fontSize: '0.82rem',
+                    lineHeight: '1.5',
+                    color: '#bbb',
+                    marginBottom: '8px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: isDescriptionExpanded ? 'unset' : 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                }}>
                     {displayMovie.description || "Experience the thrill and excitement of this blockbuster hit. A story that will keep you on the edge of your seat from start to finish."}
                 </p>
+                <button
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        marginBottom: '20px',
+                        padding: '0',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem'
+                    }}
+                >
+                    {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+                </button>
 
                 {/* Additional Movie Details */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', fontSize: '0.85rem' }}>

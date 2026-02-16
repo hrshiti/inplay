@@ -287,6 +287,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [videoQuality, setVideoQuality] = useState('Auto');
     const [activeSheet, setActiveSheet] = useState(null); // 'speed' | 'quality' | null
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const controlsTimeoutRef = useRef(null);
 
     // Auto-hide controls
@@ -910,9 +911,32 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 {/* Description */}
                 <div style={{ marginBottom: '32px' }}>
                     <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'white', marginBottom: '8px' }}>About this {movie.isMovie ? 'Movie' : 'Show'}</h3>
-                    <p style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                    <p style={{
+                        color: '#aaa',
+                        fontSize: '0.9rem',
+                        lineHeight: '1.5',
+                        display: '-webkit-box',
+                        WebkitLineClamp: isDescriptionExpanded ? 'unset' : 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                    }}>
                         {movie.description || "An engaging story waiting to be discovered. Watch the full content to experience the thrill, drama, and excitement."}
                     </p>
+                    <button
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            marginTop: '8px',
+                            padding: '0',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+                    </button>
                 </div>
 
                 {/* Episode List (Inline) if Episodic */}

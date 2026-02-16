@@ -578,7 +578,7 @@ function App() {
     }
   };
 
-  const handleToggleLike = async (movie) => {
+  const handleToggleLike = async (movie, showNotification = true) => {
     if (!currentUser) {
       navigate('/login');
       return;
@@ -591,7 +591,7 @@ function App() {
         const res = await authService.toggleLike(contentId);
         // res.action is 'liked' or 'unliked'
         const action = res.action === 'liked' ? "Added to Liked Videos" : "Removed from Liked Videos";
-        showToast(action);
+        if (showNotification) showToast(action);
 
         // Re-fetch profile to sync likedVideos
         const profile = await authService.getProfile();
@@ -600,7 +600,7 @@ function App() {
         console.error("Failed to update like", error);
       }
     } else {
-      showToast("Likes only supported for Real Content");
+      if (showNotification) showToast("Likes only supported for Real Content");
     }
   };
 
@@ -1032,37 +1032,7 @@ function App() {
                                         </div>
 
                                         {/* Action Buttons Row */}
-                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
-                                          <motion.button
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleContentSelect(movie);
-                                            }}
-                                            style={{
-                                              flex: 1, height: '40px', borderRadius: '12px', border: 'none',
-                                              background: 'white', color: 'black', fontSize: '1rem', fontWeight: '700',
-                                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                                              cursor: 'pointer', boxShadow: '0 4px 20px rgba(255,255,255,0.2)'
-                                            }}
-                                          >
-                                            {movie.isPaid && !purchasedContent.includes(movie._id || movie.id) ? <Crown size={20} fill="#eab308" stroke="none" /> : <Play size={20} fill="black" />}
-                                            {movie.isPaid && !purchasedContent.includes(movie._id || movie.id) ? "Unlock Now" : "Watch Now"}
-                                          </motion.button>
-
-                                          <motion.button
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={(e) => { e.stopPropagation(); toggleMyList(movie); }}
-                                            style={{
-                                              width: '40px', height: '40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)',
-                                              background: 'rgba(255,255,255,0.1)', color: 'white',
-                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                              cursor: 'pointer', backdropFilter: 'blur(10px)'
-                                            }}
-                                          >
-                                            {myList.find(m => m.id === movie.id) ? <Check size={24} color="#46d369" /> : <Plus size={24} />}
-                                          </motion.button>
-                                        </div>
+                                        {/* Removed as per user request */}
                                       </motion.div>
                                     )}
                                   </div>

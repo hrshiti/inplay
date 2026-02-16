@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const multer = require("multer");
 const path = require("path");
+const { parseFile } = require('music-metadata');
 
 // Load environment variables FIRST
 require('dotenv').config();
@@ -153,7 +154,7 @@ const upload = multer({ storage });
 // -------------------
 // Upload Route
 // -------------------
-app.post("/upload", upload.single("file"), (req, res) => {
+app.post("/upload", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).send("No file uploaded");
 
   // Generate relative path
@@ -171,15 +172,28 @@ app.post("/upload", upload.single("file"), (req, res) => {
   // Clean up relative path double slashes if any
   relativePath = relativePath.replace('//', '/');
 
-
   // Generate full URL
   const fileUrl = `${BACKEND_URL}/uploads/${req.file.path.split("uploads")[1].replace(/\\/g, "/")}`;
 
-  res.json({
+  // Default response data
+  let responseData = {
     message: "File uploaded successfully",
     relativePath,
     url: fileUrl
-  });
+  };
+
+  // Calculate duration if audio
+  if (req.file.mimetype.startsWith("audio")) {
+    try {
+      const metadata = await parseFile(req.file.path);
+      responseData.duration = metadata.format.duration; // Duration in seconds
+    } catch (err) {
+      console.error("Error parsing audio metadata:", err.message);
+      // We continue without duration if parsing fails
+    }
+  }
+
+  res.json(responseData);
 });
 
 // -------------------

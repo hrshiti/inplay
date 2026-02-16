@@ -195,7 +195,7 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
 
             // Trigger global like toggle (updates user profile and list)
             if (onToggleLike) {
-                await onToggleLike(reel);
+                await onToggleLike(reel, false);
             } else {
                 // Fallback for isolated use
                 const token = localStorage.getItem('inplay_token');
@@ -528,9 +528,9 @@ const CommentsSheet = ({ reelId, onClose }) => {
 
     return (
         <div style={{
-            position: 'absolute', bottom: 0, left: 0, width: '100%', height: '75vh',
+            position: 'fixed', bottom: 0, left: 0, width: '100%', height: '75vh',
             background: '#ffffff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
-            zIndex: 100, display: 'flex', flexDirection: 'column', color: '#1a1a1a',
+            zIndex: 20001, display: 'flex', flexDirection: 'column', color: '#1a1a1a',
             animation: 'slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
             boxShadow: '0 -10px 40px rgba(0,0,0,0.3)'
         }}>
@@ -575,7 +575,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
             )}
 
             {/* Input Section */}
-            <div style={{ padding: '16px 20px 32px', borderTop: '1px solid #f5f5f5', background: '#fff' }}>
+            <div style={{ padding: '16px 20px 80px', borderTop: '1px solid #f5f5f5', background: '#fff' }}>
                 <form onSubmit={handleSubmit} style={{
                     display: 'flex', gap: '12px', alignItems: 'center', background: '#f8f8f8',
                     padding: '8px 8px 8px 16px', borderRadius: '30px', border: '1px solid #eeeeee'
