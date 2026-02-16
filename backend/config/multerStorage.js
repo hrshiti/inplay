@@ -29,7 +29,7 @@ Object.values(UPLOAD_DIRS).forEach(dir => ensureDirectoryExists(dir));
 // File size limits (in bytes)
 const FILE_SIZE_LIMITS = {
     IMAGE: 10 * 1024 * 1024,      // 10MB for images
-    VIDEO: 500 * 1024 * 1024,     // 500MB for videos
+    VIDEO: 10 * 1024 * 1024 * 1024,    // 10GB for videos (Increased from 500MB)
     AUDIO: 20 * 1024 * 1024,      // 20MB for audio
     AVATAR: 5 * 1024 * 1024,      // 5MB for avatars
 };
