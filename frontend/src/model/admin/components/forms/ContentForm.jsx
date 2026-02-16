@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, X, Save, ArrowLeft, Plus, Trash, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, X, Save, ArrowLeft, Plus, Trash, ChevronDown, ChevronUp, Video } from 'lucide-react';
 import adminTabService from '../../../../services/api/adminTabService';
 
 export default function ContentForm({ content = null, onSave, onCancel, isUploading = false }) {
