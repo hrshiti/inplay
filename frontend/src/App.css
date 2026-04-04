@@ -177,41 +177,50 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
-  margin-bottom: 20px;
+  padding: 0 16px;
+  margin-bottom: 16px;
 }
 
 .section-title {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .section-link {
-  font-size: 0.9rem;
-  color: var(--accent);
+  font-size: 1rem;
+  color: #ff0a16;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.section-link:hover {
+  opacity: 0.8;
 }
 
 /* Horizontal Scroll List */
 .horizontal-list {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   overflow-x: auto;
-  padding: 0 24px;
+  padding: 0 16px;
   padding-bottom: 20px;
-  /* Space for shadow */
+  scrollbar-width: none;
+}
+
+.horizontal-list::-webkit-scrollbar {
+  display: none;
 }
 
 /* Movie Card */
 .movie-card {
-  flex: 0 0 100px;
+  flex: 0 0 calc((100% - 28px) / 3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   transition: transform 0.3s ease;
 }
 
@@ -220,12 +229,12 @@
 }
 
 .poster-container {
-  width: 100px;
-  height: 150px;
+  width: 100%;
+  aspect-ratio: 2/3;
   border-radius: var(--radius-md);
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
   background: var(--bg-tertiary);
 }
 
@@ -251,10 +260,10 @@
 
 /* Song Card (Square) */
 .song-card {
-  flex: 0 0 140px;
+  flex: 0 0 calc((100% - 28px) / 3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   transition: transform 0.3s ease;
 }
 
@@ -263,12 +272,12 @@
 }
 
 .song-poster-container {
-  width: 140px;
-  height: 140px;
+  width: 100%;
+  aspect-ratio: 1/1;
   border-radius: var(--radius-md);
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
   background: var(--bg-tertiary);
 }
 
