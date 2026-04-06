@@ -1421,7 +1421,7 @@ function App() {
                                     zIndex: 2
                                   }}>
                                     <img
-                                      src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
+                                      src={getImageUrl(movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)}
                                       alt={movie.title}
                                       style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
                                       onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}

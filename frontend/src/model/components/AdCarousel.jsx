@@ -44,7 +44,7 @@ const AdCarousel = ({ promotions }) => {
                                 muted={isMuted}
                                 loop
                                 playsInline
-                                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center', background: '#111' }}
                             />
                             <button
                                 onClick={() => setIsMuted(!isMuted)}
@@ -68,7 +68,7 @@ const AdCarousel = ({ promotions }) => {
                         <img
                             src={getImageUrl(currentPromo.posterImageUrl)}
                             alt={currentPromo.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center', background: '#111' }}
                             onError={(e) => { e.target.src = `https://placehold.co/800x450/111/FFF?text=${currentPromo.title}` }}
                         />
                     )}
