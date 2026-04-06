@@ -1432,21 +1432,21 @@ function App() {
                                         PAID
                                       </div>
                                     )}
-                                    <div style={{
-                                      position: 'absolute',
-                                      bottom: 0,
-                                      left: 0,
-                                      right: 0,
-                                      padding: '16px',
-                                      background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
-                                      zIndex: 5
+                                    <div className="hero-overlay" style={{
+                                      background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.35) 35%, transparent 100%)',
+                                      padding: '20px 16px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      justifyContent: 'flex-end',
+                                      alignItems: 'flex-start'
                                     }}>
                                       <span style={{
                                         fontSize: '15px',
                                         fontWeight: '800',
                                         color: '#fff',
                                         display: 'block',
-                                        textAlign: 'right',
+                                        marginTop: 'auto',
+                                        alignSelf: 'flex-end',
                                         textShadow: '0 2px 4px rgba(0,0,0,0.8)',
                                         letterSpacing: '0.5px'
                                       }}>
