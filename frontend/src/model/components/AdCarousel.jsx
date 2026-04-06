@@ -24,7 +24,7 @@ const AdCarousel = ({ promotions }) => {
     const isVideo = !!currentPromo.promoVideoUrl;
 
     return (
-        <div style={{ width: '100%', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '140px' }}>
+        <div style={{ width: '100%', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '140px', background: '#111' }}>
             <AnimatePresence mode='wait'>
                 <motion.div
                     key={currentPromo._id}
@@ -35,7 +35,7 @@ const AdCarousel = ({ promotions }) => {
                     style={{ width: '100%', height: '100%', position: 'relative' }}
                 >
                     {isVideo ? (
-                        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        <div style={{ width: '100%', height: '100%', position: 'relative', background: '#111' }}>
                             <video
                                 ref={videoRef}
                                 src={getImageUrl(currentPromo.promoVideoUrl)}
@@ -44,7 +44,7 @@ const AdCarousel = ({ promotions }) => {
                                 muted={isMuted}
                                 loop
                                 playsInline
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
                             />
                             <button
                                 onClick={() => setIsMuted(!isMuted)}
@@ -68,7 +68,7 @@ const AdCarousel = ({ promotions }) => {
                         <img
                             src={getImageUrl(currentPromo.posterImageUrl)}
                             alt={currentPromo.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
                             onError={(e) => { e.target.src = `https://placehold.co/800x450/111/FFF?text=${currentPromo.title}` }}
                         />
                     )}

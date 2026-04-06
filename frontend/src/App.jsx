@@ -1423,7 +1423,7 @@ function App() {
                                     <img
                                       src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
                                       alt={movie.title}
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
                                       onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}
                                     />
                                     {movie.isPaid && (
@@ -1506,16 +1506,16 @@ function App() {
                             {contentSections.trending_song.map(song => (
                               <motion.div
                                 key={song.id}
-                                className="song-card"
+                                className="movie-card"
                                 whileTap={{ scale: 0.95 }}
                                 // Song click could play song, for now showing details like movie
                                 onClick={() => handleContentSelect({ ...song, description: `Artist: ${song.artist}` })}
                                 style={{ cursor: 'pointer' }}
                               >
-                                <div className="song-poster-container">
+                                <div className="poster-container">
                                   <img
                                     src={getImageUrl(song.poster?.url || song.image)}
-                                    onError={(e) => { e.target.src = `https://placehold.co/300x300/111/FFF?text=${song.title}` }}
+                                    onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${song.title}` }}
                                     alt={song.title}
                                     className="poster-img"
                                   />
@@ -1529,7 +1529,7 @@ function App() {
                                   </div>
                                 </div>
                                 <div>
-                                  <h3 className="song-title">{song.title}</h3>
+                                  <h3 className="movie-title">{song.title}</h3>
                                   <p className="song-artist">{song.artist}</p>
                                 </div>
                               </motion.div>
