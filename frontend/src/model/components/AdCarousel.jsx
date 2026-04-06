@@ -24,7 +24,7 @@ const AdCarousel = ({ promotions }) => {
     const isVideo = !!currentPromo.promoVideoUrl;
 
     return (
-        <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '140px' }}>
+        <div style={{ width: '100%', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '140px' }}>
             <AnimatePresence mode='wait'>
                 <motion.div
                     key={currentPromo._id}

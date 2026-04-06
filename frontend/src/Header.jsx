@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const headerLogo = '/FINAL_LOGO_copy__1_.jpg-removebg-preview (2).png';
+
 const Header = ({ currentUser, onLoginClick }) => {
     const navigate = useNavigate();
     const isSubscribed = currentUser?.subscription?.isActive;
@@ -9,8 +11,7 @@ const Header = ({ currentUser, onLoginClick }) => {
         <div className="mx-header">
             <div className="mx-header-left">
                 <div className="brand-logo">
-                    {/* Amazon style text or Inplay text */}
-                    <span className="brand-primary">inplay</span>
+                    <img src={headerLogo} alt="InPlay" className="brand-logo-image" />
                 </div>
             </div>
             <div className="mx-header-right">

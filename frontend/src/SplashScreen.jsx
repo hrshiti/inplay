@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import logo from './assets/inplay logo-Photoroom.png';
+
+const logo = '/FINAL_LOGO_copy__1_.jpg-removebg-preview (2).png';
 
 export default function SplashScreen() {
     return (

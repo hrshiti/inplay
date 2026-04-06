@@ -957,20 +957,20 @@ function App() {
                                   key={movie._id || movie.id}
                                   initial={false}
                                   animate={{
-                                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-96%" : "96%"),
-                                    scale: visualOffset === 0 ? 1 : 0.9,
-                                    opacity: visualOffset === 0 ? 1 : 0.5,
+                                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-100%" : "100%"),
+                                    scale: 1,
+                                    opacity: visualOffset === 0 ? 1 : 0,
                                     zIndex: visualOffset === 0 ? 10 : 5
                                   }}
                                   transition={{ type: "spring", stiffness: 200, damping: 25 }}
                                   style={{
                                     position: 'absolute',
-                                    width: '88%',
+                                    width: '100%',
                                     height: '100%',
-                                    borderRadius: '24px',
+                                    borderRadius: '14px',
                                     overflow: 'hidden',
                                     boxShadow: visualOffset === 0 ? '0 20px 40px rgba(0,0,0,0.6)' : 'none',
-                                    left: '6%',
+                                    left: 0,
                                     top: 0
                                   }}
                                   drag="x"
@@ -991,7 +991,7 @@ function App() {
                                   <img src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)} alt={movie.title} className="hero-image" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
 
                                   <div className="hero-overlay" style={{
-                                    background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.8) 40%, transparent 100%)',
+                                    background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.35) 35%, transparent 100%)',
                                     padding: '20px 16px',
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -1016,20 +1016,6 @@ function App() {
                                             PAID
                                           </div>
                                         )}
-
-
-
-
-
-                                        <div className="hero-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#ccc', marginBottom: '8px' }}>
-                                          <span style={{ color: '#46d369', fontWeight: 'bold' }}>{Math.round(movie.rating * 10)}% Match</span>
-                                          <span style={{ opacity: 0.3 }}>|</span>
-                                          <span>{movie.year}</span>
-                                          <span style={{ opacity: 0.3 }}>|</span>
-                                          <span style={{ background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>HD</span>
-                                          <a style={{ opacity: 0.3 }}>|</a>
-                                          <span>{movie.genre}</span>
-                                        </div>
 
                                         {/* Action Buttons Row */}
                                         {/* Removed as per user request */}
@@ -1326,102 +1312,6 @@ function App() {
                           </section>
                         )}
 
-
-                        {/* New Release Section */}
-                        {contentSections.new_release && contentSections.new_release.length > 0 && (
-                          <section className="section" style={{ marginBottom: '40px', marginTop: '20px' }}>
-                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
-                                <h2 className="section-title" style={{ fontSize: '1.4rem', fontWeight: '800' }}>New Releases</h2>
-                                <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Latest</span>
-                              </div>
-                            </div>
-                            <div className="horizontal-list hide-scrollbar nr-auto-scroll" style={{ gap: '0', padding: '0 0 20px 0', alignItems: 'center', scrollSnapType: 'x mandatory' }}>
-                              {contentSections.new_release.map((movie, index) => (
-                                <motion.div
-                                  key={movie._id || movie.id}
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => handleContentSelect(movie)}
-                                  style={{
-                                    flex: '0 0 100%',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    paddingLeft: '40px', // Space for ranking number
-                                    paddingRight: '20px',
-                                    position: 'relative',
-                                    scrollSnapAlign: 'start'
-                                  }}
-                                >
-                                  {/* Ranking Number */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    left: '5px',
-                                    bottom: '-10px',
-                                    fontSize: '110px',
-                                    fontWeight: '900',
-                                    color: 'white',
-                                    zIndex: 3,
-                                    lineHeight: '1',
-                                    pointerEvents: 'none',
-                                    opacity: 0.4,
-                                    textShadow: '2px 2px 10px rgba(0,0,0,0.5)',
-                                    fontFamily: 'var(--font-display)'
-                                  }}>
-                                    {index + 1}
-                                  </div>
-
-                                  <div style={{
-                                    width: '100%',
-                                    height: '220px',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    boxShadow: '0 15px 35px rgba(0,0,0,0.6)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    zIndex: 2
-                                  }}>
-                                    <img
-                                      src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
-                                      alt={movie.title}
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
-                                      onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}
-                                    />
-                                    {movie.isPaid && (
-                                      <div style={{ position: 'absolute', top: '15px', right: '15px', background: '#FFD700', color: '#000', fontSize: '11px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px', zIndex: 10 }}>
-                                        PAID
-                                      </div>
-                                    )}
-                                    <div style={{
-                                      position: 'absolute',
-                                      bottom: 0,
-                                      left: 0,
-                                      right: 0,
-                                      padding: '16px',
-                                      background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
-                                      zIndex: 5
-                                    }}>
-                                      <span style={{
-                                        fontSize: '15px',
-                                        fontWeight: '800',
-                                        color: '#fff',
-                                        display: 'block',
-                                        textAlign: 'right',
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                                        letterSpacing: '0.5px'
-                                      }}>
-                                        {movie.title}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </div>
-                          </section>
-                        )}
-
-
                         {/* Promotion & Ads Section */}
                         {/* Promotion & Ads Section */}
                         {/* Promotion & Ads Section */}
@@ -1435,7 +1325,7 @@ function App() {
                               No active promotions
                             </div>
                           ) : (
-                            <div style={{ padding: '0 20px', position: 'relative' }}>
+                            <div style={{ padding: '0', position: 'relative' }}>
                               {(() => {
                                 // Local variable or we need state? 
                                 // We can't use hooks inside this callback easily if not already defined.
@@ -1492,6 +1382,82 @@ function App() {
                             ))}
                           </div>
                         </section>
+
+                        {/* New Release Section */}
+                        {contentSections.new_release && contentSections.new_release.length > 0 && (
+                          <section className="section" style={{ marginBottom: '40px', marginTop: '20px' }}>
+                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
+                                <h2 className="section-title" style={{ fontSize: '1.4rem', fontWeight: '800' }}>New Releases</h2>
+                                <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Latest</span>
+                              </div>
+                            </div>
+                            <div className="horizontal-list hide-scrollbar nr-auto-scroll" style={{ gap: '0', padding: '0 0 20px 0', alignItems: 'center', scrollSnapType: 'x mandatory' }}>
+                              {contentSections.new_release.map((movie) => (
+                                <motion.div
+                                  key={movie._id || movie.id}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => handleContentSelect(movie)}
+                                  style={{
+                                    flex: '0 0 100%',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    paddingLeft: '0',
+                                    paddingRight: '0',
+                                    position: 'relative',
+                                    scrollSnapAlign: 'start'
+                                  }}
+                                >
+                                  <div style={{
+                                    width: '100%',
+                                    height: '220px',
+                                    borderRadius: '14px',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    boxShadow: '0 15px 35px rgba(0,0,0,0.6)',
+                                    border: '0',
+                                    zIndex: 2
+                                  }}>
+                                    <img
+                                      src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
+                                      alt={movie.title}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
+                                      onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}
+                                    />
+                                    {movie.isPaid && (
+                                      <div style={{ position: 'absolute', top: '15px', right: '15px', background: '#FFD700', color: '#000', fontSize: '11px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px', zIndex: 10 }}>
+                                        PAID
+                                      </div>
+                                    )}
+                                    <div style={{
+                                      position: 'absolute',
+                                      bottom: 0,
+                                      left: 0,
+                                      right: 0,
+                                      padding: '16px',
+                                      background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+                                      zIndex: 5
+                                    }}>
+                                      <span style={{
+                                        fontSize: '15px',
+                                        fontWeight: '800',
+                                        color: '#fff',
+                                        display: 'block',
+                                        textAlign: 'right',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                                        letterSpacing: '0.5px'
+                                      }}>
+                                        {movie.title}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </section>
+                        )}
 
                         {/* Bhojpuri Section */}
                         <section className="section">
@@ -1652,7 +1618,7 @@ function App() {
                         </section>
 
                         {/* More Sections: Action Movies */}
-                        <section className="section" style={{ paddingBottom: '40px' }}>
+                        <section className="section">
                           <div className="section-header">
                             <h2 className="section-title">Action Blockbusters</h2>
                             <span className="section-link" onClick={() => navigate('/category/action-blockbusters')}>Show all</span>

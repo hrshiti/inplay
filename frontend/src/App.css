@@ -218,6 +218,7 @@
 /* Movie Card */
 .movie-card {
   flex: 0 0 calc((100% - 28px) / 3);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -250,6 +251,9 @@
 }
 
 .movie-title {
+  width: 100%;
+  min-width: 0;
+  display: block;
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
@@ -261,6 +265,7 @@
 /* Song Card (Square) */
 .song-card {
   flex: 0 0 calc((100% - 28px) / 3);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -282,6 +287,9 @@
 }
 
 .song-title {
+  width: 100%;
+  min-width: 0;
+  display: block;
   font-size: 0.9rem;
   font-weight: 600;
   white-space: nowrap;
@@ -292,6 +300,8 @@
 }
 
 .song-artist {
+  width: 100%;
+  min-width: 0;
   font-size: 0.75rem;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -762,8 +772,21 @@
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-start;
+  width: 148px;
+  height: 38px;
+  overflow: hidden;
   font-family: 'Inter', sans-serif;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 148px;
+  height: 38px;
+  object-fit: contain;
+  object-position: left center;
+  transform: scale(2.05) translateX(2px);
+  transform-origin: left center;
 }
 
 .brand-primary {
