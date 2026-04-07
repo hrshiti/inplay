@@ -100,6 +100,33 @@ const authService = {
         }
     },
 
+    async requestOtp(phone) {
+        const response = await fetch(`${API_URL}/user/auth/request-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone }),
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to send OTP');
+        return data;
+    },
+
+    async verifyOtp(phone, otp) {
+        const response = await fetch(`${API_URL}/user/auth/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, otp }),
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'OTP verification failed');
+        
+        localStorage.setItem('inplay_token', data.token);
+        localStorage.setItem('inplay_current_user', JSON.stringify(data.data.user));
+        return data;
+    },
+
     async getProfile() {
         const token = localStorage.getItem('inplay_token');
         if (!token) throw new Error('No token found');

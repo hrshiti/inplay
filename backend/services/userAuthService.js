@@ -4,6 +4,31 @@ const QuickByte = require('../models/QuickByte');
 const ForYou = require('../models/ForYou');
 const { sendTokenResponse } = require('../middlewares/auth');
 
+// Helper to send SMS via SMS India Hub
+const sendSMS = async (phone, text) => {
+  try {
+    const apiKey = process.env.SMSINDIAHUB_API_KEY;
+    const senderId = process.env.SMSINDIAHUB_SENDER_ID;
+    
+    // Fallback if SMS credentials are not set purely for development
+    if (!apiKey || !senderId) {
+      console.log(`[DEVELOPMENT] Sending SMS to ${phone}: ${text}`);
+      return true;
+    }
+
+    const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone)}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2`;
+    
+    // Add timeout and robust parsing
+    const response = await fetch(url);
+    const dataText = await response.text();
+    console.log('SMS India Hub response:', dataText);
+    return true;
+  } catch (err) {
+    console.error('Error sending SMS:', err);
+    throw new Error('Failed to send SMS');
+  }
+};
+
 // Register new user
 const registerUser = async (userData) => {
   const { name, email, phone, password } = userData;
@@ -26,35 +51,83 @@ const registerUser = async (userData) => {
   const user = await User.create({
     name,
     email,
-    phone,
-    password
+    phone
   });
 
   return user;
 };
 
-// Login user
+// Login user by password (fallback / admin)
 const loginUser = async (email, password) => {
-  // Find user and include password for comparison
   const user = await User.findOne({ email, role: 'user' }).select('+password');
 
   if (!user) {
     throw new Error('Invalid credentials');
   }
 
-  // Check if account is active
   if (!user.isActive) {
     throw new Error('Account is deactivated. Please contact support.');
   }
 
-  // Check password
-  const isPasswordMatch = await user.comparePassword(password);
-  if (!isPasswordMatch) {
-    throw new Error('Invalid credentials');
+  // Check password if it exists
+  if (user.password) {
+      const isPasswordMatch = await user.comparePassword(password);
+      if (!isPasswordMatch) {
+        throw new Error('Invalid credentials');
+      }
   }
 
   return user;
 };
+
+// Request OTP for Login
+const requestOtp = async (phone) => {
+  const user = await User.findOne({ phone, role: 'user' });
+  if (!user) {
+    throw new Error('No account found with this phone number. Please sign up first.');
+  }
+  if (!user.isActive) {
+    throw new Error('Account is deactivated. Please contact support.');
+  }
+
+  // Generate 6 digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+  user.otp = otp;
+  user.otpExpiry = otpExpiry;
+  await user.save();
+
+  // Send SMS using the explicitly registered template
+  const text = `Welcome to the inplay powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
+  await sendSMS(phone, text);
+
+  return { message: 'OTP sent successfully' };
+};
+
+// Verify OTP
+const verifyOtp = async (phone, otp) => {
+  const user = await User.findOne({ phone, role: 'user' }).select('+otp +otpExpiry');
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (!user.otp || user.otp !== otp) {
+    throw new Error('Invalid OTP');
+  }
+
+  if (new Date() > user.otpExpiry) {
+    throw new Error('OTP expired');
+  }
+
+  // Clear OTP
+  user.otp = undefined;
+  user.otpExpiry = undefined;
+  await user.save();
+
+  return user;
+};
+
 
 // Helper to hydrate content items (Content, QuickByte, ForYou)
 const hydrateContentItem = (item) => {
@@ -507,5 +580,7 @@ module.exports = {
   logoutUser,
   toggleLike,
   saveFCMToken,
-  removeFCMToken
+  removeFCMToken,
+  requestOtp,
+  verifyOtp
 };

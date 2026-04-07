@@ -236,26 +236,36 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const structure = await contentService.getDynamicStructure();
-        setDynamicStructure(structure);
+        const [
+          structure,
+          reels,
+          allContentData,
+          promoData,
+          newReleases
+        ] = await Promise.all([
+          contentService.getDynamicStructure().catch(e => { console.error(e); return []; }),
+          contentService.getQuickBytes(20).catch(e => { console.error(e); return []; }),
+          contentService.getAllContent().catch(e => { console.error(e); return []; }),
+          promotionService.getActivePromotions().catch(e => { console.error(e); return []; }),
+          contentService.getNewReleases().catch(e => { console.error(e); return []; })
+        ]);
 
-        const reels = await contentService.getQuickBytes(20);
-        setQuickBites(reels);
+        setDynamicStructure(structure || []);
+        setQuickBites(reels || []);
 
-        const allContent = await contentService.getAllContent();
         const sections = {
           bhojpuri: [],
           trending_now: [],
           trending_song: [],
           hindi_series: [],
           action: [],
-          new_release: [],
+          new_release: newReleases || [],
           originals: [],
           broadcast: []
         };
 
-        if (Array.isArray(allContent)) {
-          allContent.forEach(item => {
+        if (Array.isArray(allContentData)) {
+          allContentData.forEach(item => {
             if (item.type === 'bhojpuri') sections.bhojpuri.push(item);
             else if (item.type === 'trending_song') sections.trending_song.push(item);
             else if (item.type === 'hindi_series') sections.hindi_series.push(item);
@@ -270,22 +280,9 @@ function App() {
           });
         }
 
-        try {
-          const newReleases = await contentService.getNewReleases();
-          sections.new_release = newReleases || [];
-        } catch (error) {
-          console.error("Failed to fetch new releases", error);
-        }
-
         setContentSections(sections);
-        setAllContent(allContent || []);
-
-        try {
-          const promoData = await promotionService.getActivePromotions();
-          setPromotions(promoData);
-        } catch (err) {
-          console.error("Failed to fetch promotions", err);
-        }
+        setAllContent(allContentData || []);
+        setPromotions(promoData || []);
 
       } catch (error) {
         console.error("Failed to fetch content", error);
@@ -713,7 +710,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, []);  const lenisRef = useRef(null);
 
   // Smooth Scroll Setup with GSAP Sync
   useEffect(() => {
@@ -727,6 +724,7 @@ function App() {
       smoothTouch: false,
       touchMultiplier: 2,
     });
+    lenisRef.current = lenis;
 
     // Synchronize Lenis scroll with ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
@@ -743,8 +741,20 @@ function App() {
       gsap.ticker.remove(update);
       ScrollTrigger.getAll().forEach(t => t.kill()); // Kill all ScrollTriggers to prevent removeChild errors
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
+
+  // Watch for activeTab changes to toggle lenis
+  useEffect(() => {
+    if (lenisRef.current) {
+      if (activeTab === 'For You') {
+        lenisRef.current.stop();
+      } else {
+        lenisRef.current.start();
+      }
+    }
+  }, [activeTab]);
 
   // GSAP Animations
   useEffect(() => {

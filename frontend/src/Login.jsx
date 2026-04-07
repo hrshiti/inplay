@@ -1,36 +1,68 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Phone, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import authService from './services/api/authService';
 
 export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState(1); // 1 = Phone input, 2 = OTP input
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    setError(''); // Clear error when user types
+  const handlePhoneChange = (e) => {
+    const numericValue = e.target.value.replace(/\D/g, '');
+    if (numericValue.length <= 10) setPhone(numericValue);
+    setError('');
   };
 
-  const handleSubmit = async (e) => {
+  const handleOtpChange = (e) => {
+    const numericValue = e.target.value.replace(/\D/g, '');
+    if (numericValue.length <= 6) setOtp(numericValue);
+    setError('');
+  };
+
+  const requestOtp = async (e) => {
     e.preventDefault();
+    if (phone.length < 10) {
+      setError('Please enter a valid 10-digit phone number.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      await authService.requestOtp(phone);
+      setSuccess('OTP sent successfully!');
+      setStep(2);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to request OTP. Please try again or create an account.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyOtp = async (e) => {
+    e.preventDefault();
+    if (otp.length < 4) {
+      setError('Please enter a valid OTP.');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
-      await authService.login(formData.email, formData.password);
+      await authService.verifyOtp(phone, otp);
       onLoginSuccess();
-      onClose();
+      navigate('/');
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.message || 'Login failed. Invalid OTP.');
     } finally {
       setIsLoading(false);
     }
@@ -86,127 +118,84 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
               Welcome Back
             </h2>
             <p style={{ color: '#9ca3af', fontSize: '0.95rem', fontWeight: '500' }}>
-              Sign in to continue watching
+              {step === 1 ? 'Sign in with your phone number' : 'Enter the OTP to verify'}
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit}>
-            {/* Email Field */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                color: '#fff',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '10px'
-              }}>
-                Email
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={20} style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#888'
-                }} />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '16px 16px 16px 48px',
-                    background: '#242424',
-                    border: '1px solid #333',
-                    borderRadius: '16px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#ff0a16';
-                    e.target.style.background = '#2a2a2a';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#333';
-                    e.target.style.background = '#242424';
-                  }}
-                />
+          <form onSubmit={step === 1 ? requestOtp : verifyOtp}>
+            {step === 1 ? (
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', color: '#fff', fontSize: '0.9rem', fontWeight: '600', marginBottom: '10px' }}>
+                  Phone Number
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Phone size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    placeholder="Enter your mobile number"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '16px 16px 16px 48px',
+                      background: '#242424',
+                      border: '1px solid #333',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '1rem',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#ff0a16';
+                      e.target.style.background = '#2a2a2a';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#333';
+                      e.target.style.background = '#242424';
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-
-            {/* Password Field */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                color: '#fff',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '10px'
-              }}>
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={20} style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#888'
-                }} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '16px 48px 16px 48px',
-                    background: '#242424',
-                    border: '1px solid #333',
-                    borderRadius: '16px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#ff0a16';
-                    e.target.style.background = '#2a2a2a';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#333';
-                    e.target.style.background = '#242424';
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '16px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#888',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+            ) : (
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', color: '#fff', fontSize: '0.9rem', fontWeight: '600', marginBottom: '10px' }}>
+                  One Time Password (OTP)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={handleOtpChange}
+                    placeholder="Enter 6-digit OTP"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '16px 16px 16px 48px',
+                      background: '#242424',
+                      border: '1px solid #333',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '1rem',
+                      outline: 'none',
+                      letterSpacing: '2px',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#ff0a16';
+                      e.target.style.background = '#2a2a2a';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#333';
+                      e.target.style.background = '#242424';
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -222,6 +211,23 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                 fontWeight: '500'
               }}>
                 {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div style={{
+                background: 'rgba(22, 163, 74, 0.1)',
+                border: '1px solid rgba(22, 163, 74, 0.2)',
+                color: '#22c55e',
+                padding: '12px',
+                borderRadius: '12px',
+                marginBottom: '20px',
+                fontSize: '0.85rem',
+                textAlign: 'center',
+                fontWeight: '500'
+              }}>
+                {success}
               </div>
             )}
 
@@ -246,11 +252,29 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
                 boxShadow: '0 8px 24px rgba(255, 10, 22, 0.3)'
               }}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? 'Please wait...' : (step === 1 ? 'Request OTP' : 'Verify & Login')}
             </motion.button>
 
-            {/* Switch to Signup */}
+            {/* Navigation options */}
             <div style={{ textAlign: 'center' }}>
+              {step === 2 && (
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  style={{
+                    color: '#9ca3af',
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    marginBottom: '16px',
+                    display: 'block',
+                    width: '100%'
+                  }}
+                >
+                  Change Phone Number
+                </button>
+              )}
               <p style={{ color: '#9ca3af', fontSize: '0.95rem' }}>
                 Don't have an account?{' '}
                 <button

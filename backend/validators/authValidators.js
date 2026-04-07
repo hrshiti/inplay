@@ -14,10 +14,6 @@ const validateUserRegistration = [
     .normalizeEmail()
     .withMessage('Please provide a valid email'),
 
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
-
   body('phone')
     .matches(/^[6-9]\d{9}$/)
     .withMessage('Please provide a valid Indian mobile number')

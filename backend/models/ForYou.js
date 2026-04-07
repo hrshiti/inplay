@@ -51,4 +51,7 @@ const forYouSchema = new mongoose.Schema({
     timestamps: true
 });
 
+forYouSchema.index({ status: 1 });
+forYouSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('ForYou', forYouSchema);

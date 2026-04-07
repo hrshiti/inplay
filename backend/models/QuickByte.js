@@ -95,4 +95,7 @@ const quickByteSchema = new mongoose.Schema({
     timestamps: true
 });
 
+quickByteSchema.index({ status: 1 });
+quickByteSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('QuickByte', quickByteSchema);

@@ -63,6 +63,50 @@ const loginUser = async (req, res) => {
   }
 };
 
+// @desc    Request OTP for Login
+// @route   POST /api/user/auth/request-otp
+// @access  Public
+const requestLoginOtp = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Phone number is required' });
+    }
+
+    const result = await userAuthService.requestOtp(phone);
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Login request OTP error:', error.message);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Verify OTP for Login
+// @route   POST /api/user/auth/verify-otp
+// @access  Public
+const verifyLoginOtp = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    if (!phone || !otp) {
+      return res.status(400).json({ success: false, message: 'Phone number and OTP are required' });
+    }
+
+    const user = await userAuthService.verifyOtp(phone, otp);
+    await sendTokenResponse(user, 200, res, 'User logged in successfully');
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 // @desc    Get current user profile
 // @route   GET /api/user/auth/profile
 // @access  Private
@@ -399,5 +443,7 @@ module.exports = {
   logoutUser,
   toggleLike,
   saveFCMToken,
-  removeFCMToken
+  removeFCMToken,
+  requestLoginOtp,
+  verifyLoginOtp
 };

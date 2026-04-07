@@ -1,36 +1,27 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock, Phone, User } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, User } from 'lucide-react';
 import authService from './services/api/authService';
 
 export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
     phone: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Special handling for phone to only allow numbers and max 10
     if (name === 'phone') {
       const numericValue = value.replace(/\D/g, '');
       if (numericValue.length <= 10) {
-        setFormData({
-          ...formData,
-          [name]: numericValue
-        });
+        setFormData({ ...formData, [name]: numericValue });
       }
     } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      });
+      setFormData({ ...formData, [name]: value });
     }
     setError('');
     setSuccess('');
@@ -43,10 +34,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
     }
     if (!formData.email.includes('@')) {
       setError('Please enter a valid email address');
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
       return false;
     }
     if (formData.phone.length < 10) {
@@ -67,14 +54,13 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
       await authService.signup({
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
-        password: formData.password
+        phone: formData.phone
       });
 
-      setSuccess('Account created successfully!');
+      setSuccess('Account created successfully! Please log in.');
       setTimeout(() => {
-        onSignupSuccess();
-        onClose();
+        // Here we can either just switch to login or notify success
+        onSwitchToLogin();
       }, 1500);
     } catch (err) {
       setError(err.message || 'Signup failed. Please try again.');
@@ -141,23 +127,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
           <form onSubmit={handleSubmit}>
             {/* Name Field */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                color: '#e5e7eb',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '8px'
-              }}>
+              <label style={{ display: 'block', color: '#e5e7eb', fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px' }}>
                 Full Name
               </label>
               <div style={{ position: 'relative' }}>
-                <User size={20} style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280'
-                }} />
+                <User size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
                 <input
                   type="text"
                   name="name"
@@ -184,23 +158,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
 
             {/* Email Field */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                color: '#e5e7eb',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '8px'
-              }}>
+              <label style={{ display: 'block', color: '#e5e7eb', fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px' }}>
                 Email
               </label>
               <div style={{ position: 'relative' }}>
-                <Mail size={20} style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280'
-                }} />
+                <Mail size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
                 <input
                   type="email"
                   name="email"
@@ -227,23 +189,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
 
             {/* Phone Field */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                color: '#e5e7eb',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '8px'
-              }}>
+              <label style={{ display: 'block', color: '#e5e7eb', fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px' }}>
                 Phone Number
               </label>
               <div style={{ position: 'relative' }}>
-                <Phone size={20} style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280'
-                }} />
+                <Phone size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
                 <input
                   type="tel"
                   name="phone"
@@ -268,91 +218,16 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
               </div>
             </div>
 
-            {/* Password Field */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                color: '#e5e7eb',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '8px'
-              }}>
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={20} style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280'
-                }} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Password (min 6 chars)"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '16px 48px 16px 48px',
-                    background: '#2a2a2a',
-                    border: '1px solid #374151',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    transition: 'border-color 0.3s ease'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#46d369'}
-                  onBlur={(e) => e.target.style.borderColor = '#374151'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '16px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#6b7280',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
             {/* Error Message */}
             {error && (
-              <div style={{
-                background: '#dc2626',
-                color: 'white',
-                padding: '12px',
-                borderRadius: '8px',
-                marginBottom: '20px',
-                fontSize: '0.9rem',
-                textAlign: 'center'
-              }}>
+              <div style={{ background: '#dc2626', color: 'white', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center' }}>
                 {error}
               </div>
             )}
 
             {/* Success Message */}
             {success && (
-              <div style={{
-                background: '#16a34a',
-                color: 'white',
-                padding: '12px',
-                borderRadius: '8px',
-                marginBottom: '20px',
-                fontSize: '0.9rem',
-                textAlign: 'center'
-              }}>
+              <div style={{ background: '#16a34a', color: 'white', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center' }}>
                 {success}
               </div>
             )}
@@ -379,7 +254,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSignupSuccess }) {
               onMouseEnter={(e) => !isLoading && (e.target.style.backgroundColor = '#e63946')}
               onMouseLeave={(e) => !isLoading && (e.target.style.backgroundColor = '#ff4d4d')}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading ? 'Creating Account...' : 'Continue to Login'}
             </motion.button>
 
             {/* Switch to Login */}

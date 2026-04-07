@@ -14,6 +14,8 @@ const { validateUserRegistration, validateUserLogin } = require('../validators/a
 // Auth routes (no auth required)
 router.post('/auth/register', validateUserRegistration, userAuthController.registerUser);
 router.post('/auth/login', validateUserLogin, userAuthController.loginUser);
+router.post('/auth/request-otp', userAuthController.requestLoginOtp);
+router.post('/auth/verify-otp', userAuthController.verifyLoginOtp);
 
 // Protected routes (auth required)
 router.use(protect); // All routes below require authentication
