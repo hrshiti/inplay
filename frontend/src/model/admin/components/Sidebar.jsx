@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Film,
   Users,
-  DollarSign,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -20,8 +19,6 @@ const navigation = [
   { name: 'For You', href: '/admin/for-you', icon: Smartphone },
   { name: 'Audio Series', href: '/admin/audio-series', icon: Film }, // Using Film icon for now, or maybe something better if available
   { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Ad & Promotion', href: '/admin/promotions', icon: Film },
-  { name: 'Monetization', href: '/admin/monetization/plans', icon: DollarSign },
   { name: 'Legal Pages', href: '/admin/legal', icon: Shield },
   { name: 'Tab Management', href: '/admin/tabs', icon: Layout },
   { name: 'Settings', href: '/admin/settings/app', icon: Settings }

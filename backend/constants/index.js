@@ -19,26 +19,6 @@ const CONTENT_STATUS = {
   ARCHIVED: 'archived'
 };
 
-// Payment status
-const PAYMENT_STATUS = {
-  PENDING: 'pending',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  REFUNDED: 'refunded'
-};
-
-// Payment types
-const PAYMENT_TYPES = {
-  SUBSCRIPTION: 'subscription',
-  CONTENT_PURCHASE: 'content_purchase'
-};
-
-// Subscription duration
-const SUBSCRIPTION_DURATION = {
-  MONTHLY: 'monthly',
-  QUARTERLY: 'quarterly',
-  YEARLY: 'yearly'
-};
 
 // Video quality options
 const VIDEO_QUALITY = {
@@ -122,9 +102,6 @@ module.exports = {
   USER_ROLES,
   CONTENT_TYPES,
   CONTENT_STATUS,
-  PAYMENT_STATUS,
-  PAYMENT_TYPES,
-  SUBSCRIPTION_DURATION,
   VIDEO_QUALITY,
   CONTENT_CATEGORIES,
   GENRES,

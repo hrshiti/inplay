@@ -12,8 +12,6 @@ export const ADMIN_MOVIES = [
     year: 2022,
     genre: "Crime",
     description: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler.",
-    isPaid: true,
-    price: 199,
     status: "published",
     views: 125000,
     likes: 8500,
@@ -31,7 +29,6 @@ export const ADMIN_MOVIES = [
     year: 2022,
     genre: "Action",
     description: "After more than thirty years of service as one of the Navy's top aviators, Pete 'Maverick' Mitchell finds himself training a detachment of TOP GUN graduates for a specialized mission.",
-    isPaid: false,
     status: "published",
     views: 250000,
     likes: 15000,
@@ -50,8 +47,6 @@ export const ADMIN_MOVIES = [
     year: 2021,
     genre: "Action",
     description: "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous.",
-    isPaid: true,
-    price: 249,
     status: "published",
     views: 300000,
     likes: 22000,
@@ -70,8 +65,6 @@ export const ADMIN_SERIES = [
     year: 2018,
     genre: "Crime",
     description: "A shocking incident at a wedding procession ignites a series of events entangling the lives of two families in the lawless city of Mirzapur.",
-    isPaid: true,
-    price: 299,
     type: 'series',
     status: "published",
     totalSeasons: 3,
@@ -160,100 +153,52 @@ export const ADMIN_USERS = [
     name: "Rahul Sharma",
     email: "rahul.sharma@email.com",
     avatar: "https://placehold.co/100x100/3498db/ffffff?text=RS",
-    plan: "Premium",
+    plan: "Free",
     status: "active",
     joinDate: "2024-01-15",
     lastLogin: "2024-01-20",
     totalWatchTime: 45, // hours
-    favoriteGenre: "Action",
-    subscriptionExpiry: "2024-02-15",
-    paymentMethod: "Credit Card"
+    favoriteGenre: "Action"
   },
   {
     id: 2,
     name: "Priya Patel",
     email: "priya.patel@email.com",
     avatar: "https://placehold.co/100x100/e74c3c/ffffff?text=PP",
-    plan: "Basic",
+    plan: "Free",
     status: "active",
     joinDate: "2024-01-10",
     lastLogin: "2024-01-19",
     totalWatchTime: 28,
-    favoriteGenre: "Drama",
-    subscriptionExpiry: "2024-02-10",
-    paymentMethod: "UPI"
+    favoriteGenre: "Drama"
   },
   {
     id: 3,
     name: "Amit Kumar",
     email: "amit.kumar@email.com",
     avatar: "https://placehold.co/100x100/27ae60/ffffff?text=AK",
-    plan: "VIP",
+    plan: "Free",
     status: "inactive",
     joinDate: "2023-12-20",
     lastLogin: "2024-01-05",
     totalWatchTime: 120,
-    favoriteGenre: "Thriller",
-    subscriptionExpiry: "2024-01-20",
-    paymentMethod: "Debit Card"
+    favoriteGenre: "Thriller"
   },
   {
     id: 4,
     name: "Sneha Gupta",
     email: "sneha.gupta@email.com",
     avatar: "https://placehold.co/100x100/9b59b6/ffffff?text=SG",
-    plan: "Premium",
+    plan: "Free",
     status: "active",
     joinDate: "2024-01-18",
     lastLogin: "2024-01-20",
     totalWatchTime: 15,
-    favoriteGenre: "Romance",
-    subscriptionExpiry: "2024-02-18",
-    paymentMethod: "Net Banking"
+    favoriteGenre: "Romance"
   }
 ];
 
-export const ADMIN_SUBSCRIPTIONS = [
-  {
-    id: 1,
-    name: "Basic",
-    price: 199,
-    currency: "INR",
-    duration: "monthly",
-    features: ["HD Quality", "1 Device", "Limited Downloads"],
-    maxDevices: 1,
-    maxDownloads: 10,
-    status: "active",
-    subscriberCount: 1250,
-    revenue: 248750
-  },
-  {
-    id: 2,
-    name: "Premium",
-    price: 399,
-    currency: "INR",
-    duration: "monthly",
-    features: ["4K Quality", "4 Devices", "Unlimited Downloads", "Offline Viewing"],
-    maxDevices: 4,
-    maxDownloads: -1, // unlimited
-    status: "active",
-    subscriberCount: 2150,
-    revenue: 858850
-  },
-  {
-    id: 3,
-    name: "VIP",
-    price: 599,
-    currency: "INR",
-    duration: "monthly",
-    features: ["4K Quality", "6 Devices", "Unlimited Downloads", "Early Access", "Exclusive Content"],
-    maxDevices: 6,
-    maxDownloads: -1,
-    status: "active",
-    subscriberCount: 450,
-    revenue: 269550
-  }
-];
+export const ADMIN_SUBSCRIPTIONS = [];
 
 export const ADMIN_BANNERS = [
   {
@@ -271,7 +216,7 @@ export const ADMIN_BANNERS = [
   },
   {
     id: 2,
-    title: "Premium Subscription Promo",
+    title: "New Releases Promo",
     image: "/assets/spiderman_no_way_home.jpg",
     type: "sidebar",
     status: "active",
@@ -301,10 +246,10 @@ export const ADMIN_ACTIVITY_LOGS = [
   {
     id: 1,
     type: "user_signup",
-    message: "New user Rahul Sharma signed up for Premium plan",
+    message: "New user Rahul Sharma signed up",
     timestamp: "2024-01-20T10:30:00Z",
     user: "Rahul Sharma",
-    details: "Premium Plan - Credit Card"
+    details: "Registration complete"
   },
   {
     id: 2,
@@ -316,11 +261,11 @@ export const ADMIN_ACTIVITY_LOGS = [
   },
   {
     id: 3,
-    type: "subscription_upgrade",
-    message: "User Priya Patel upgraded to Premium plan",
+    type: "app_update",
+    message: "System maintenance complete",
     timestamp: "2024-01-18T09:15:00Z",
-    user: "Priya Patel",
-    details: "Basic → Premium (+₹200)"
+    user: "System",
+    details: "Performance optimized"
   },
   {
     id: 4,
@@ -336,7 +281,7 @@ export const ADMIN_ACTIVITY_LOGS = [
     message: "High view count: 'Top Gun: Maverick' reached 250K views",
     timestamp: "2024-01-16T14:20:00Z",
     user: "System",
-    details: "Action genre, Free content"
+    details: "Action genre"
   }
 ];
 
@@ -345,7 +290,7 @@ export const ADMIN_ANALYTICS = {
   totalUsers: ADMIN_USERS.length,
   activeUsers: ADMIN_USERS.filter(u => u.status === 'active').length,
   totalContent: ADMIN_MOVIES.length + ADMIN_SERIES.length + ADMIN_REELS.length,
-  totalRevenue: ADMIN_SUBSCRIPTIONS.reduce((sum, sub) => sum + sub.revenue, 0),
+  totalRevenue: 0,
   totalViews: ADMIN_MOVIES.reduce((sum, movie) => sum + movie.views, 0) +
     ADMIN_SERIES.reduce((sum, series) => sum + series.views, 0) +
     ADMIN_REELS.reduce((sum, reel) => sum + reel.views, 0),
@@ -353,8 +298,6 @@ export const ADMIN_ANALYTICS = {
     ADMIN_SERIES.reduce((sum, s) => sum + s.rating, 0)) /
     (ADMIN_MOVIES.length + ADMIN_SERIES.length),
   subscriptionDistribution: {
-    Basic: ADMIN_USERS.filter(u => u.plan === 'Basic').length,
-    Premium: ADMIN_USERS.filter(u => u.plan === 'Premium').length,
-    VIP: ADMIN_USERS.filter(u => u.plan === 'VIP').length
+    Free: ADMIN_USERS.length
   }
 };

@@ -23,9 +23,7 @@ export const MOVIES = [
         rating: 7.7,
         year: 2022,
         genre: "Crime",
-        description: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler.",
-        isPaid: true,
-        price: 199
+        description: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler."
     },
     {
         id: 1,
@@ -58,9 +56,7 @@ export const MOVIES = [
         rating: 7.6,
         year: 2022,
         genre: "Sci-Fi",
-        description: "Jake Sully lives with his newfound family formed on the extrasolar moon Pandora. Once a familiar threat returns to finish what was previously started, Jake must work with Neytiri and the army of the Na'vi race to protect their home.",
-        isPaid: true,
-        price: 249
+        description: "Jake Sully lives with his newfound family formed on the extrasolar moon Pandora. Once a familiar threat returns to finish what was previously started, Jake must work with Neytiri and the army of the Na'vi race to protect their home."
     },
     {
         id: 5,
@@ -142,54 +138,13 @@ export const CATEGORIES = [
     "Sci-Fi"
 ];
 
-export const SUBSCRIPTION_PLANS = [
-    {
-        id: 'mobile',
-        name: 'Mobile',
-        price: '₹149',
-        quality: 'Good',
-        resolution: '480p',
-        devices: ['Mobile', 'Tablet'],
-        color: '#3b82f6',
-        features: ['Ad-free movies', 'Unlimited content']
-    },
-    {
-        id: 'basic',
-        name: 'Basic',
-        price: '₹199',
-        quality: 'Better',
-        resolution: '720p',
-        devices: ['Mobile', 'Tablet', 'Computer', 'TV'],
-        color: '#a855f7',
-        features: ['Ad-free movies', 'Unlimited content', 'Watch on TV']
-    },
-    {
-        id: 'standard',
-        name: 'Standard',
-        price: '₹499',
-        quality: 'Best',
-        resolution: '1080p',
-        devices: ['Mobile', 'Tablet', 'Computer', 'TV'],
-        color: '#eab308',
-        features: ['Ad-free movies', 'Unlimited content', 'Watch on 2 devices']
-    },
-    {
-        id: 'premium',
-        name: 'Premium',
-        price: '₹649',
-        quality: 'Ultra',
-        resolution: '4K+HDR',
-        devices: ['Mobile', 'Tablet', 'Computer', 'TV'],
-        color: '#ef4444',
-        features: ['Ad-free movies', 'Unlimited content', 'Watch on 4 devices', 'Spatial Audio']
-    }
-];
+export const SUBSCRIPTION_PLANS = [];
 
 export const MY_SPACE_DATA = {
     user: {
         name: "John Doe",
         avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d",
-        plan: "Premium"
+        plan: "Free"
     },
     watch_later: [
         MOVIES[0], // Batman

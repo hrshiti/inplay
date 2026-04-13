@@ -59,8 +59,7 @@ const authService = {
                         user: {
                             _id: 'default_user_id',
                             name: 'Abhishek Bhatia (Admin)',
-                            email: email,
-                            subscription: { isActive: true, plan: 'Premium' }
+                            email: email
                         }
                     }
                 };
@@ -87,8 +86,7 @@ const authService = {
                             _id: 'default_user_id',
                             name: 'Abhishek Bhatia (Admin)',
                             email: email,
-                            role: 'admin',
-                            subscription: { isActive: true, plan: 'Premium' }
+                            role: 'admin'
                         }
                     }
                 };

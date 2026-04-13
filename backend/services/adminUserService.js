@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const Payment = require('../models/Payment');
 
 // Get all users with filters and pagination
 const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
@@ -8,16 +7,7 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
   // Apply filters
   if (filters.role) query.role = filters.role;
   if (filters.isActive !== undefined) query.isActive = filters.isActive;
-  if (filters.subscriptionStatus) {
-    if (filters.subscriptionStatus === 'active') {
-      query['subscription.isActive'] = true;
-      query['subscription.endDate'] = { $gt: new Date() };
-    } else if (filters.subscriptionStatus === 'expired') {
-      query['subscription.isActive'] = false;
-    } else if (filters.subscriptionStatus === 'never') {
-      query.subscription = { $exists: false };
-    }
-  }
+
   if (filters.search) {
     query.$or = [
       { name: { $regex: filters.search, $options: 'i' } },
@@ -30,7 +20,6 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
 
   const users = await User.find(query)
     .select('-password')
-    .populate('subscription.plan', 'name price')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
@@ -67,7 +56,6 @@ const hydrateUser = (doc) => {
 const getUserById = async (userId) => {
   const user = await User.findById(userId)
     .select('-password')
-    .populate('subscription.plan', 'name price')
     .populate('myList', 'title type')
     .populate('downloads.content', 'title type');
 
@@ -105,20 +93,6 @@ const getUserAnalytics = async () => {
         inactiveUsers: {
           $sum: { $cond: [{ $eq: ['$isActive', false] }, 1, 0] }
         },
-        subscribedUsers: {
-          $sum: {
-            $cond: [
-              {
-                $and: [
-                  { $eq: ['$subscription.isActive', true] },
-                  { $gt: ['$subscription.endDate', new Date()] }
-                ]
-              },
-              1,
-              0
-            ]
-          }
-        },
         adminUsers: {
           $sum: { $cond: [{ $eq: ['$role', 'admin'] }, 1, 0] }
         }
@@ -135,48 +109,14 @@ const getUserAnalytics = async () => {
   return {
     ...(analytics[0] || {
       totalUsers: 0,
-      activeUsers: 0,
-      inactiveUsers: 0,
-      subscribedUsers: 0,
-      adminUsers: 0
+       activeUsers: 0,
+       inactiveUsers: 0,
+       adminUsers: 0
     }),
     recentUsers
   };
 };
 
-// Get user's payment history (admin view)
-const getUserPaymentHistory = async (userId, limit = 20) => {
-  const payments = await Payment.find({ user: userId })
-    .populate('subscriptionPlan', 'name price')
-    .populate('content', 'title type')
-    .sort({ createdAt: -1 })
-    .limit(limit);
-
-  return payments;
-};
-
-// Update user subscription (admin action)
-const updateUserSubscription = async (userId, subscriptionData) => {
-  const user = await User.findById(userId);
-
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  const { planId, startDate, endDate, isActive } = subscriptionData;
-
-  user.subscription = {
-    plan: planId || user.subscription?.plan,
-    startDate: startDate ? new Date(startDate) : user.subscription?.startDate || new Date(),
-    endDate: endDate ? new Date(endDate) : user.subscription?.endDate,
-    isActive: isActive !== undefined ? isActive : user.subscription?.isActive || false,
-    autoRenew: user.subscription?.autoRenew || true
-  };
-
-  await user.save();
-
-  return hydrateUser(user);
-};
 
 // Delete user (admin action)
 const deleteUser = async (userId) => {
@@ -191,8 +131,7 @@ const deleteUser = async (userId) => {
     throw new Error('Cannot delete admin users');
   }
 
-  // Delete user's payments
-  await Payment.deleteMany({ user: userId });
+
 
   // Delete user's downloads
   const Download = require('../models/Download');
@@ -209,7 +148,5 @@ module.exports = {
   getUserById,
   updateUserStatus,
   getUserAnalytics,
-  getUserPaymentHistory,
-  updateUserSubscription,
   deleteUser
 };

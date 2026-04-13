@@ -8,8 +8,6 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         genre: content?.genre || 'Entertainment',
         year: content?.year || new Date().getFullYear(),
         rating: content?.rating || 0,
-        isPaid: content?.isPaid || false,
-        price: content?.price || 0,
         isNewAndHot: content?.isNewAndHot || false,
         isOriginal: content?.isOriginal || false,
         isRanking: content?.isRanking || false,
@@ -82,8 +80,6 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 submissionData.append('genre', formData.genre);
                 submissionData.append('year', formData.year);
                 submissionData.append('rating', formData.rating);
-                submissionData.append('isPaid', formData.isPaid);
-                submissionData.append('price', formData.price);
                 submissionData.append('isNewAndHot', formData.isNewAndHot);
                 submissionData.append('isOriginal', formData.isOriginal);
                 submissionData.append('isRanking', formData.isRanking);

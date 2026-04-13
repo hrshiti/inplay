@@ -42,14 +42,11 @@ export default function MovieDetailsWrapper(props) {
     if (loading) return <div style={{ color: 'white', padding: 20 }}>Loading...</div>;
     if (!movie) return <div style={{ color: 'white', padding: 20 }}>Content not found</div>;
 
-    const isPaidContent = movie.isPaid;
-    const isPurchased = props.purchasedContent && (props.purchasedContent.includes(movie._id) || props.purchasedContent.includes(movie.id));
 
     return (
         <MovieDetailsPage
             {...props}
             movie={movie}
-            isPurchased={isPurchased}
             onClose={handleClose}
             onSelectMovie={(m) => navigate(`/content/${m._id || m.id}`)}
         />

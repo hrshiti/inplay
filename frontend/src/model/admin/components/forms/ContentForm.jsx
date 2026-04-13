@@ -9,8 +9,6 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     genre: content?.genre ? (Array.isArray(content.genre) ? content.genre.join(', ') : content.genre) : '',
     year: content?.year || new Date().getFullYear(),
     rating: content?.rating || '',
-    isPaid: content?.isPaid || false,
-    price: content?.price || '',
     status: content?.status || 'draft',
     type: content?.type || 'bhojpuri',
     image: content?.image || '',
@@ -93,8 +91,6 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         genre: Array.isArray(content.genre) ? content.genre.join(', ') : (content.genre || ''),
         year: content.year || new Date().getFullYear(),
         rating: content.rating || '',
-        isPaid: content.isPaid || false,
-        price: content.price || '',
         status: content.status || 'draft',
         type: content.type || 'bhojpuri',
         image: getUrl('image') || getUrl('poster') || '',
@@ -170,9 +166,6 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     if (!String(formData.genre).trim()) newErrors.genre = 'Genre is required';
     if (!formData.rating || formData.rating < 0 || formData.rating > 10) {
       newErrors.rating = 'Rating must be between 0 and 10';
-    }
-    if (formData.isPaid && (!formData.price || formData.price <= 0)) {
-      newErrors.price = 'Price is required for paid content';
     }
 
     setErrors(newErrors);
@@ -718,70 +711,6 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
           </div>
         </div>
 
-        {/* Improved Monetization Section */}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', margin: 0 }}>Monetization Strategy</h3>
-          </div>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', gap: '32px', marginBottom: formData.isPaid ? '16px' : '0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.95rem', cursor: 'pointer', color: 'black' }}>
-                <input
-                  type="radio"
-                  name="monetization"
-                  checked={!formData.isPaid}
-                  onChange={() => setFormData(prev => ({ ...prev, isPaid: false }))}
-                  style={{ accentColor: '#46d369', width: '18px', height: '18px' }}
-                />
-                <span>No Purchase Plan (Free)</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.95rem', cursor: 'pointer', color: 'black' }}>
-                <input
-                  type="radio"
-                  name="monetization"
-                  checked={formData.isPaid}
-                  onChange={() => setFormData(prev => ({ ...prev, isPaid: true }))}
-                  style={{ accentColor: '#46d369', width: '18px', height: '18px' }}
-                />
-                <span>Add Purchase Plan (Paid)</span>
-              </label>
-            </div>
-
-            {formData.isPaid && (
-              <div style={{
-                marginTop: '16px', padding: '16px', background: '#fffbeb',
-                border: '1px solid #fcd34d', borderRadius: '6px',
-                display: 'flex', alignItems: 'center', gap: '16px'
-              }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>
-                    Price (INR)
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 199"
-                    min="1"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #fcd34d',
-                      borderRadius: '4px',
-                      fontSize: '0.9rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                <div style={{ flex: 2, fontSize: '0.85rem', color: '#b45309' }}>
-                  Users will need to purchase this content specifically to watch it. Set a competitive price.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Display Categories */}
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', background: '#f9fafb' }}>

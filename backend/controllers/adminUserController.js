@@ -12,7 +12,6 @@ const getAllUsers = async (req, res) => {
       role: req.query.role,
       isActive: req.query.isActive === 'true' ? true :
                 req.query.isActive === 'false' ? false : undefined,
-      subscriptionStatus: req.query.subscriptionStatus,
       search: req.query.search
     };
 
@@ -98,48 +97,6 @@ const getUserAnalytics = async (req, res) => {
   }
 };
 
-// @desc    Get user's payment history
-// @route   GET /api/admin/users/:id/payments
-// @access  Private (Admin only)
-const getUserPaymentHistory = async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 20;
-
-    const payments = await adminUserService.getUserPaymentHistory(req.params.id, limit);
-
-    res.status(200).json({
-      success: true,
-      data: payments
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// @desc    Update user subscription
-// @route   PUT /api/admin/users/:id/subscription
-// @access  Private (Admin only)
-const updateUserSubscription = async (req, res) => {
-  try {
-    const subscriptionData = req.body;
-
-    const user = await adminUserService.updateUserSubscription(req.params.id, subscriptionData);
-
-    res.status(200).json({
-      success: true,
-      message: 'User subscription updated successfully',
-      data: user
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
 
 // @desc    Delete user
 // @route   DELETE /api/admin/users/:id
@@ -165,7 +122,5 @@ module.exports = {
   getUser,
   updateUserStatus,
   getUserAnalytics,
-  getUserPaymentHistory,
-  updateUserSubscription,
   deleteUser
 };

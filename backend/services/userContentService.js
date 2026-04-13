@@ -1,6 +1,5 @@
 const Content = require('../models/Content');
 const User = require('../models/User');
-const Payment = require('../models/Payment');
 const { generateSignedUrl, generateHLSUrl } = require('../config/cloudinary');
 const { DOWNLOAD_EXPIRY_DAYS } = require('../constants');
 
@@ -186,11 +185,8 @@ const getContentById = async (contentId, userId = null) => {
     throw new Error('Content not found or not available');
   }
 
-  let accessInfo = { hasAccess: !content.isPaid, accessType: 'free' };
+  const accessInfo = { hasAccess: true, accessType: 'free' };
 
-  if (userId && content.isPaid) {
-    accessInfo = await checkUserContentAccess(userId, contentId);
-  }
 
   const result = {
     ...content.toObject(),
@@ -207,45 +203,17 @@ const checkUserContentAccess = async (userId, contentId) => {
     return { hasAccess: false, accessType: 'not_found' };
   }
 
-  // Free content is always accessible
-  if (!content.isPaid) {
-    return { hasAccess: true, accessType: 'free' };
-  }
-
-  const user = await User.findById(userId);
-  if (!user) {
-    return { hasAccess: false, accessType: 'not_logged_in' };
-  }
-
-  // Check if user has active subscription
-  const now = new Date();
-  if (user.subscription?.isActive && user.subscription.endDate > now) {
-    return { hasAccess: true, accessType: 'subscription' };
-  }
-
-  // Check if user purchased this content
-  const purchase = await Payment.findOne({
-    user: userId,
-    content: contentId,
-    status: 'completed',
-    type: 'content_purchase'
-  });
-
-  if (purchase) {
-    return { hasAccess: true, accessType: 'purchased' };
-  }
-
-  return { hasAccess: false, accessType: 'payment_required' };
+  // All content is now free
+  return { hasAccess: true, accessType: 'free' };
 };
 
 // Generate streaming URL for content
 const generateStreamingUrl = async (contentId, userId, quality = 'HD') => {
-  // Check access first
-  const accessInfo = await checkUserContentAccess(userId, contentId);
-
-  if (!accessInfo.hasAccess) {
-    throw new Error('Access denied. Please purchase content or subscribe.');
-  }
+  // All content is accessible
+  // const accessInfo = await checkUserContentAccess(userId, contentId);
+  // if (!accessInfo.hasAccess) {
+  //   throw new Error('Access denied. Please purchase content or subscribe.');
+  // }
 
   const content = await Content.findById(contentId);
   if (!content || !content.video?.public_id) {
@@ -280,12 +248,11 @@ const generateStreamingUrl = async (contentId, userId, quality = 'HD') => {
 
 // Generate download license for content
 const generateDownloadLicense = async (contentId, userId, deviceId) => {
-  // Check access first
-  const accessInfo = await checkUserContentAccess(userId, contentId);
-
-  if (!accessInfo.hasAccess) {
-    throw new Error('Access denied. Please purchase content or subscribe.');
-  }
+  // All content is accessible
+  // const accessInfo = await checkUserContentAccess(userId, contentId);
+  // if (!accessInfo.hasAccess) {
+  //   throw new Error('Access denied. Please purchase content or subscribe.');
+  // }
 
   const content = await Content.findById(contentId);
   if (!content || !content.video?.public_id) {

@@ -29,7 +29,6 @@ import SettingsPage from './SettingsPage';
 import CategoryPage from './pages/CategoryPage';
 import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
 import DynamicTabPage from './DynamicTabPage';
-import MembershipPlansPage from './pages/MembershipPlansPage';
 
 import VideoPlayer from './VideoPlayer';
 import { AdminRoutes } from './model/admin';
@@ -39,7 +38,6 @@ import Login from './Login';
 import Signup from './Signup';
 import authService from './services/api/authService';
 import contentService from './services/api/contentService';
-import paymentService from './services/api/paymentService';
 import AdPromotionPage from './model/admin/pages/AdPromotionPage';
 import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
@@ -62,7 +60,6 @@ function App() {
   const [playingEpisode, setPlayingEpisode] = useState(null);
   const [myList, setMyList] = useState([]); // Fetched from backend
   const [likedVideos, setLikedVideos] = useState([]);
-  const [purchasedContent, setPurchasedContent] = useState([]); // Track paid content IDs
   const [continueWatching, setContinueWatching] = useState([]);
   const [watchHistory, setWatchHistory] = useState([]);
   const [toast, setToast] = useState(null);
@@ -213,7 +210,6 @@ function App() {
       setLikedVideos(profile.likedContent || []);
       setContinueWatching(profile.continueWatching || []);
       setWatchHistory(profile.history || []);
-      setPurchasedContent(profile.purchasedContent || []);
       return profile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
@@ -227,7 +223,6 @@ function App() {
       setCurrentUser(user);
       setMyList(user.myList || []);
       setLikedVideos(user.likedContent || []);
-      setPurchasedContent(user.purchasedContent || []);
     }
   };
   // Use Trending Now content for Hero Slideshow
@@ -601,102 +596,6 @@ function App() {
     }
   };
 
-  const handlePurchase = async (movie) => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-
-    const contentId = movie._id || movie.id;
-    console.log("Initiating purchase for content:", movie.title, "ID:", contentId);
-
-    if (!contentId || typeof contentId !== 'string') {
-      showToast("Invalid Content ID (Only real content can be purchased)");
-      return;
-    }
-
-    try {
-      showToast("Initiating Payment...");
-
-      // 1. Create Order
-      const { order, content } = await paymentService.createContentOrder(contentId);
-
-      // Handle Mock Order (if Razorpay keys are failed on backend)
-      if (order.isMock) {
-        showToast("Processing Internal Payment...");
-        const verificationData = {
-          razorpay_order_id: order.id,
-          isMock: true
-        };
-
-        await paymentService.verifyContentPayment(verificationData);
-
-        showToast("Purchase Successful (Mock)!");
-        setPurchasedContent(prev => [...prev, contentId]);
-
-        // Refresh profile to sync
-        try {
-          await authService.getProfile();
-        } catch (e) { console.error("Profile sync failed", e); }
-
-        return; // Success, skip Razorpay modal
-      }
-
-      // 2. Options (Real Razorpay Flow)
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: "InPlay",
-        description: `Purchase ${content.title}`,
-        order_id: order.id,
-        handler: async function (response) {
-          try {
-            showToast("Verifying Payment...");
-            const verificationData = {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            };
-
-            await paymentService.verifyContentPayment(verificationData);
-
-            showToast("Purchase Successful!");
-            setPurchasedContent(prev => [...prev, contentId]);
-
-            // Refresh profile to sync
-            try {
-              await authService.getProfile();
-            } catch (e) { console.error("Profile sync failed", e); }
-
-          } catch (err) {
-            console.error("Payment Verification Failed", err);
-            showToast(err.message || "Payment Verification Failed");
-          }
-        },
-        prefill: {
-          name: currentUser.name,
-          email: currentUser.email,
-          contact: currentUser.mobile || ""
-        },
-        theme: {
-          color: "#E50914"
-        }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response) {
-        showToast("Payment Failed: " + (response.error.description || response.error.reason));
-        console.error(response.error);
-      });
-      rzp.open();
-
-    } catch (error) {
-      console.error("Purchase Error", error);
-      // Fix: Fetch error object doesn't have response.data
-      showToast(error.message || "Failed to initiate purchase");
-    }
-  };
 
 
 
@@ -816,7 +715,6 @@ function App() {
     <Routes>
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/*" element={<ProtectedRoute><AdminRoutes /></ProtectedRoute>} />
-      <Route path="/membership-plans" element={<MembershipPlansPage currentUser={currentUser} onLoginClick={() => navigate('/login')} showToast={(m) => setToast(m)} />} />
 
       {/* Dedicated Routes for Login and Signup */}
       <Route path="/login" element={<Login onClose={() => navigate(-1)} onSwitchToSignup={() => navigate('/signup')} onLoginSuccess={handleAuthSuccess} />} />
@@ -831,8 +729,7 @@ function App() {
           likedVideos={likedVideos}
           handleToggleMyList={handleToggleMyList}
           handleToggleLike={handleToggleLike}
-          purchasedContent={purchasedContent}
-          handlePurchase={handlePurchase}
+          onClose={() => setSelectedMovie(null)}
         />
       } />
       <Route path="/watch/:id" element={
@@ -1016,16 +913,6 @@ function App() {
                                       >
 
 
-                                        {movie.isPaid && (
-                                          <div style={{
-                                            position: 'absolute', top: '20px', right: '20px',
-                                            padding: '6px 12px', background: '#eab308', color: 'black',
-                                            fontWeight: '800', borderRadius: '4px', fontSize: '0.8rem',
-                                            boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
-                                          }}>
-                                            PAID
-                                          </div>
-                                        )}
 
                                         {/* Action Buttons Row */}
                                         {/* Removed as per user request */}
@@ -1180,11 +1067,6 @@ function App() {
                                           )}
                                         </div>
                                       </div>
-                                      {verticalItem.isPaid && (
-                                        <div style={{ position: 'absolute', top: '8px', right: '8px', background: '#FFD700', color: '#000', fontSize: '9px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>
-                                          PAID
-                                        </div>
-                                      )}
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                       <span style={{
@@ -1377,15 +1259,6 @@ function App() {
                                     alt={movie.title}
                                     className="poster-img"
                                   />
-                                  {movie.isPaid && (
-                                    <div style={{
-                                      position: 'absolute', top: '8px', right: '8px',
-                                      background: '#eab308', color: 'black', fontSize: '10px',
-                                      padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
-                                    }}>
-                                      PAID
-                                    </div>
-                                  )}
                                 </div>
                                 <h3 className="movie-title">{movie.title}</h3>
                               </motion.div>
@@ -1404,9 +1277,9 @@ function App() {
                               </div>
                             </div>
                             <div className="horizontal-list hide-scrollbar nr-auto-scroll" style={{ gap: '0', padding: '0 0 20px 0', alignItems: 'center', scrollSnapType: 'x mandatory' }}>
-                              {contentSections.new_release.map((movie) => (
+                              {contentSections.new_release.map((movie, index) => (
                                 <motion.div
-                                  key={movie._id || movie.id}
+                                  key={`${movie._id || movie.id}-${index}`}
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
                                   onClick={() => handleContentSelect(movie)}
@@ -1437,11 +1310,6 @@ function App() {
                                       style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', background: '#111' }}
                                       onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}
                                     />
-                                    {movie.isPaid && (
-                                      <div style={{ position: 'absolute', top: '15px', right: '15px', background: '#FFD700', color: '#000', fontSize: '11px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px', zIndex: 10 }}>
-                                        PAID
-                                      </div>
-                                    )}
                                     <div className="hero-overlay" style={{
                                       background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.35) 35%, transparent 100%)',
                                       padding: '20px 16px',
@@ -1492,15 +1360,6 @@ function App() {
                                     alt={movie.title}
                                     className="poster-img"
                                   />
-                                  {movie.isPaid && (
-                                    <div style={{
-                                      position: 'absolute', top: '8px', right: '8px',
-                                      background: '#eab308', color: 'black', fontSize: '10px',
-                                      padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
-                                    }}>
-                                      PAID
-                                    </div>
-                                  )}
                                 </div>
                                 <h3 className="movie-title">{movie.title}</h3>
                               </motion.div>
@@ -1570,15 +1429,6 @@ function App() {
                                     alt={movie.title}
                                     className="poster-img"
                                   />
-                                  {movie.isPaid && (
-                                    <div style={{
-                                      position: 'absolute', top: '8px', right: '8px',
-                                      background: '#eab308', color: 'black', fontSize: '10px',
-                                      padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
-                                    }}>
-                                      PAID
-                                    </div>
-                                  )}
                                 </div>
                                 <h3 className="movie-title">{movie.title}</h3>
                               </motion.div>
@@ -1611,15 +1461,6 @@ function App() {
                                       alt={movie.title}
                                       className="poster-img"
                                     />
-                                    {movie.isPaid && (
-                                      <div style={{
-                                        position: 'absolute', top: '8px', right: '8px',
-                                        background: '#eab308', color: 'black', fontSize: '10px',
-                                        padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
-                                      }}>
-                                        PAID
-                                      </div>
-                                    )}
                                   </div>
                                   <h3 className="movie-title">{movie.title}</h3>
                                 </motion.div>
@@ -1635,9 +1476,9 @@ function App() {
                             <span className="section-link" onClick={() => navigate('/category/action-blockbusters')}>Show all</span>
                           </div>
                           <div className="horizontal-list hide-scrollbar">
-                            {contentSections.action.map(movie => (
+                            {contentSections.action.map((movie, index) => (
                               <motion.div
-                                key={movie.id}
+                                key={`${movie.id || movie._id}-${index}`}
                                 className="movie-card"
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => handleContentSelect(movie)}
@@ -1650,15 +1491,6 @@ function App() {
                                     alt={movie.title}
                                     className="poster-img"
                                   />
-                                  {movie.isPaid && (
-                                    <div style={{
-                                      position: 'absolute', top: '8px', right: '8px',
-                                      background: '#eab308', color: 'black', fontSize: '10px',
-                                      padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
-                                    }}>
-                                      PAID
-                                    </div>
-                                  )}
                                 </div>
                                 <h3 className="movie-title">{movie.title}</h3>
                               </motion.div>
@@ -1677,7 +1509,6 @@ function App() {
                         <CategoryGridView
                           activeFilter={activeFilter}
                           setSelectedMovie={handleContentSelect}
-                          purchasedContent={purchasedContent}
                           originalsData={contentSections.originals}
                           trendingData={contentSections.trending_now}
                           newReleaseData={contentSections.new_release}
@@ -1833,7 +1664,6 @@ function App() {
                     <CategoryPage
                       slug={categorySlug}
                       setSelectedMovie={setSelectedMovie}
-                      purchasedContent={purchasedContent}
                     />
                   </motion.div>
                 )}
@@ -1849,8 +1679,6 @@ function App() {
                     likedVideos={likedVideos}
                     onToggleMyList={handleToggleMyList}
                     onToggleLike={handleToggleLike}
-                    isPurchased={purchasedContent.includes(selectedMovie._id || selectedMovie.id)}
-                    onPurchase={handlePurchase}
                     onSelectMovie={setSelectedMovie}
                     recommendedContent={allContent.filter(item =>
                       item.type === selectedMovie.type &&
@@ -1927,9 +1755,7 @@ function ContentDetailsRoute({
   myList,
   likedVideos,
   handleToggleMyList,
-  handleToggleLike,
-  purchasedContent,
-  handlePurchase
+  handleToggleLike
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1968,8 +1794,6 @@ function ContentDetailsRoute({
         likedVideos={likedVideos}
         onToggleMyList={handleToggleMyList}
         onToggleLike={handleToggleLike}
-        isPurchased={purchasedContent.includes(movie._id || movie.id)}
-        onPurchase={handlePurchase}
         onSelectMovie={(m) => navigate(`/content/${m._id || m.id}`)}
         recommendedContent={allContent.filter(item =>
           item.type === movie.type && (item._id || item.id) !== (movie._id || movie.id)
@@ -2211,7 +2035,7 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, originalsData, trendingData, newReleaseData, promotions }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2244,16 +2068,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
                 {/* New Badge */}
                 <div className="badge-new">New Release</div>
 
-                {item.isPaid && (
-                  <div style={{
-                    position: 'absolute', top: '35px', left: '0px',
-                    background: '#eab308', color: 'black', fontSize: '10px',
-                    padding: '2px 6px', fontWeight: 'bold', borderRadius: '0 4px 4px 0',
-                    zIndex: 20
-                  }}>
-                    PAID
-                  </div>
-                )}
 
                 {/* Bookmark */}
                 <div style={{ position: 'absolute', top: 8, right: 8 }}>
@@ -2334,15 +2148,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
               />
               <div className="rank-number">{index + 1}</div>
 
-              {item.isPaid && (
-                <div style={{
-                  position: 'absolute', top: '8px', right: '8px',
-                  background: '#eab308', color: 'black', fontSize: '10px',
-                  padding: '2px 6px', fontWeight: 'bold', borderRadius: '2px'
-                }}>
-                  PAID
-                </div>
-              )}
             </div>
             <div className="hottest-info">
               {/* Bookmark & Flame row */}
@@ -2371,9 +2176,9 @@ function CategoryGridView({ activeFilter, setSelectedMovie, purchasedContent, or
           <div className="tag-pill" style={{ background: 'red', color: 'white', fontSize: '10px' }}>FRESH</div>
         </div>
         <div className="horizontal-list hide-scrollbar">
-          {newReleaseData.map(movie => (
+          {newReleaseData.map((movie, index) => (
             <motion.div
-              key={movie.id}
+              key={`${movie.id || movie._id}-${index}`}
               className="new-release-card"
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedMovie(movie)}

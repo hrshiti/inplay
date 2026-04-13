@@ -20,7 +20,6 @@ const getAllContent = async (req, res) => {
       category: req.query.category,
       genre: req.query.genre ? req.query.genre.split(',') : [],
       status: req.query.status,
-      isPaid: req.query.isPaid === 'true' ? true : req.query.isPaid === 'false' ? false : undefined,
       dynamicTabId: req.query.dynamicTabId,
       dynamicTabs: req.query.dynamicTabs,
       search: req.query.search
@@ -95,12 +94,7 @@ const createContent = [
         contentData.tags = contentData.tags.split(',').filter(Boolean);
       }
 
-      // Convert string booleans
-      if (contentData.isPaid === 'true') contentData.isPaid = true;
-      if (contentData.isPaid === 'false') contentData.isPaid = false;
-
       // Convert string numbers
-      if (contentData.price) contentData.price = parseFloat(contentData.price);
       if (contentData.year) contentData.year = parseInt(contentData.year);
       if (contentData.rating) contentData.rating = parseFloat(contentData.rating);
 
@@ -185,12 +179,7 @@ const updateContent = [
         contentData.tags = contentData.tags.split(',').filter(Boolean);
       }
 
-      // Convert string booleans
-      if (contentData.isPaid === 'true') contentData.isPaid = true;
-      if (contentData.isPaid === 'false') contentData.isPaid = false;
-
       // Convert string numbers
-      if (contentData.price) contentData.price = parseFloat(contentData.price);
       if (contentData.year) contentData.year = parseInt(contentData.year);
       if (contentData.rating) contentData.rating = parseFloat(contentData.rating);
 

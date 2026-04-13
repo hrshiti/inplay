@@ -83,36 +83,7 @@ const authorize = (...roles) => {
   };
 };
 
-// Check subscription status for premium content
-const requireSubscription = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required'
-    });
-  }
 
-  // Check if user has active subscription
-  const now = new Date();
-  const hasActiveSubscription = req.user.subscription?.isActive &&
-    req.user.subscription?.endDate > now;
-
-  if (!hasActiveSubscription) {
-    return res.status(403).json({
-      success: false,
-      message: 'Active subscription required to access this content'
-    });
-  }
-
-  next();
-};
-
-// Check if user owns the content or has purchased it
-const checkContentAccess = (req, res, next) => {
-  // This middleware will be used with content-specific routes
-  // The actual logic will be in the controller
-  next();
-};
 
 // Generate JWT token
 const generateToken = (id) => {
@@ -154,8 +125,6 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success') => 
 module.exports = {
   protect,
   authorize,
-  requireSubscription,
-  checkContentAccess,
   generateToken,
   sendTokenResponse
 };

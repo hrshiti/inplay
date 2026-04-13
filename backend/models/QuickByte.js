@@ -50,15 +50,6 @@ const quickByteSchema = new mongoose.Schema({
         min: 0,
         max: 10
     },
-    // Monetization
-    isPaid: {
-        type: Boolean,
-        default: false
-    },
-    price: {
-        type: Number,
-        default: 0
-    },
     // Display Categories
     isNewAndHot: { type: Boolean, default: false },
     isOriginal: { type: Boolean, default: false },

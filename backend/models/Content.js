@@ -121,20 +121,7 @@ const contentSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // Monetization
-  isPaid: {
-    type: Boolean,
-    default: false
-  },
-  price: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  currency: {
-    type: String,
-    default: 'INR'
-  },
+
   // Content status
   status: {
     type: String,
@@ -231,7 +218,7 @@ contentSchema.index({ title: 'text', description: 'text' }, { language_override:
 contentSchema.index({ type: 1, status: 1 });
 contentSchema.index({ genre: 1 });
 contentSchema.index({ category: 1 });
-contentSchema.index({ isPaid: 1 });
+
 contentSchema.index({ views: -1 });
 contentSchema.index({ createdAt: -1 });
 

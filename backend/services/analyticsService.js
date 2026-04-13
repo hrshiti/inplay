@@ -1,7 +1,5 @@
 const User = require('../models/User');
 const Content = require('../models/Content');
-const Payment = require('../models/Payment');
-const SubscriptionPlan = require('../models/SubscriptionPlan');
 const QuickByte = require('../models/QuickByte');
 const AudioSeries = require('../models/AudioSeries');
 const ForYou = require('../models/ForYou');
@@ -19,12 +17,6 @@ const getDashboardAnalytics = async (startDate, endDate) => {
 
   // Content analytics
   const contentAnalytics = await getContentAnalytics(start, end);
-
-  // Revenue analytics
-  const revenueAnalytics = await getRevenueAnalytics(start, end);
-
-  // Subscription analytics
-  const subscriptionAnalytics = await getSubscriptionAnalytics(start, end);
 
   // Quick Bites analytics
   const quickByteAnalytics = await getQuickByteAnalytics(start, end);
@@ -58,8 +50,6 @@ const getDashboardAnalytics = async (startDate, endDate) => {
     period: { start, end },
     users: userAnalytics,
     content: contentAnalytics,
-    revenue: revenueAnalytics,
-    subscriptions: subscriptionAnalytics,
     quickBites: quickByteAnalytics,
     audioSeries: audioSeriesAnalytics,
     forYou: forYouAnalytics,
@@ -81,20 +71,6 @@ const getUserAnalytics = async (startDate, endDate) => {
               totalUsers: { $sum: 1 },
               activeUsers: {
                 $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
-              },
-              subscribedUsers: {
-                $sum: {
-                  $cond: [
-                    {
-                      $and: [
-                        { $eq: ['$subscription.isActive', true] },
-                        { $gt: ['$subscription.endDate', new Date()] }
-                      ]
-                    },
-                    1,
-                    0
-                  ]
-                }
               }
             }
           }
@@ -137,7 +113,6 @@ const getUserAnalytics = async (startDate, endDate) => {
   return {
     totalUsers: stats.totalStats[0]?.totalUsers || 0,
     activeUsers: stats.totalStats[0]?.activeUsers || 0,
-    subscribedUsers: stats.totalStats[0]?.subscribedUsers || 0,
     newUsers: stats.newUsers[0]?.count || 0,
     topGenres: stats.topGenres || []
   };
@@ -158,10 +133,7 @@ const getContentAnalytics = async (startDate, endDate) => {
               },
               totalViews: { $sum: '$views' },
               totalLikes: { $sum: '$likes' },
-              totalDownloads: { $sum: '$downloads' },
-              paidContent: {
-                $sum: { $cond: [{ $eq: ['$isPaid', true] }, 1, 0] }
-              }
+              totalDownloads: { $sum: '$downloads' }
             }
           }
         ],
@@ -225,8 +197,7 @@ const getContentAnalytics = async (startDate, endDate) => {
       publishedContent: 0,
       totalViews: 0,
       totalLikes: 0,
-      totalDownloads: 0,
-      paidContent: 0
+      totalDownloads: 0
     },
     byType: stats.byType || [],
     byCategory: stats.byCategory || [],
@@ -234,146 +205,6 @@ const getContentAnalytics = async (startDate, endDate) => {
   };
 };
 
-// Revenue analytics
-const getRevenueAnalytics = async (startDate, endDate) => {
-  const revenueStats = await Payment.aggregate([
-    {
-      $match: {
-        status: 'completed',
-        createdAt: { $gte: startDate, $lte: endDate }
-      }
-    },
-    {
-      $facet: {
-        overview: [
-          {
-            $group: {
-              _id: null,
-              totalRevenue: { $sum: '$amount' },
-              totalTransactions: { $sum: 1 },
-              subscriptionRevenue: {
-                $sum: { $cond: [{ $eq: ['$type', 'subscription'] }, '$amount', 0] }
-              },
-              contentRevenue: {
-                $sum: { $cond: [{ $eq: ['$type', 'content_purchase'] }, '$amount', 0] }
-              }
-            }
-          }
-        ],
-        dailyRevenue: [
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-              },
-              revenue: { $sum: '$amount' },
-              transactions: { $sum: 1 }
-            }
-          },
-          {
-            $sort: { '_id': 1 }
-          },
-          {
-            $limit: 30
-          }
-        ],
-        byPaymentMethod: [
-          {
-            $group: {
-              _id: '$paymentMethod',
-              revenue: { $sum: '$amount' },
-              count: { $sum: 1 }
-            }
-          },
-          {
-            $sort: { revenue: -1 }
-          }
-        ]
-      }
-    }
-  ]);
-
-  const stats = revenueStats[0];
-  return {
-    overview: stats.overview[0] || {
-      totalRevenue: 0,
-      totalTransactions: 0,
-      subscriptionRevenue: 0,
-      contentRevenue: 0
-    },
-    dailyRevenue: stats.dailyRevenue || [],
-    byPaymentMethod: stats.byPaymentMethod || []
-  };
-};
-
-// Subscription analytics
-const getSubscriptionAnalytics = async (startDate, endDate) => {
-  const subStats = await SubscriptionPlan.aggregate([
-    {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: 'subscription.plan',
-        as: 'subscribers'
-      }
-    },
-    {
-      $project: {
-        name: 1,
-        price: 1,
-        subscriberCount: 1,
-        revenue: 1,
-        activeSubscribers: {
-          $size: {
-            $filter: {
-              input: '$subscribers',
-              cond: {
-                $and: [
-                  { $eq: ['$$this.subscription.isActive', true] },
-                  { $gt: ['$$this.subscription.endDate', new Date()] }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      $sort: { revenue: -1 }
-    }
-  ]);
-
-  // Get churn rate and other metrics
-  const churnStats = await User.aggregate([
-    {
-      $match: {
-        'subscription.endDate': { $gte: startDate, $lte: endDate },
-        'subscription.isActive': false
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        churnedUsers: { $sum: 1 }
-      }
-    }
-  ]);
-
-  return {
-    plans: subStats,
-    churnRate: {
-      churnedUsers: churnStats[0]?.churnedUsers || 0,
-      period: { start: startDate, end: endDate }
-    }
-  };
-  return {
-    plans: subStats,
-    churnRate: {
-      churnedUsers: churnStats[0]?.churnedUsers || 0,
-      period: { start: startDate, end: endDate }
-    }
-  };
-};
 
 // Quick Bites analytics
 const getQuickByteAnalytics = async (startDate, endDate) => {
@@ -465,35 +296,8 @@ const getRecentActivity = async (limit = 10) => {
     });
   });
 
-  // Recent payments
-  const recentPayments = await Payment.find({ status: 'completed' })
-    .populate('user', 'name')
-    .populate('content', 'title')
-    .populate('subscriptionPlan', 'name')
-    .select('type amount createdAt')
-    .sort({ createdAt: -1 })
-    .limit(limit);
+  // Payment activity removed as payments are no longer part of the app
 
-  recentPayments.forEach(payment => {
-    if (payment.user) {
-      let message = '';
-      if (payment.type === 'subscription' && payment.subscriptionPlan) {
-        message = `${payment.user.name} subscribed to ${payment.subscriptionPlan.name}`;
-      } else if (payment.type === 'content_purchase' && payment.content) {
-        message = `${payment.user.name} purchased ${payment.content.title}`;
-      } else {
-        message = `${payment.user.name} made a payment of ₹${payment.amount}`;
-      }
-
-      activities.push({
-        type: 'payment',
-        message: message,
-        timestamp: payment.createdAt,
-        user: payment.user.name,
-        amount: payment.amount
-      });
-    }
-  });
 
   // Recent content uploads
   const recentContent = await Content.find({})
@@ -523,7 +327,5 @@ module.exports = {
   getDashboardAnalytics,
   getUserAnalytics,
   getContentAnalytics,
-  getRevenueAnalytics,
-  getSubscriptionAnalytics,
   getRecentActivity
 };

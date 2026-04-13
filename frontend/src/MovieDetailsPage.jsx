@@ -13,8 +13,6 @@ export default function MovieDetailsPage({
     likedVideos,
     onToggleMyList,
     onToggleLike,
-    isPurchased,
-    onPurchase,
     recommendedContent = [],
     onSelectMovie,
     sourceTab // Receive the source tab context
@@ -181,39 +179,30 @@ export default function MovieDetailsPage({
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
-                            if (displayMovie.isPaid && !isPurchased) {
-                                // Trigger purchase flow
-                                if (onPurchase) onPurchase(movie);
-                            } else {
-                                console.log("Play clicked for:", displayMovie.title);
-                                if (onPlay) {
-                                    // Special handling for Series (Hindi Series) which might not have a direct video URL
-                                    // but have episodes/seasons.
-                                    if ((displayMovie.type === 'hindi_series' || displayMovie.category === 'Hindi Series') && (!displayMovie.video || displayMovie.video === '')) {
-                                        // Find first episode
-                                        let firstEpisode = null;
-                                        if (displayMovie.episodes && displayMovie.episodes.length > 0) {
-                                            firstEpisode = displayMovie.episodes[0];
-                                        } else if (displayMovie.seasons && displayMovie.seasons.length > 0 && displayMovie.seasons[0].episodes && displayMovie.seasons[0].episodes.length > 0) {
-                                            firstEpisode = displayMovie.seasons[0].episodes[0];
-                                        }
-
-                                        if (firstEpisode) {
-                                            onPlay(movie, firstEpisode);
-                                        } else {
-                                            // Fallback if no episodes found
-                                            onPlay(movie);
-                                        }
+                            console.log("Play clicked for:", displayMovie.title);
+                            if (onPlay) {
+                                // Special handling for Series (Hindi Series)
+                                if ((displayMovie.type === 'hindi_series' || displayMovie.category === 'Hindi Series') && (!displayMovie.video || displayMovie.video === '')) {
+                                    let firstEpisode = null;
+                                    if (displayMovie.episodes && displayMovie.episodes.length > 0) {
+                                        firstEpisode = displayMovie.episodes[0];
+                                    } else if (displayMovie.seasons && displayMovie.seasons.length > 0 && displayMovie.seasons[0].episodes && displayMovie.seasons[0].episodes.length > 0) {
+                                        firstEpisode = displayMovie.seasons[0].episodes[0];
+                                    }
+                                    if (firstEpisode) {
+                                        onPlay(movie, firstEpisode);
                                     } else {
                                         onPlay(movie);
                                     }
+                                } else {
+                                    onPlay(movie);
                                 }
                             }
                         }}
                         style={{
                             flex: 1, // Keep flex 1 to fill the space, or set a specific width
                             maxWidth: '400px', // Add a max width for better centering on wide screens
-                            background: displayMovie.isPaid && !isPurchased ? '#eab308' : 'white',
+                            background: 'white',
                             color: 'black',
                             border: 'none',
                             borderRadius: '8px',
@@ -227,15 +216,9 @@ export default function MovieDetailsPage({
                             cursor: 'pointer'
                         }}
                     >
-                        {displayMovie.isPaid && !isPurchased ? (
-                            <>
-                                <span style={{ fontSize: '1.2em' }}>₹</span> Buy for ₹{displayMovie.price}
-                            </>
-                        ) : (
-                            <>
-                                <Play size={20} fill="black" /> Play
-                            </>
-                        )}
+                        <>
+                            <Play size={20} fill="black" /> Play
+                        </>
                     </motion.button>
                 </div>
 

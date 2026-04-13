@@ -164,40 +164,8 @@ const checkDownloadAccess = async (contentId, userId) => {
     return { hasAccess: false, message: 'Content not available' };
   }
 
-  const user = await User.findById(userId);
-  if (!user) {
-    return { hasAccess: false, message: 'User not authenticated' };
-  }
-
-  // Free content cannot be downloaded (only streamed)
-  if (!content.isPaid) {
-    return { hasAccess: false, message: 'Free content cannot be downloaded' };
-  }
-
-  // Check if user has active subscription
-  const now = new Date();
-  if (user.subscription?.isActive && user.subscription.endDate > now) {
-    return { hasAccess: true, accessType: 'subscription' };
-  }
-
-  // Check if user purchased this content
-  const Payment = require('../models/Payment');
-  const purchase = await Payment.findOne({
-    user: userId,
-    content: contentId,
-    status: 'completed',
-    type: 'content_purchase'
-  });
-
-  if (purchase) {
-    return { hasAccess: true, accessType: 'purchased' };
-  }
-
-  return {
-    hasAccess: false,
-    message: 'Content requires payment or active subscription for download',
-    accessType: 'payment_required'
-  };
+  // All content is now free and downloadable by authenticated users
+  return { hasAccess: true, accessType: 'free' };
 };
 
 // Get user's active downloads

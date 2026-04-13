@@ -28,7 +28,7 @@ const slugToApiParams = (slug) => {
     }
 };
 
-export default function CategoryPage({ setSelectedMovie, purchasedContent, slug: propSlug }) {
+export default function CategoryPage({ setSelectedMovie, slug: propSlug }) {
     const params = useParams();
     const slug = propSlug || params.slug;
     const navigate = useNavigate();
@@ -165,15 +165,6 @@ export default function CategoryPage({ setSelectedMovie, purchasedContent, slug:
                                 onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${item.title}` }}
                             />
 
-                            {item.isPaid && (
-                                <div style={{
-                                    position: 'absolute', top: '8px', right: '8px',
-                                    background: '#eab308', color: 'black', fontSize: '10px',
-                                    padding: '2px 6px', fontWeight: 'bold', borderRadius: '4px'
-                                }}>
-                                    PAID
-                                </div>
-                            )}
 
                             {/* If it's a song, show play icon overlay */}
                             {slug === 'trending-songs' && (

@@ -39,7 +39,7 @@ const app = express();
 const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
 const contentRoutes = require('./routes/contentRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
+
 const quickByteRoutes = require('./routes/quickByteRoutes');
 const forYouRoutes = require('./routes/forYouRoutes');
 const audioSeriesRoutes = require('./routes/audioSeriesRoutes');
@@ -115,7 +115,7 @@ app.use('/api/admin/dynamic', require('./routes/adminTabRoutes'));
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/content', contentRoutes);
-app.use('/api/payment', paymentRoutes);
+
 app.use('/api/quickbytes', quickByteRoutes);
 app.use('/api/foryou', forYouRoutes);
 app.use('/api/audio-series', audioSeriesRoutes);
@@ -288,26 +288,6 @@ const startScheduledTasks = () => {
     }
   }, 6 * 60 * 60 * 1000); // 6 hours
 
-  // Update subscription statuses daily
-  setInterval(async () => {
-    try {
-      const User = require('./models/User');
-      const expiredCount = await User.updateMany(
-        {
-          'subscription.endDate': { $lt: new Date() },
-          'subscription.isActive': true
-        },
-        {
-          $set: { 'subscription.isActive': false }
-        }
-      );
-      if (expiredCount.modifiedCount > 0) {
-        console.log(`Updated ${expiredCount.modifiedCount} expired subscriptions`);
-      }
-    } catch (error) {
-      console.error('Error updating subscription statuses:', error);
-    }
-  }, 24 * 60 * 60 * 1000); // 24 hours
 };
 
 // Import database connection (it will connect automatically)

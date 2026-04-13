@@ -49,23 +49,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  subscription: {
-    plan: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'SubscriptionPlan',
-      default: null
-    },
-    startDate: Date,
-    endDate: Date,
-    isActive: {
-      type: Boolean,
-      default: false
-    },
-    autoRenew: {
-      type: Boolean,
-      default: true
-    }
-  },
+
   watchHistory: [{
     content: {
       type: mongoose.Schema.Types.ObjectId,
@@ -161,15 +145,10 @@ const userSchema = new mongoose.Schema({
 
 // Index for better performance (email index is already created by unique: true)
 userSchema.index({ role: 1 });
-userSchema.index({ 'subscription.endDate': 1 });
+
 userSchema.index({ createdAt: -1 });
 
-// Virtual for subscription status
-userSchema.virtual('subscriptionStatus').get(function () {
-  if (!this.subscription.isActive) return 'inactive';
-  if (this.subscription.endDate < new Date()) return 'expired';
-  return 'active';
-});
+
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {

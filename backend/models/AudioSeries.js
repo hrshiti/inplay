@@ -21,10 +21,6 @@ const audioEpisodeSchema = new mongoose.Schema({
     description: {
         type: String,
         maxlength: [1000, 'Description cannot be more than 1000 characters']
-    },
-    isFree: {
-        type: Boolean,
-        default: true
     }
 }, { timestamps: true });
 

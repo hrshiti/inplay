@@ -5,13 +5,11 @@ import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
 import ContentForm from './components/forms/ContentForm';
 import QuickBitesForm from './components/forms/QuickBitesForm';
-import { ADMIN_ANALYTICS, ADMIN_ACTIVITY_LOGS, ADMIN_MOVIES, ADMIN_SERIES, ADMIN_USERS, ADMIN_SUBSCRIPTIONS, ADMIN_REELS } from './services/mockData';
+import { ADMIN_ANALYTICS, ADMIN_ACTIVITY_LOGS, ADMIN_MOVIES, ADMIN_SERIES, ADMIN_USERS, ADMIN_REELS } from './services/mockData';
 import adminUserService from '../../services/api/adminUserService';
-import adminSubscriptionService from '../../services/api/adminSubscriptionService';
 import adminDashboardService from '../../services/api/adminDashboardService';
 import adminQuickByteService from '../../services/api/adminQuickByteService';
 import adminContentService from '../../services/api/adminContentService';
-import adminMonetizationService from '../../services/api/adminMonetizationService';
 import adminAuthService from '../../services/api/adminAuthService';
 import ForYouReels from './ForYouReels';
 import AudioSeriesPage from './pages/audio-series/AudioSeriesPage';
@@ -49,31 +47,7 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [dashboardData, paidContent] = await Promise.all([
-        adminDashboardService.getDashboardAnalytics(),
-        adminMonetizationService.getPaidContentPerformance().catch(err => {
-          console.error("Failed to load paid content", err);
-          return [];
-        })
-      ]);
-
-      // Merge paid content into subscription plans for the dashboard view
-      if (dashboardData && dashboardData.subscriptions && paidContent) {
-        const contentItems = paidContent.map(item => ({
-          _id: item._id || item.id,
-          name: item.title,
-          subscriberCount: item.purchases || 0,
-          revenue: item.revenue || 0,
-          isOneTimePurchase: true
-        }));
-
-        // Combine plans and paid content, sorted by revenue (highest first)
-        dashboardData.subscriptions.plans = [
-          ...dashboardData.subscriptions.plans,
-          ...contentItems
-        ].sort((a, b) => b.revenue - a.revenue);
-      }
-
+      const dashboardData = await adminDashboardService.getDashboardAnalytics();
       setData(dashboardData);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
@@ -101,7 +75,7 @@ const Dashboard = () => {
 
   if (!data) return null;
 
-  const { users, content, revenue, subscriptions, recentActivity, quickBites, audioSeries, forYou, promotions, tabs } = data;
+  const { users, content, recentActivity, quickBites, audioSeries, forYou, promotions, tabs } = data;
   const movieCount = content.byType.find(t => t._id === 'movie')?.count || 0;
   const seriesCount = content.byType.find(t => t._id === 'series')?.count || 0;
 
@@ -168,14 +142,7 @@ const Dashboard = () => {
           color="#7c3aed"
           bgColor="#ede9fe"
         />
-        <StatCard
-          title="Revenue"
-          value={`₹${revenue.overview.totalRevenue.toLocaleString()}`}
-          subtext="Total lifetime revenue"
-          icon={Shield}
-          color="#d97706"
-          bgColor="#fef3c7"
-        />
+
       </div>
 
       {/* Secondary Stats Row - Module Breakdowns */}
@@ -223,9 +190,8 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Activity and Subscriptions Split */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
-
+      {/* Activity Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
         {/* Recent Activity */}
         <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -241,19 +207,16 @@ const Dashboard = () => {
                     height: '32px',
                     borderRadius: '8px',
                     background: activity.type === 'user_registration' ? '#dcfce7' :
-                      activity.type === 'content_upload' ? '#dbeafe' :
-                        activity.type === 'payment' ? '#fef3c7' : '#f3f4f6',
+                      activity.type === 'content_upload' ? '#dbeafe' : '#f3f4f6',
                     color: activity.type === 'user_registration' ? '#16a34a' :
-                      activity.type === 'content_upload' ? '#2563eb' :
-                        activity.type === 'payment' ? '#d97706' : '#4b5563',
+                      activity.type === 'content_upload' ? '#2563eb' : '#4b5563',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0
                   }}>
                     {activity.type === 'user_registration' ? <UserIcon size={16} /> :
-                      activity.type === 'content_upload' ? <Video size={16} /> :
-                        activity.type === 'payment' ? <Shield size={16} /> : <AlertCircle size={16} />}
+                      activity.type === 'content_upload' ? <Video size={16} /> : <AlertCircle size={16} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '2px', color: '#1f2937' }}>{activity.message}</p>
@@ -268,51 +231,6 @@ const Dashboard = () => {
             )}
           </div>
         </div>
-
-        {/* Subscription Performance */}
-        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, color: '#111827' }}>Subscription Performance</h3>
-            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Revenue by Plan</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {subscriptions.plans.length > 0 ? (
-              subscriptions.plans.map((plan) => {
-                const percentage = users.totalUsers > 0 ? (plan.subscriberCount / users.totalUsers) * 100 : 0;
-                return (
-                  <div key={plan._id}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div>
-                        <p style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', margin: 0 }}>{plan.name}</p>
-                        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{plan.subscriberCount} {plan.isOneTimePurchase ? 'purchases' : 'active subscribers'}</p>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '0.95rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>₹{Number(plan.revenue).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    {/* Progress Bar */}
-                    <div style={{ width: '100%', height: '6px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${percentage}%`, height: '100%', background: '#46d369', borderRadius: '3px' }}></div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.9rem', textAlign: 'center', padding: '20px' }}>No subscription plans data available.</p>
-            )}
-
-            {/* Churn Rate Mini-Card */}
-            <div style={{ marginTop: '16px', padding: '16px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ color: '#991b1b', fontWeight: '600', fontSize: '0.9rem', margin: 0 }}>Churned Users (This Period)</p>
-                <span style={{ background: '#fff', color: '#ef4444', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                  {subscriptions.churnRate?.churnedUsers || 0} users
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );
@@ -410,8 +328,6 @@ const ContentLibrary = () => {
         </span>
       )
     },
-    { key: 'isPaid', label: 'Monetization', sortable: false, render: (value) => value ? 'Paid' : 'Free' },
-    { key: 'price', label: 'Price', sortable: true, render: (v) => v ? `₹${v}` : '-' },
     { key: 'createdAt', label: 'Added Date', sortable: true, render: (d) => new Date(d).toLocaleDateString() }
   ];
 
@@ -728,7 +644,6 @@ const ViewContent = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f9fafb', padding: '20px', borderRadius: '12px' }}>
                 <InfoItem label="Release Year" value={content.year} />
                 <InfoItem label="Language" value={content.language || 'N/A'} />
-                <InfoItem label="Monetization" value={content.isPaid ? `Paid (₹${content.price})` : 'Free'} color={content.isPaid ? '#b45309' : '#059669'} />
                 <InfoItem label="View Count" value={content.views?.toLocaleString() || 0} />
               </div>
 
@@ -1138,235 +1053,7 @@ const Users = () => {
 };
 
 
-const Monetization = () => {
-  const [plans, setPlans] = useState([]);
-  const [paidContent, setPaidContent] = useState([]); // New state for paid content
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
 
-  // Modal State
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [modalMode, setModalMode] = useState(null); // 'add' or 'edit'
-  const [isModalLoading, setIsModalLoading] = useState(false);
-
-  const [editingContent, setEditingContent] = useState(null); // Content being edited
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-
-      // Parallel fetch
-      const [plansData, analyticsData, paidContentData] = await Promise.all([
-        adminUserService.getPlans(),
-        adminSubscriptionService.getAnalytics(),
-        adminMonetizationService.getPaidContentPerformance()
-      ]);
-
-      // Map plans
-      const mappedPlans = plansData.map(plan => ({
-        id: plan._id,
-        name: plan.name,
-        price: plan.price,
-        subscriberCount: plan.subscriberCount || 0,
-        revenue: plan.revenue || 0,
-        features: plan.features || [],
-        fullData: plan
-      }));
-
-      setPlans(mappedPlans);
-      setAnalytics(analyticsData);
-      setPaidContent(paidContentData); // Set paid content data
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching monetization data:', err);
-      setError('Failed to load monetization data.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const planColumns = [
-    { key: 'name', label: 'Plan Name', sortable: true },
-    { key: 'price', label: 'Price (₹)', sortable: true, render: (value) => `₹${value}` },
-    { key: 'subscriberCount', label: 'Subscribers', sortable: true },
-    { key: 'revenue', label: 'Revenue (₹)', sortable: true, render: (value) => `₹${Number(value).toLocaleString()}` },
-    { key: 'features', label: 'Features', sortable: false, render: (value) => value.length > 0 ? value.slice(0, 2).join(', ') + (value.length > 2 ? '...' : '') : 'N/A' }
-  ];
-
-  // New columns for Pay-Per-View table
-  const contentColumns = [
-    {
-      key: 'title', label: 'Content Title', sortable: true, render: (val, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src={getImageUrl(row.poster)} alt="" style={{ width: '30px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
-          <span>{val}</span>
-        </div>
-      )
-    },
-    { key: 'price', label: 'Price', sortable: true, render: (val) => `₹${val}` },
-    { key: 'purchases', label: 'Purchases', sortable: true },
-    { key: 'revenue', label: 'Total Revenue', sortable: true, render: (val) => `₹${(val || 0).toLocaleString()}` },
-    { key: 'views', label: 'Views', sortable: true, render: (val) => val?.toLocaleString() }
-  ];
-
-  const handleEdit = (plan) => {
-    setSelectedPlan(plan.fullData);
-    setModalMode('edit');
-  };
-
-  const handleEditContent = (content) => {
-    setEditingContent(content);
-  };
-
-  const handleSaveContentPrice = async (priceData) => {
-    try {
-      setIsModalLoading(true);
-      // Call adminContentService to update
-      // We pass id and partial data. We need to handle formData or JSON.
-      // adminContentService handles both. simpler to pass JSON if service checks.
-      // But service checks `instanceof FormData`. so we can pass plain object.
-      // Wait, checking AdminContentService again...
-      // "if (!isFormData) headers['Content-Type'] = 'application/json'; body: JSON.stringify..."
-      // So yes, we can pass a plain object!
-
-      await adminContentService.updateContent(editingContent._id, {
-        price: parseFloat(priceData.price),
-        isPaid: parseFloat(priceData.price) > 0, // Automatically set isPaid based on price
-        currency: 'INR'
-      });
-
-      await fetchData(); // Refresh data
-      setEditingContent(null);
-      alert('Plan updated successfully');
-    } catch (err) {
-      console.error("Update content price error", err);
-      alert(err.message || "Failed to update plan");
-    } finally {
-      setIsModalLoading(false);
-    }
-  };
-
-  const handleDelete = async (plan) => {
-    if (confirm(`Are you sure you want to delete plan "${plan.name}"?`)) {
-      try {
-        await adminSubscriptionService.deletePlan(plan.id);
-        // Refresh
-        fetchData();
-        alert('Plan deleted successfully');
-      } catch (err) {
-        alert(err.message || 'Failed to delete plan');
-      }
-    }
-  };
-
-  const handleAddNew = () => {
-    setSelectedPlan(null);
-    setModalMode('add');
-  };
-
-  const handleSavePlan = async (planData) => {
-    try {
-      setIsModalLoading(true);
-      if (modalMode === 'add') {
-        await adminSubscriptionService.createPlan(planData);
-      } else {
-        await adminSubscriptionService.updatePlan(selectedPlan._id, planData);
-      }
-      fetchData();
-      setModalMode(null);
-      alert(modalMode === 'add' ? 'Plan created successfully' : 'Plan updated successfully');
-    } catch (err) {
-      console.error("Save plan error", err);
-      alert('Failed to save plan');
-    } finally {
-      setIsModalLoading(false);
-    }
-  };
-
-
-  return (
-    <div style={{ padding: '12px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '6px', color: '#111827' }}>Monetization</h1>
-        <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>Manage subscription plans and track revenue performance</p>
-      </div>
-
-      {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading monetization data...</div>
-      ) : error ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#dc2626' }}>{error}</div>
-      ) : (
-        <>
-          <div style={{ marginBottom: '40px' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px', color: '#374151' }}>Pay-Per-View Content Performance</h2>
-            <DataTable
-              data={paidContent}
-              columns={contentColumns}
-              title="" // Hide internal title
-              hideSearch={false}
-              onEdit={handleEditContent} // Enable Edit action
-              emptyMessage="No paid content found. enable 'Add Purchase Plan' when editing content."
-            />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0, color: '#374151' }}>Membership Plans</h2>
-              <button
-                onClick={handleAddNew}
-                style={{
-                  background: '#46d369',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Add New Membership Plan
-              </button>
-            </div>
-            <DataTable
-              data={plans}
-              columns={planColumns}
-              title=""
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Plan Modal */}
-      {modalMode && (
-        <PlanFormModal
-          mode={modalMode}
-          initialData={selectedPlan}
-          onSave={handleSavePlan}
-          onCancel={() => setModalMode(null)}
-          isLoading={isModalLoading}
-        />
-      )}
-
-      {/* Content Pricing Modal */}
-      {editingContent && (
-        <ContentPricingModal
-          initialData={editingContent}
-          onSave={handleSaveContentPrice}
-          onCancel={() => setEditingContent(null)}
-          isLoading={isModalLoading}
-        />
-      )}
-    </div>
-  );
-};
 
 // Helper Component for Content Pricing
 function ContentPricingModal({ initialData, onSave, onCancel, isLoading }) {
@@ -1931,7 +1618,7 @@ const ViewQuickBite = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f9fafb', padding: '20px', borderRadius: '12px' }}>
                 <InfoItem label="Genre" value={content.genre || 'Entertainment'} />
                 <InfoItem label="Year" value={content.year} />
-                <InfoItem label="Monetization" value={content.isPaid ? `Paid (₹${content.price})` : 'Free'} color={content.isPaid ? '#b45309' : '#059669'} />
+
                 <InfoItem label="Views" value={content.views?.toLocaleString() || 0} />
                 <InfoItem label="Rating" value={`★ ${content.rating || 0}`} />
               </div>

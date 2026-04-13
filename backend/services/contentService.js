@@ -13,7 +13,6 @@ const getAllContent = async (filters = {}, page = 1, limit = 10) => {
     query.genre = { $in: filters.genre };
   }
   if (filters.status) query.status = filters.status;
-  if (filters.isPaid !== undefined) query.isPaid = filters.isPaid;
   if (filters.dynamicTabId) query.dynamicTabId = filters.dynamicTabId;
   if (filters.dynamicTabs) query.dynamicTabs = { $in: [filters.dynamicTabs] };
   if (filters.search) {
@@ -347,13 +346,7 @@ const getContentAnalytics = async () => {
         },
         totalViews: { $sum: '$views' },
         totalLikes: { $sum: '$likes' },
-        totalDownloads: { $sum: '$downloads' },
-        paidContent: {
-          $sum: { $cond: [{ $eq: ['$isPaid', true] }, 1, 0] }
-        },
-        freeContent: {
-          $sum: { $cond: [{ $eq: ['$isPaid', false] }, 1, 0] }
-        }
+        totalDownloads: { $sum: '$downloads' }
       }
     }
   ]);
@@ -363,9 +356,7 @@ const getContentAnalytics = async () => {
     publishedContent: 0,
     totalViews: 0,
     totalLikes: 0,
-    totalDownloads: 0,
-    paidContent: 0,
-    freeContent: 0
+    totalDownloads: 0
   };
 };
 
