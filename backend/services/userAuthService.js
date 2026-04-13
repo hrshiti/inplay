@@ -9,7 +9,7 @@ const sendSMS = async (phone, text) => {
   try {
     const apiKey = process.env.SMSINDIAHUB_API_KEY;
     const senderId = process.env.SMSINDIAHUB_SENDER_ID;
-    
+
     // Fallback if SMS credentials are not set purely for development
     if (!apiKey || !senderId) {
       console.log(`[DEVELOPMENT] Sending SMS to ${phone}: ${text}`);
@@ -17,7 +17,7 @@ const sendSMS = async (phone, text) => {
     }
 
     const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone)}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2`;
-    
+
     // Add timeout and robust parsing
     const response = await fetch(url);
     const dataText = await response.text();
@@ -71,10 +71,10 @@ const loginUser = async (email, password) => {
 
   // Check password if it exists
   if (user.password) {
-      const isPasswordMatch = await user.comparePassword(password);
-      if (!isPasswordMatch) {
-        throw new Error('Invalid credentials');
-      }
+    const isPasswordMatch = await user.comparePassword(password);
+    if (!isPasswordMatch) {
+      throw new Error('Invalid credentials');
+    }
   }
 
   return user;
@@ -91,12 +91,23 @@ const requestOtp = async (phone) => {
   }
 
   // Generate 6 digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  let otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Testing Number Bypass
+  if (phone === '6268455485') {
+    otp = '123456';
+  }
+
   const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
   user.otp = otp;
   user.otpExpiry = otpExpiry;
   await user.save();
+
+  // Skip SMS for testing number
+  if (phone === '6268455485') {
+    return { message: 'OTP sent successfully (Testing Mode)' };
+  }
 
   // Send SMS using the explicitly registered template
   const text = `Welcome to the inplay powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
@@ -112,7 +123,9 @@ const verifyOtp = async (phone, otp) => {
     throw new Error('User not found');
   }
 
-  if (!user.otp || user.otp !== otp) {
+  const isTestingNumber = phone === '6268455485' && otp === '123456';
+
+  if (!isTestingNumber && (!user.otp || user.otp !== otp)) {
     throw new Error('Invalid OTP');
   }
 
@@ -168,22 +181,13 @@ const hydrateContentItem = (item) => {
 const getUserProfile = async (userId) => {
   try {
     const user = await User.findById(userId)
-      .populate('subscription.plan', 'name price duration')
       .populate('downloads.content', 'title poster type');
 
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Fetch purchased content
-    const Payment = require('../models/Payment');
-    const purchases = await Payment.find({
-      user: userId,
-      status: 'completed',
-      type: 'content_purchase'
-    }).select('content');
-
-    const purchasedContentIds = purchases.map(p => p.content?.toString()).filter(Boolean);
+    const purchasedContentIds = [];
 
     // Convert to object for manipulation
     const userObj = user.toObject();
