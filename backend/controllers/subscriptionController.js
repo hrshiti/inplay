@@ -183,6 +183,7 @@ exports.verifySubscription = async (req, res) => {
       user.subscription.isActive = true;
       user.subscription.isTrialUsed = true;
       user.subscription.startDate = new Date();
+      user.subscription.status = 'active';
       // End date: 14, 15, 16, 17 (Total 4 days). Ends on 17th.
       user.subscription.endDate = new Date(Date.now() + ((trialDays - 1) * 24 * 60 * 60 * 1000));
       await user.save();
@@ -207,6 +208,7 @@ exports.verifySubscription = async (req, res) => {
       user.subscription.isActive = true;
       user.subscription.startDate = new Date();
       user.subscription.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      user.subscription.status = 'active';
       await user.save();
 
       // Record in CustomerSubscription
@@ -385,9 +387,11 @@ exports.handleWebhook = async (req, res) => {
       user.isActive = true;
       user.subscription.isActive = true;
       user.subscription.startDate = new Date();
+      user.subscription.status = 'active';
       
       const trialKey = Object.keys(notes).find(key => key.toLowerCase() === 'istrial');
-      const isTrialType = trialKey && (notes[trialKey] === 'true' || notes[trialKey] === true);
+      // If paid_count > 0, it means the trial has ended and a real payment was taken, even if notes say isTrial: true
+      const isTrialType = trialKey && (notes[trialKey] === 'true' || notes[trialKey] === true) && (subscription ? subscription.paid_count === 0 : true);
 
       if (isTrialType) {
         // --- TRIAL HANDLING ---
@@ -436,11 +440,95 @@ exports.handleWebhook = async (req, res) => {
       }
       
       console.log(`✅ Webhook: Activated access for ${user.email} (Type: ${isTrialType ? 'Trial' : 'Plan'})`);
+    } else if (event === 'subscription.cancelled' || event === 'subscription.halted' || event === 'subscription.pending') {
+      user.subscription.isActive = false;
+      user.isActive = false;
+      user.subscription.status = event === 'subscription.cancelled' ? 'cancelled' : 'active'; // keep active but inactive if pending
+      await user.save();
+      
+      const statusText = event === 'subscription.cancelled' ? 'cancelled' : 'pending';
+      const CustomerSubscription = require('../models/CustomerSubscription');
+      await CustomerSubscription.findOneAndUpdate(
+        { razorpaySubscriptionId: subscription?.id },
+        { status: statusText }
+      );
+      
+      console.log(`❌ Webhook: Deactivated access for ${user.email} (Event: ${event})`);
     }
 
     res.status(200).json({ success: true });
   } catch (err) {
     console.error('❌ Webhook Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Get current user's subscription details
+// @route   GET /api/user/subscription/status
+exports.getSubscriptionDetails = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id).populate('subscription.plan');
+    
+    if (!user.subscription || !user.subscription.isActive) {
+      return res.status(200).json({ 
+        success: true, 
+        data: { isActive: false } 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isActive: true,
+        planName: user.subscription.plan?.name || 'Premium Plan',
+        price: user.subscription.plan?.price || 699,
+        startDate: user.subscription.startDate,
+        endDate: user.subscription.endDate,
+        razorpaySubscriptionId: user.subscription.razorpay_subscription_id,
+        isTrial: user.subscription.isTrialUsed,
+        status: user.subscription.status || 'active'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Cancel subscription
+// @route   POST /api/user/subscription/cancel
+exports.cancelSubscription = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+
+    if (!user || !user.subscription || !user.subscription.razorpay_subscription_id) {
+      return res.status(400).json({ success: false, message: 'No active subscription found' });
+    }
+
+    const rzp = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    // Cancel in Razorpay (at end of cycle)
+    await rzp.subscriptions.cancel(user.subscription.razorpay_subscription_id);
+
+    // Update DB
+    user.subscription.status = 'cancelled';
+    await user.save();
+
+    const CustomerSubscription = require('../models/CustomerSubscription');
+    await CustomerSubscription.findOneAndUpdate(
+      { razorpaySubscriptionId: user.subscription.razorpay_subscription_id },
+      { status: 'cancelled' }
+    );
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Subscription cancelled successfully. You will have access until ' + new Date(user.subscription.endDate).toLocaleDateString() 
+    });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };

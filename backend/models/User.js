@@ -154,6 +154,11 @@ const userSchema = new mongoose.Schema({
     isTrialUsed: {
       type: Boolean,
       default: false
+    },
+    status: {
+      type: String,
+      enum: ['active', 'cancelled'],
+      default: 'active'
     }
   },
   lastLogin: Date,

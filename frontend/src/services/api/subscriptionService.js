@@ -77,6 +77,40 @@ const subscriptionService = {
         }
 
         return data;
+    },
+
+    async getSubscriptionStatus() {
+        const token = localStorage.getItem('inplay_token');
+        if (!token) throw new Error('User authentication required');
+
+        const response = await fetch(`${API_URL}/user/subscription/status`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        const data = await response.json();
+        return data.data;
+    },
+
+    async cancelSubscription() {
+        const token = localStorage.getItem('inplay_token');
+        if (!token) throw new Error('User authentication required');
+
+        const response = await fetch(`${API_URL}/user/subscription/cancel`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to cancel subscription');
+        }
+
+        return data;
     }
 };
 

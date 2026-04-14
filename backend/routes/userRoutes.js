@@ -46,7 +46,9 @@ router.post('/watch-history', userContentController.updateWatchHistory);
 
 // Subscription routes
 router.get('/plans', subscriptionController.getPlans);
+router.get('/subscription/status', subscriptionController.getSubscriptionDetails);
 router.post('/subscription/create', subscriptionController.createSubscription);
 router.post('/subscription/verify', subscriptionController.verifySubscription);
+router.post('/subscription/cancel', subscriptionController.cancelSubscription);
 
 module.exports = router;
