@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film } from 'lucide-react';
+import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap } from 'lucide-react';
 import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
 import ContentForm from './components/forms/ContentForm';
@@ -1163,6 +1163,209 @@ function ContentPricingModal({ initialData, onSave, onCancel, isLoading }) {
     </div>
   );
 }
+const Monetization = () => {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const fetchPlans = async () => {
+    try {
+      setLoading(true);
+      const data = await adminUserService.getPlans();
+      setPlans(data || []);
+    } catch (error) {
+      console.error('Failed to fetch plans:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = () => {
+    setModalMode('add');
+    setSelectedPlan(null);
+    setModalOpen(true);
+  };
+
+  const handleEdit = (plan) => {
+    setModalMode('edit');
+    setSelectedPlan(plan);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (plan) => {
+    if (confirm(`Are you sure you want to delete the plan "${plan.name}"?`)) {
+      try {
+        await adminUserService.deletePlan(plan._id);
+        fetchPlans();
+      } catch (error) {
+        alert('Failed to delete plan: ' + error.message);
+      }
+    }
+  };
+
+  const handleSave = async (planData) => {
+    try {
+      setIsSaving(true);
+      if (modalMode === 'add') {
+        await adminUserService.createPlan(planData);
+        alert('Plan created successfully!');
+      } else {
+        await adminUserService.updatePlan(selectedPlan._id, planData);
+        alert('Plan updated successfully!');
+      }
+      setModalOpen(false);
+      fetchPlans();
+    } catch (error) {
+      alert('Failed to save plan: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const columns = [
+    { key: 'name', label: 'Plan Name', sortable: true },
+    { key: 'price', label: 'Price (₹)', sortable: true, render: (v) => `₹${v}` },
+    { key: 'duration', label: 'Duration', sortable: true },
+    { 
+      key: 'isActive', 
+      label: 'Status', 
+      sortable: true, 
+      render: (v) => (
+        <span style={{ 
+          padding: '4px 8px', 
+          borderRadius: '12px', 
+          fontSize: '0.75rem', 
+          fontWeight: '600', 
+          background: v ? '#dcfce7' : '#fee2e2', 
+          color: v ? '#166534' : '#991b1b' 
+        }}>
+          {v ? 'Active' : 'Inactive'}
+        </span>
+      ) 
+    },
+    { key: 'createdAt', label: 'Created', sortable: true, render: (d) => new Date(d).toLocaleDateString() }
+  ];
+
+  return (
+    <div style={{ padding: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>Monetization & Plans</h1>
+          <p style={{ color: '#4b5563', fontSize: '0.85rem', margin: '4px 0 0' }}>Manage subscription tiers and pricing models</p>
+        </div>
+        <button
+          onClick={handleAdd}
+          style={{
+            background: '#46d369',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <Plus size={18} /> Add New Plan
+        </button>
+      </div>
+
+      <DataTable
+        data={plans}
+        columns={columns}
+        title="Subscription Plans"
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        loading={loading}
+        emptyMessage="No subscription plans found."
+      />
+
+      {modalOpen && (
+        <PlanFormModal
+          mode={modalMode}
+          initialData={selectedPlan}
+          onSave={handleSave}
+          onCancel={() => setModalOpen(false)}
+          isLoading={isSaving}
+        />
+      )}
+    </div>
+  );
+};
+
+const Subscriptions = () => {
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, []);
+
+  const fetchSubscriptions = async () => {
+    try {
+      setLoading(true);
+      const data = await adminUserService.getActiveSubscriptions();
+      setSubscriptions(data || []);
+    } catch (error) {
+      console.error('Failed to fetch subscriptions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = [
+    { key: 'name', label: 'User Name', sortable: true },
+    { key: 'email', label: 'Email', sortable: true },
+    { key: 'subscription', label: 'Plan', sortable: true, render: (v) => v?.plan?.name || 'Unknown' },
+    { key: 'subscription', label: 'Starts', sortable: true, render: (v) => v?.startDate ? new Date(v.startDate).toLocaleDateString() : 'N/A' },
+    { key: 'subscription', label: 'Expires', sortable: true, render: (v) => v?.endDate ? new Date(v.endDate).toLocaleDateString() : 'N/A' },
+    { 
+      key: 'subscription', 
+      label: 'Status', 
+      sortable: true, 
+      render: (v) => (
+        <span style={{ 
+          padding: '4px 8px', 
+          borderRadius: '12px', 
+          fontSize: '0.75rem', 
+          fontWeight: '600', 
+          background: v?.isActive ? '#dcfce7' : '#fee2e2', 
+          color: v?.isActive ? '#166534' : '#991b1b' 
+        }}>
+          {v?.isActive ? 'Active' : 'Expired'}
+        </span>
+      ) 
+    }
+  ];
+
+  return (
+    <div style={{ padding: '12px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>Active Subscriptions</h1>
+        <p style={{ color: '#4b5563', fontSize: '0.85rem', margin: '4px 0 0' }}>Monitor and manage active user subscriptions</p>
+      </div>
+
+      <DataTable
+        data={subscriptions}
+        columns={columns}
+        title="Active Subscriptions"
+        loading={loading}
+        emptyMessage="No active subscriptions found."
+      />
+    </div>
+  );
+};
+
 // Helper Component for Monetization
 function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
   return (
@@ -1186,7 +1389,7 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
           backgroundColor: 'white',
           borderRadius: '16px',
           width: '100%',
-          maxWidth: '600px',
+          maxWidth: '500px',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
@@ -1220,44 +1423,17 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
         <form onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
-          const features = formData.get('features').split('\n').filter(f => f.trim());
-          const duration = formData.get('duration');
-
-          // Calculate durationInDays based on duration
-          let durationInDays;
-          switch (duration) {
-            case 'monthly':
-              durationInDays = 30;
-              break;
-            case 'quarterly':
-              durationInDays = 90;
-              break;
-            case 'half-yearly':
-              durationInDays = 180;
-              break;
-            case 'yearly':
-              durationInDays = 365;
-              break;
-            default:
-              durationInDays = 30;
-          }
-
           onSave({
             name: formData.get('name'),
             description: formData.get('description'),
             price: parseFloat(formData.get('price')),
-            duration: duration,
-            durationInDays: durationInDays,
-            features: features,
-            maxDevices: parseInt(formData.get('maxDevices')),
-            videoQuality: formData.get('videoQuality'),
-            canDownload: formData.get('canDownload') === 'true',
+            duration: formData.get('duration'),
             isActive: formData.get('isActive') === 'true'
           });
         }}>
           <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+              <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
                   Plan Name *
                 </label>
@@ -1265,11 +1441,12 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
                   name="name"
                   defaultValue={initialData?.name || ''}
                   required
+                  placeholder="e.g. Premium Monthly"
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div style={{ gridColumn: '1 / -1' }}>
+              <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
                   Description *
                 </label>
@@ -1278,82 +1455,42 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
                   defaultValue={initialData?.description || ''}
                   required
                   rows="3"
+                  placeholder="What's included in this plan?"
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Price (₹) *
-                </label>
-                <input
-                  name="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={initialData?.price || ''}
-                  required
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                    Price (₹) *
+                  </label>
+                  <input
+                    name="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={initialData?.price || ''}
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Duration *
-                </label>
-                <select
-                  name="duration"
-                  defaultValue={initialData?.duration || 'monthly'}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
-                >
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly (3 Months)</option>
-                  <option value="half-yearly">Half-Yearly (6 Months)</option>
-                  <option value="yearly">Yearly (12 Months)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Max Devices *
-                </label>
-                <input
-                  name="maxDevices"
-                  type="number"
-                  min="1"
-                  defaultValue={initialData?.maxDevices || 1}
-                  required
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Video Quality *
-                </label>
-                <select
-                  name="videoQuality"
-                  defaultValue={initialData?.videoQuality || 'HD'}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
-                >
-                  <option value="SD">SD</option>
-                  <option value="HD">HD</option>
-                  <option value="4K">4K</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Download Allowed
-                </label>
-                <select
-                  name="canDownload"
-                  defaultValue={initialData?.canDownload !== false ? 'true' : 'false'}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
-                >
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                    Duration *
+                  </label>
+                  <select
+                    name="duration"
+                    defaultValue={initialData?.duration || 'monthly'}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="half-yearly">Half-Yearly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1368,20 +1505,6 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>
                 </select>
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Features (one per line) *
-                </label>
-                <textarea
-                  name="features"
-                  defaultValue={initialData?.features?.join('\n') || ''}
-                  required
-                  rows="5"
-                  placeholder="HD Quality&#10;1 Device&#10;Download Available"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
-                />
               </div>
             </div>
 
@@ -1700,24 +1823,31 @@ const EditQuickBite = () => {
 const Settings = () => {
   const [adminProfile, setAdminProfile] = useState({ name: '', email: '' });
   const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [trialSettings, setTrialSettings] = useState({ trialPrice: 9, trialDurationDays: 4, isTrialActive: true });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
+    fetchData();
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await adminAuthService.getProfile();
-      setAdminProfile({ name: data.name, email: data.email });
+      const [profile, appSettings] = await Promise.all([
+        adminAuthService.getProfile(),
+        adminUserService.getAppSettings()
+      ]);
+      setAdminProfile({ name: profile.name, email: profile.email });
+      if (appSettings?.subscriptionSettings) {
+        setTrialSettings(appSettings.subscriptionSettings);
+      }
       setError(null);
     } catch (err) {
-      console.error('Failed to load profile', err);
-      setError('Failed to load profile data.');
+      console.error('Failed to load data', err);
+      setError('Failed to load settings data.');
     } finally {
       setLoading(false);
     }
@@ -1729,12 +1859,29 @@ const Settings = () => {
       setSaving(true);
       setError(null);
       setSuccess(null);
-      await adminAuthService.updateProfile({ name: adminProfile.name }); // Only updates name for now based on typical flows
+      await adminAuthService.updateProfile({ name: adminProfile.name });
       setSuccess('Profile details updated successfully!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Update failed', err);
       setError(err.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateTrialSettings = async (e) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      await adminUserService.updateAppSettings({ subscriptionSettings: trialSettings });
+      setSuccess('Trial settings updated successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Update failed', err);
+      setError(err.message || 'Failed to update trial settings');
     } finally {
       setSaving(false);
     }
@@ -1767,13 +1914,13 @@ const Settings = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Admin Profile...</div>;
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Settings...</div>;
 
   return (
     <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>Admin Profile</h1>
-        <p style={{ color: '#4b5563', fontSize: '0.95rem' }}>Manage your account settings and security preferences</p>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>Admin Settings</h1>
+        <p style={{ color: '#4b5563', fontSize: '0.95rem' }}>Manage your account, security, and app-wide configurations</p>
       </div>
 
       {error && (
@@ -1787,6 +1934,70 @@ const Settings = () => {
           {success}
         </div>
       )}
+
+      {/* Subscription Trial Settings Section */}
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '32px' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Zap size={20} color="#46d369" /> Subscription Trial Settings
+          </h2>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <form onSubmit={handleUpdateTrialSettings}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Trial Price (₹)
+                </label>
+                <input
+                  type="number"
+                  value={trialSettings.trialPrice}
+                  onChange={(e) => setTrialSettings({ ...trialSettings, trialPrice: parseFloat(e.target.value) })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Trial Duration (Days)
+                </label>
+                <input
+                  type="number"
+                  value={trialSettings.trialDurationDays}
+                  onChange={(e) => setTrialSettings({ ...trialSettings, trialDurationDays: parseInt(e.target.value) })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+            </div>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                Trial Status
+              </label>
+              <select
+                value={trialSettings.isTrialActive ? 'true' : 'false'}
+                onChange={(e) => setTrialSettings({ ...trialSettings, isTrialActive: e.target.value === 'true' })}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+              >
+                <option value="true">Active (Users must pay trial price after login)</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  background: '#46d369', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                {saving ? 'Saving...' : <><Save size={18} /> Update Trial Settings</>}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       {/* Profile Details Section */}
       <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '32px' }}>
@@ -1927,6 +2138,7 @@ export default function AdminRoutes() {
         <Route path="audio-series/add" element={<AudioSeriesPage />} />
         <Route path="audio-series/edit/:id" element={<AudioSeriesPage />} />
         <Route path="monetization/plans" element={<Monetization />} />
+        <Route path="monetization/subscriptions" element={<Subscriptions />} />
         <Route path="promotions" element={<AdPromotionPage />} />
         <Route path="promotions/add" element={<AdPromotionPage />} />
         <Route path="promotions/edit/:id" element={<AdPromotionPage />} />

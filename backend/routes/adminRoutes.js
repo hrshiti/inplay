@@ -50,4 +50,12 @@ router.get('/analytics/users', analyticsController.getUserAnalytics);
 router.get('/analytics/content', analyticsController.getContentAnalytics);
 router.get('/analytics/activity', analyticsController.getRecentActivity);
 
+// Subscription Plan routes
+const subscriptionController = require('../controllers/subscriptionController');
+router.get('/subscription/plans', subscriptionController.getPlans);
+router.post('/subscription/plans', subscriptionController.createPlan);
+router.put('/subscription/plans/:id', subscriptionController.updatePlan);
+router.delete('/subscription/plans/:id', subscriptionController.deletePlan);
+router.get('/subscription/active', subscriptionController.getActiveSubscriptions);
+
 module.exports = router;

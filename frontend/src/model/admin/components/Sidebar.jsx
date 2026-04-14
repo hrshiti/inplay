@@ -9,7 +9,9 @@ import {
   Zap,
   Smartphone,
   Shield,
-  Layout
+  Layout,
+  CreditCard,
+  Repeat
 } from 'lucide-react';
 
 const navigation = [
@@ -17,8 +19,10 @@ const navigation = [
   { name: 'Content', href: '/admin/content/library', icon: Film },
   { name: 'Quick Bites', href: '/admin/quick-bytes', icon: Zap },
   { name: 'For You', href: '/admin/for-you', icon: Smartphone },
-  { name: 'Audio Series', href: '/admin/audio-series', icon: Film }, // Using Film icon for now, or maybe something better if available
+  { name: 'Audio Series', href: '/admin/audio-series', icon: Film },
   { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Plan', href: '/admin/monetization/plans', icon: CreditCard },
+  { name: 'Subscription', href: '/admin/monetization/subscriptions', icon: Repeat },
   { name: 'Legal Pages', href: '/admin/legal', icon: Shield },
   { name: 'Tab Management', href: '/admin/tabs', icon: Layout },
   { name: 'Settings', href: '/admin/settings/app', icon: Settings }

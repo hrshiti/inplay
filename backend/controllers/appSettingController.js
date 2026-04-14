@@ -45,6 +45,7 @@ const updateAppSettings = async (req, res) => {
             if (req.body.helpCenter) settings.helpCenter = req.body.helpCenter;
             if (req.body.privacyPolicy) settings.privacyPolicy = req.body.privacyPolicy;
             if (req.body.aboutInPlay) settings.aboutInPlay = req.body.aboutInPlay;
+            if (req.body.subscriptionSettings) settings.subscriptionSettings = req.body.subscriptionSettings;
         }
 
         await settings.save();

@@ -29,6 +29,7 @@ import SettingsPage from './SettingsPage';
 import CategoryPage from './pages/CategoryPage';
 import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
 import DynamicTabPage from './DynamicTabPage';
+import PlanPage from './PlanPage';
 
 import VideoPlayer from './VideoPlayer';
 import { AdminRoutes } from './model/admin';
@@ -215,6 +216,30 @@ function App() {
       console.error('Failed to load user profile:', err);
     }
   };
+
+  // Check subscription and redirect if needed
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (currentUser && !location.pathname.startsWith('/admin') && location.pathname !== '/plan' && location.pathname !== '/login' && location.pathname !== '/signup') {
+        let isSubscribed = currentUser.subscription?.isActive;
+        let isTrialUsed = currentUser.subscription?.isTrialUsed; // Check if they ever took a trial
+        
+        // If not active in local state, double-check server
+        if (!isSubscribed) {
+          const freshProfile = await loadUserProfile();
+          isSubscribed = freshProfile?.subscription?.isActive;
+          isTrialUsed = freshProfile?.subscription?.isTrialUsed;
+        }
+
+        // ONLY redirect if they are NOT active AND have NEVER used a trial
+        if (!isSubscribed && !isTrialUsed) {
+          navigate('/plan', { replace: true });
+        }
+      }
+    };
+    
+    checkAccess();
+  }, [currentUser?._id, location.pathname, navigate]);
 
   const handleAuthSuccess = () => {
     const savedUser = localStorage.getItem('inplay_current_user');
@@ -602,7 +627,6 @@ function App() {
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
-    setPurchasedContent([]);
     showToast('Logged out successfully');
   };
 
@@ -719,6 +743,7 @@ function App() {
       {/* Dedicated Routes for Login and Signup */}
       <Route path="/login" element={<Login onClose={() => navigate(-1)} onSwitchToSignup={() => navigate('/signup')} onLoginSuccess={handleAuthSuccess} />} />
       <Route path="/signup" element={<Signup onClose={() => navigate(-1)} onSwitchToLogin={() => navigate('/login')} onSignupSuccess={handleAuthSuccess} />} />
+      <Route path="/plan" element={<PlanPage />} />
 
       {/* Dedicated Routes for Deep Linking */}
       <Route path="/content/:id" element={

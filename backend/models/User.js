@@ -132,6 +132,30 @@ const userSchema = new mongoose.Schema({
     },
     deviceId: String
   }],
+  subscription: {
+    plan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubscriptionPlan'
+    },
+    startDate: Date,
+    endDate: Date,
+    isActive: {
+      type: Boolean,
+      default: false
+    },
+    paymentMethod: {
+      type: String,
+      default: 'none'
+    },
+    razorpay_subscription_id: String,
+    razorpay_customer_id: String,
+    trialStartedAt: Date,
+    trialEndedAt: Date,
+    isTrialUsed: {
+      type: Boolean,
+      default: false
+    }
+  },
   lastLogin: Date,
   loginCount: {
     type: Number,

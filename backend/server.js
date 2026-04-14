@@ -95,7 +95,14 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing middleware
-app.use(express.json({ limit: '10gb' }));
+app.use(express.json({ 
+  limit: '10gb',
+  verify: (req, res, buf) => {
+    if (req.originalUrl.includes('/webhook')) {
+      req.rawBody = buf.toString();
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10gb' }));
 
 // Logging
@@ -122,6 +129,7 @@ app.use('/api/audio-series', audioSeriesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/promotions', require('./routes/promotionRoutes'));
 app.use('/api/app-settings', require('./routes/appSettingRoutes'));
+app.use('/api/admin/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/public', require('./routes/publicTabRoutes'));
 
 // SERVE STATIC FILES - All uploaded media (images, videos, audio)
@@ -297,6 +305,10 @@ require('./config/database');
 const startServer = async () => {
   // Start scheduled tasks
   startScheduledTasks();
+  
+  // Start Subscription Transition Cron
+  const { startSubscriptionCron } = require('./services/subscriptionCron');
+  startSubscriptionCron();
 
   // Port is defined globally at the top
   const server = app.listen(PORT, () => {

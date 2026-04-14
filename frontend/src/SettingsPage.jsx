@@ -304,7 +304,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                     onClick={() => {
                         if (confirm("Are you sure you want to logout?")) {
                             onLogout();
-                            navigate('/');
+                            navigate('/login');
                         }
                     }}
                     style={{
@@ -610,7 +610,10 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                             cursor: 'pointer',
                                             boxShadow: '0 8px 24px rgba(255, 77, 77, 0.3)'
                                         }}
-                                        onClick={() => alert('Plan management coming soon!')}
+                                        onClick={() => {
+                                            setActiveModal(null);
+                                            navigate('/plan');
+                                        }}
                                     >
                                         Manage Subscription
                                     </motion.button>

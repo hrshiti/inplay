@@ -17,6 +17,10 @@ router.post('/auth/login', validateUserLogin, userAuthController.loginUser);
 router.post('/auth/request-otp', userAuthController.requestLoginOtp);
 router.post('/auth/verify-otp', userAuthController.verifyLoginOtp);
 
+// Subscription Webhook (Public)
+const subscriptionController = require('../controllers/subscriptionController');
+router.post('/subscription/webhook', subscriptionController.handleWebhook);
+
 // Protected routes (auth required)
 router.use(protect); // All routes below require authentication
 
@@ -40,6 +44,9 @@ router.delete('/auth/fcm-token', userAuthController.removeFCMToken);
 router.get('/my-list', userContentController.getMyList);
 router.post('/watch-history', userContentController.updateWatchHistory);
 
-// Subscription and payment routes are handled in paymentRoutes.js
+// Subscription routes
+router.get('/plans', subscriptionController.getPlans);
+router.post('/subscription/create', subscriptionController.createSubscription);
+router.post('/subscription/verify', subscriptionController.verifySubscription);
 
 module.exports = router;

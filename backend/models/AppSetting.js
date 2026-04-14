@@ -44,6 +44,20 @@ const appSettingSchema = new mongoose.Schema({
             type: String,
             default: '@inplay_official'
         }
+    },
+    subscriptionSettings: {
+        trialPrice: {
+            type: Number,
+            default: 9
+        },
+        trialDurationDays: {
+            type: Number,
+            default: 4
+        },
+        isTrialActive: {
+            type: Boolean,
+            default: true
+        }
     }
 }, { timestamps: true });
 
