@@ -1,96 +1,166 @@
 /**
- * Razorpay Utility for handling payments and UPI Intent
+ * Razorpay Payment Integration Utility
+ * Handles Razorpay payment initialization and verification
  */
 
+let razorpayLoaded = false;
+
+const isProbablyWebView = () => {
+  try {
+    const ua = String(navigator?.userAgent || "");
+    // Common WebView indicators for Flutter/Hybrid apps
+    const isAndroid = /Android/i.test(ua);
+    const hasWv = /\bwv\b/i.test(ua);
+    const hasVersion = /Version\/\d+/i.test(ua);
+    const hasSafari = /Safari/i.test(ua);
+    const isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !hasSafari;
+    return (isAndroid && (hasWv || hasVersion)) || isIOSWebView || !!window.flutter_inappwebview;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Load Razorpay checkout script
+ */
 export const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
+  return new Promise((resolve, reject) => {
+    if (razorpayLoaded) {
+      resolve();
       return;
     }
+
+    if (window.Razorpay) {
+      razorpayLoaded = true;
+      resolve();
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
+    script.async = true;
+    script.onload = () => {
+      razorpayLoaded = true;
+      resolve();
+    };
+    script.onerror = () => {
+      reject(new Error('Failed to load Razorpay script'));
+    };
     document.body.appendChild(script);
   });
 };
 
-export const initRazorpayPayment = async ({
-  key,
-  subscriptionId,
-  orderId,
-  amount,
-  name = 'InPlay OTT',
-  description = 'Premium Subscription',
-  prefill = {},
-  handler,
-  modal = {},
-  theme = { color: '#7c3aed' }
-}) => {
-  const isLoaded = await loadRazorpayScript();
-  if (!isLoaded) {
-    throw new Error('Razorpay SDK failed to load');
-  }
+/**
+ * Initialize Razorpay payment
+ */
+export const initRazorpayPayment = async (options) => {
+  try {
+    await loadRazorpayScript();
 
-  // Force webview_intent for all Android devices to ensure deep-linking works across all mobile browsers
-  const ua = navigator.userAgent;
-  const isAndroid = /Android/i.test(ua);
-  const isWebView = isAndroid && (/wv|WebView/i.test(ua) || !/Chrome\/[.0-9]* Mobile/i.test(ua));
-  
-  const options = {
-    key: key,
-    name: name,
-    description: description,
-    image: 'https://inplay.com/logo.png',
-    
-    subscription_id: subscriptionId,
-    order_id: orderId,
-    amount: amount,
+    if (!window.Razorpay) {
+      throw new Error('Razorpay SDK not available');
+    }
 
-    handler: handler,
-    prefill: prefill,
-    theme: theme,
-    modal: modal,
+    const razorpayOptions = {
+      key: options.key,
+      // For App B: Support both subscription_id and order_id/amount
+      subscription_id: options.subscriptionId || options.subscription_id,
+      amount: options.amount,
+      currency: options.currency || 'INR',
+      order_id: options.orderId || options.order_id,
+      
+      name: options.name || 'InPlay OTT',
+      description: options.description || 'Premium Subscription',
+      image: options.image || 'https://inplay.com/logo.png',
+      
+      // Explicitly enable UPI and others
+      method: {
+        upi: true,
+        card: true,
+        netbanking: true,
+        wallet: true,
+        emi: true,
+        paylater: true,
+      },
+      
+      // Mandatory for UPI Intent inside Flutter WebView
+      redirect: true,
+      webview_intent: true, // Forced true for Flutter hybrid app context
+      
+      upi: {
+        allow_intent: true,
+        flow: 'intent'
+      },
 
-    // UPI Intent & Mobile Optimization
-    redirect: true,
-    upi_config: {
-      webview_intent: isAndroid // Force true on Android for highest success rate
-    },
-    upi: {
-      allow_intent: true
-    },
-    method: {
-      upi: true,
-      card: true,
-      netbanking: true,
-      wallet: true
-    },
-    retry: {
-      enabled: true,
-      max_count: 3
-    },
-    // Advanced UI Configuration to show individual UPI apps as cards
-    config: {
-      display: {
-        blocks: {
-          upi: {
-            name: "Pay via UPI",
-            instruments: [
-              { method: "upi", flows: ["intent", "collect", "qr"] }
-            ]
+      prefill: {
+        name: options.prefill?.name || '',
+        email: options.prefill?.email || '',
+        contact: options.prefill?.contact || ''
+      },
+      
+      notes: options.notes || {},
+      theme: {
+        color: options.theme?.color || '#7c3aed'
+      },
+      
+      handler: function(response) {
+        if (options.handler) {
+          options.handler(response);
+        }
+      },
+      
+      modal: {
+        ondismiss: function() {
+          if (options.onClose) {
+            options.onClose();
+          } else if (options.modal?.ondismiss) {
+            options.modal.ondismiss();
           }
         },
-        sequence: ["block.upi"],
-        preferences: {
-          show_default_blocks: true // This allows other methods like cards to show below
+        escape: true,
+        animation: true
+      },
+
+      retry: {
+        enabled: true,
+        max_count: 3
+      },
+
+      // App A Reference Config: Priority for UPI Apps Icons
+      config: {
+        display: {
+          blocks: {
+            upi: {
+              name: "Pay via UPI",
+              instruments: [
+                { 
+                  method: "upi",
+                  apps: ["google_pay", "phonepe", "paytm", "cred"] 
+                }
+              ]
+            }
+          },
+          sequence: ["block.upi", "block.card", "block.netbanking", "block.wallet"],
+          preferences: {
+            show_default_blocks: true,
+            show_recommended_instruments: true
+          }
         }
       }
-    }
-  };
+    };
 
-  const rzp = new window.Razorpay(options);
-  rzp.open();
-  return rzp;
+    const razorpay = new window.Razorpay(razorpayOptions);
+    
+    razorpay.on('payment.failed', function(response) {
+      console.error('Razorpay payment failed:', response);
+      if (options.onError) options.onError(response.error);
+    });
+
+    razorpay.open();
+    return razorpay;
+  } catch (error) {
+    console.error('Error initializing Razorpay:', error);
+    if (options.onError) options.onError(error);
+    throw error;
+  }
 };
