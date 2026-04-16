@@ -33,9 +33,10 @@ export const initRazorpayPayment = async ({
     throw new Error('Razorpay SDK failed to load');
   }
 
-  // Auto-detect WebView for UPI Intent support
+  // Force webview_intent for all Android devices to ensure deep-linking works across all mobile browsers
   const ua = navigator.userAgent;
-  const isWebView = /wv|WebView|Android/i.test(ua) && !/Chrome\/[.0-9]* Mobile/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isWebView = isAndroid && (/wv|WebView/i.test(ua) || !/Chrome\/[.0-9]* Mobile/i.test(ua));
   
   const options = {
     key: key,
@@ -43,7 +44,6 @@ export const initRazorpayPayment = async ({
     description: description,
     image: 'https://inplay.com/logo.png',
     
-    // Use either subscription_id or order_id
     subscription_id: subscriptionId,
     order_id: orderId,
     amount: amount,
@@ -56,7 +56,7 @@ export const initRazorpayPayment = async ({
     // UPI Intent & Mobile Optimization
     redirect: true,
     upi_config: {
-      webview_intent: isWebView
+      webview_intent: isAndroid // Force true on Android for highest success rate
     },
     upi: {
       allow_intent: true
@@ -70,6 +70,14 @@ export const initRazorpayPayment = async ({
     retry: {
       enabled: true,
       max_count: 3
+    },
+    // Optional: Hide extra clutter if needed, but keeping it standard per requirements
+    config: {
+      display: {
+        preferences: {
+          show_default_blocks: true
+        }
+      }
     }
   };
 
