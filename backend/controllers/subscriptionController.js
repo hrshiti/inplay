@@ -1,4 +1,4 @@
-const Razorpay = require('razorpay');
+const razorpayService = require('../modules/payment/services/razorpayService');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const AppSetting = require('../models/AppSetting');
 
@@ -47,10 +47,7 @@ exports.createSubscription = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required. Please login again.' });
     }
 
-    const rzp = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
+    const rzp = razorpayService.getInstance();
 
     if (!process.env.RAZORPAY_KEY_ID) {
       throw new Error('Razorpay Keys are missing in Server .env');
@@ -141,12 +138,7 @@ exports.verifySubscription = async (req, res) => {
   try {
     const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
     const crypto = require('crypto');
-    const Razorpay = require('razorpay');
-
-    const rzp = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET
-    });
+    const rzp = razorpayService.getInstance();
     
     // 1. Verify Signature
     const secret = process.env.RAZORPAY_KEY_SECRET;
@@ -240,10 +232,7 @@ exports.verifySubscription = async (req, res) => {
 exports.createPlan = async (req, res) => {
   try {
     const { name, price, duration, description } = req.body;
-    const rzp = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
+    const rzp = razorpayService.getInstance();
 
     const rpDetails = getRazorpayPlanDetails(duration);
     const rpPlan = await rzp.plans.create({
@@ -274,10 +263,7 @@ exports.updatePlan = async (req, res) => {
     let plan = await SubscriptionPlan.findById(req.params.id);
     if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' });
 
-    const rzp = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
+    const rzp = razorpayService.getInstance();
 
     if (price !== plan.price || duration !== plan.duration) {
       const rpDetails = getRazorpayPlanDetails(duration);
@@ -506,10 +492,7 @@ exports.cancelSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No active subscription found' });
     }
 
-    const rzp = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
+    const rzp = razorpayService.getInstance();
 
     // Cancel in Razorpay (at end of cycle)
     await rzp.subscriptions.cancel(user.subscription.razorpay_subscription_id);

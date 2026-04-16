@@ -4,6 +4,7 @@ import { Check, Zap, Crown, Shield, ArrowRight, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import authService from './services/api/authService';
 import subscriptionService from './services/api/subscriptionService';
+import { initRazorpayPayment } from './lib/utils/razorpay';
 
 const PlanPage = () => {
   const navigate = useNavigate();
@@ -34,52 +35,25 @@ const PlanPage = () => {
     }
   };
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
   const handleSubscribe = async (planId, isTrial = false) => {
     try {
       setLoading(true);
-      const scriptLoaded = await loadRazorpayScript();
-
-      if (!scriptLoaded) {
-        alert('Razorpay SDK failed to load. Please check your internet connection.');
-        return;
-      }
 
       // 1. Create Subscription on Backend
       const subData = await subscriptionService.createSubscription(planId, isTrial);
 
-      // 2. Open Razorpay Checkout
-      const isWebView = /wv|WebView|Android/i.test(navigator.userAgent);
-
-      const options = {
+      // 2. Open Razorpay Checkout via central utility
+      await initRazorpayPayment({
         key: subData.razorpayKeyId,
-        subscription_id: subData.subscriptionId,
-        name: 'InPlay OTT',
+        subscriptionId: subData.subscriptionId,
         description: isTrial ? 'Pay Trial & Enable AutoPay' : `${subData.planName} Plan`,
-        image: 'https://inplay.com/logo.png', 
-        recurring: true, // Force mandate UI
-        redirect: true,  // Important for UPI Intent apps
-        upi_config: {
-          webview_intent: isWebView
+        prefill: {
+          name: currentUser?.name || '',
+          email: currentUser?.email || '',
+          contact: currentUser?.phone || ''
         },
-        method: {
-          upi: true,
-          card: true,
-          netbanking: true,
-          wallet: true
+        modal: {
+          ondismiss: () => setLoading(false)
         },
         handler: async function (response) {
           try {
@@ -89,37 +63,16 @@ const PlanPage = () => {
               razorpay_signature: response.razorpay_signature
             });
 
-            // Re-fetch profile & Navigate
-            const authService = (await import('./services/api/authService')).default;
             const updatedProfile = await authService.getProfile();
             localStorage.setItem('inplay_current_user', JSON.stringify(updatedProfile));
             navigate('/');
           } catch (err) {
             console.error('Verification failed:', err);
-            alert('Payment was successful, but activation failed. Please contact support.');
+            alert('Payment verified, but activation failed. Refreshing...');
+            window.location.reload();
           }
-        },
-        prefill: {
-          name: currentUser?.name || '',
-          email: currentUser?.email || '',
-          contact: currentUser?.phone || ''
-        },
-        theme: {
-          color: '#7c3aed' // Matching your purple theme
-        },
-        modal: {
-          ondismiss: function() {
-            setLoading(false);
-          }
-        },
-        retry: {
-          enabled: true,
-          max_count: 3
         }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      });
 
     } catch (err) {
       console.error('Subscription Error:', err);
