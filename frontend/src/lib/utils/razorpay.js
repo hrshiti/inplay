@@ -71,11 +71,20 @@ export const initRazorpayPayment = async ({
       enabled: true,
       max_count: 3
     },
-    // Optional: Hide extra clutter if needed, but keeping it standard per requirements
+    // Advanced UI Configuration to show individual UPI apps as cards
     config: {
       display: {
+        blocks: {
+          upi: {
+            name: "Pay via UPI",
+            instruments: [
+              { method: "upi", flows: ["intent", "collect", "qr"] }
+            ]
+          }
+        },
+        sequence: ["block.upi"],
         preferences: {
-          show_default_blocks: true
+          show_default_blocks: true // This allows other methods like cards to show below
         }
       }
     }
