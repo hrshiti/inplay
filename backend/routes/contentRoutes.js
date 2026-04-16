@@ -11,8 +11,9 @@ router.get('/category/:category', userContentController.getContentByCategory);
 router.post('/:id/view', userContentController.incrementViews);
 
 // Routes requiring authentication for full access
-const { protect } = require('../middlewares/auth');
+const { protect, subscribed } = require('../middlewares/auth');
 router.use(protect); // All routes below require authentication
+router.use(subscribed); // All routes below also require an active subscription
 
 router.get('/:id', userContentController.getContent);
 router.get('/:id/stream', userContentController.streamContent);

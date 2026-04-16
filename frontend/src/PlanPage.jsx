@@ -62,6 +62,8 @@ const PlanPage = () => {
       const subData = await subscriptionService.createSubscription(planId, isTrial);
 
       // 2. Open Razorpay Checkout
+      const isWebView = /wv|WebView|Android/i.test(navigator.userAgent);
+
       const options = {
         key: subData.razorpayKeyId,
         subscription_id: subData.subscriptionId,
@@ -69,6 +71,16 @@ const PlanPage = () => {
         description: isTrial ? 'Pay Trial & Enable AutoPay' : `${subData.planName} Plan`,
         image: 'https://inplay.com/logo.png', 
         recurring: true, // Force mandate UI
+        redirect: true,  // Important for UPI Intent apps
+        upi_config: {
+          webview_intent: isWebView
+        },
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true
+        },
         handler: async function (response) {
           try {
             await subscriptionService.verifySubscription({
@@ -99,6 +111,10 @@ const PlanPage = () => {
           ondismiss: function() {
             setLoading(false);
           }
+        },
+        retry: {
+          enabled: true,
+          max_count: 3
         }
       };
 

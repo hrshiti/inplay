@@ -9,81 +9,51 @@ const rzp = new Razorpay({
 });
 
 /**
- * Automatically handle transition from Trial to Monthly Plan
+ * Safety Deactivation Guard
+ * Deactivates users whose subscription/trial end date has passed.
+ * Note: Webhooks usually handle this, but this is a fallback for reliability.
  */
-const initiateSubscriptionTransition = async () => {
-    console.log('🕒 [Cron] Checking for expired trials...');
+const checkAndExpireSubscriptions = async () => {
+    console.log('🕒 [Cron] Checking for expired memberships...');
     
     try {
         const now = new Date();
         
-        // 1. Find users whose trial has ended but are still marked as active
-        const expiredTrialUsers = await User.find({
+        // Find users whose endDate has passed and are still marked as active
+        const expiredUsers = await User.find({
             'subscription.isActive': true,
-            'subscription.isTrialUsed': true,
             'subscription.endDate': { $lte: now }
         });
 
-        if (expiredTrialUsers.length === 0) {
-            console.log('✅ [Cron] No expired trials found.');
+        if (expiredUsers.length === 0) {
+            console.log('✅ [Cron] No expired memberships found.');
             return;
         }
 
-        console.log(`🔄 [Cron] Found ${expiredTrialUsers.length} expired trials. Transitioning to defaults...`);
+        console.log(`🔄 [Cron] Found ${expiredUsers.length} expired memberships. Checking status...`);
 
-        // 2. Fetch a default monthly plan to transition them to
-        let defaultPlan = await SubscriptionPlan.findOne({ duration: 'monthly', isActive: true });
-        if (!defaultPlan) {
-            defaultPlan = await SubscriptionPlan.findOne({ isActive: true });
-        }
-
-        if (!defaultPlan || !defaultPlan.razorpayPlanId) {
-            console.error('❌ [Cron] No default Razorpay plan found. Cannot create auto-subscriptions.');
-            return;
-        }
-
-        for (const user of expiredTrialUsers) {
+        for (const user of expiredUsers) {
             try {
-                console.log(`📦 [Cron] Transitioning user: ${user.email}`);
-
-                // 3. Create a Razorpay Subscription for them (Unpaid state)
-                const subscription = await rzp.subscriptions.create({
-                    plan_id: defaultPlan.razorpayPlanId,
-                    customer_notify: 1,
-                    total_count: 12, // Annual cycles
-                    notes: {
-                        userId: user._id.toString(),
-                        autoTransition: "true",
-                        previousTrial: "true"
+                // Check Razorpay status to see if payment was actually successful but webhook missed
+                if (user.subscription.razorpay_subscription_id) {
+                    const sub = await rzp.subscriptions.fetch(user.subscription.razorpay_subscription_id);
+                    
+                    // If Razorpay says it's active and has charges, we might need to update the endDate here
+                    // but usually we trust the webhook. For safety, if it's "active" in RZP, we let it be.
+                    if (sub.status === 'active' || sub.status === 'authenticated') {
+                         console.log(`ℹ️ [Cron] User ${user.email} is active in Razorpay. Skipping deactivation.`);
+                         continue;
                     }
-                });
+                }
 
-                // 4. Update User: Mark as inactive (must pay) but link the new subscription
-                user.subscription.isActive = false; // User must pay to re-activate
-                user.subscription.razorpay_subscription_id = subscription.id;
-                user.subscription.plan = defaultPlan._id;
-                await user.save();
-
-                // 5. RECORD IN MONGODB: Save to CustomerSubscription collection
-                const CustomerSubscription = require('../models/CustomerSubscription');
-                await CustomerSubscription.create({
-                    user: user._id,
-                    plan: defaultPlan._id,
-                    razorpaySubscriptionId: subscription.id,
-                    status: subscription.status || 'created',
-                    price: defaultPlan.price,
-                    shortUrl: subscription.short_url,
-                    rawRazorpayData: subscription, // Store the FULL object
-                    isAutoTransition: true,
-                    startDate: new Date()
-                });
-
-                console.log(`✅ [Cron] User ${user.email} transitioned and recorded in MongoDB.`);
-            } catch (err) {
-                console.error(`❌ [Cron] Failed for user ${user._id}:`, err.message);
-                // Even if subscription fails, deactivate them to prevent free access
+                console.log(`🚫 [Cron] Deactivating expired user: ${user.email}`);
                 user.subscription.isActive = false;
+                user.isActive = false;
                 await user.save();
+                
+                console.log(`✅ [Cron] User ${user.email} deactivated.`);
+            } catch (err) {
+                console.error(`❌ [Cron] Error processing user ${user._id}:`, err.message);
             }
         }
     } catch (err) {
@@ -91,12 +61,12 @@ const initiateSubscriptionTransition = async () => {
     }
 };
 
-// Schedule: Run every 5 seconds FOR TESTING
+// Schedule: Run every 1 minute 
 const startSubscriptionCron = () => {
-    console.log('🚀 [Subscription Cron] Initialized and running every 5 seconds (TEST MODE).');
+    console.log('🚀 [Subscription Cron] Initialized and running every 1 minute.');
     
-    // Check for expired trials every 5 seconds
-    cron.schedule('*/5 * * * * *', initiateSubscriptionTransition);
+    // Check for expired memberships every minute
+    cron.schedule('*/1 * * * *', checkAndExpireSubscriptions);
 };
 
 module.exports = { startSubscriptionCron };

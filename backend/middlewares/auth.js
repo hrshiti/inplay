@@ -122,9 +122,37 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success') => 
   });
 };
 
+// Ensure user has an active subscription
+const subscribed = (req, res, next) => {
+  // Allow admins to bypass subscription check
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
+    return next();
+  }
+
+  if (!req.user || !req.user.subscription || !req.user.subscription.isActive) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. An active subscription is required to access this feature.',
+      errorCode: 'SUBSCRIPTION_REQUIRED'
+    });
+  }
+
+  // Double check end date (fallback for cron/webhooks)
+  if (req.user.subscription.endDate && new Date(req.user.subscription.endDate) < new Date()) {
+    return res.status(403).json({
+      success: false,
+      message: 'Your subscription has expired. Please renew to continue.',
+      errorCode: 'SUBSCRIPTION_EXPIRED'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   protect,
   authorize,
+  subscribed,
   generateToken,
   sendTokenResponse
 };

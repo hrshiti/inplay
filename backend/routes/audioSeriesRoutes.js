@@ -11,12 +11,14 @@ const {
     incrementViews
 } = require('../controllers/audioSeries.controller');
 
-const { protect, authorize } = require('../middlewares/auth');
+const { protect, authorize, subscribed } = require('../middlewares/auth');
 
 // Public routes
 router.get('/', getAllAudioSeries);
-router.get('/:id', getAudioSeries);
 router.post('/:id/view', incrementViews);
+
+// Protected routes (Subscription Required)
+router.get('/:id', protect, subscribed, getAudioSeries);
 
 // Admin protected routes
 router.use(protect);
