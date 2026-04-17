@@ -227,20 +227,18 @@ function App() {
   // Check subscription and redirect if needed
   useEffect(() => {
     const checkAccess = async () => {
-      if (currentUser && !location.pathname.startsWith('/admin') && location.pathname !== '/plan' && location.pathname !== '/login' && location.pathname !== '/signup') {
-        let isSubscribed = currentUser.subscription?.isActive;
-        let isTrialUsed = currentUser.subscription?.isTrialUsed; // Check if they ever took a trial
+      // Don't redirect on public or admin routes
+      if (currentUser && !location.pathname.startsWith('/admin') && 
+          location.pathname !== '/plan' && location.pathname !== '/login' && 
+          location.pathname !== '/signup') {
         
-        // If not active in local state, double-check server
+        const isSubscribed = currentUser.subscription?.isActive;
+        const isTrialUsed = currentUser.subscription?.isTrialUsed;
+        
+        // STRICT REDIRECT: If user is NOT active, send to plan page.
+        // We use !isSubscribed to catch false, null, and undefined.
         if (!isSubscribed) {
-          const freshProfile = await loadUserProfile();
-          isSubscribed = freshProfile?.subscription?.isActive;
-          isTrialUsed = freshProfile?.subscription?.isTrialUsed;
-        }
-
-        // ONLY redirect if they are NOT active AND have NEVER used a trial
-        if (!isSubscribed && !isTrialUsed) {
-          navigate('/plan', { replace: true });
+           navigate('/plan', { replace: true });
         }
       }
     };

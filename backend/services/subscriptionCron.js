@@ -48,7 +48,6 @@ const checkAndExpireSubscriptions = async () => {
 
                 console.log(`🚫 [Cron] Deactivating expired user: ${user.email}`);
                 user.subscription.isActive = false;
-                user.isActive = false;
                 await user.save();
                 
                 console.log(`✅ [Cron] User ${user.email} deactivated.`);

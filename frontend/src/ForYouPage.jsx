@@ -18,6 +18,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     const [reels, setReels] = useState([]);
     const [muted, setMuted] = useState(true);
     const [activeReelId, setActiveReelId] = useState(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     useEffect(() => {
         const fetchReels = async () => {
@@ -49,13 +50,17 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
             </div>
 
             {reels.length > 0 ? (
-                reels.map((reel) => (
+                reels.map((reel, index) => (
                     <ReelItem
                         key={reel._id}
+                        index={index}
                         reel={reel}
                         muted={muted}
                         toggleMute={() => setMuted(!muted)}
                         setActiveReelId={setActiveReelId}
+                        setActiveIndex={setActiveIndex}
+                        isActiveIndex={activeIndex === index}
+                        shouldPreload={index > activeIndex && index <= activeIndex + 2}
                         isAlreadyLiked={likedVideos.some(v => (v._id || v.id) === reel._id)}
                         onToggleLike={onToggleLike}
                     />
@@ -69,7 +74,11 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     );
 }
 
-function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, onToggleLike }) {
+function ReelItem({ 
+    reel, muted, toggleMute, setActiveReelId, 
+    setActiveIndex, index, isActiveIndex, shouldPreload,
+    isAlreadyLiked, onToggleLike 
+}) {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [likes, setLikes] = useState(reel.likes || 0);
@@ -125,6 +134,7 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
                 if (entry.isIntersecting) {
                     setIsPlaying(true);
                     setActiveReelId(reel._id);
+                    setActiveIndex(index);
                     // Join Reel Room for Socket events
                     socket.emit('join_reel', reel._id);
                     if (videoRef.current) {
@@ -177,7 +187,7 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
                 if (isPlayingRef.current) syncProgress(false);
             }
         };
-    }, [reel._id, setActiveReelId]); // Removed isPlaying dependency
+    }, [reel._id, setActiveReelId, index, setActiveIndex]); // Added dependencies
 
     const handlePlayPause = () => {
         if (videoRef.current) {
@@ -278,6 +288,7 @@ function ReelItem({ reel, muted, toggleMute, setActiveReelId, isAlreadyLiked, on
                     loop={episodes.length === 1} // Only native loop if single video. Multi-video loops via state.
                     playsInline
                     muted={muted}
+                    preload={isActiveIndex || shouldPreload ? "auto" : "metadata"}
                     onEnded={handleVideoEnd}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />

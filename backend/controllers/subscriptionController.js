@@ -428,7 +428,6 @@ exports.handleWebhook = async (req, res) => {
       console.log(`✅ Webhook: Activated access for ${user.email} (Type: ${isTrialType ? 'Trial' : 'Plan'})`);
     } else if (event === 'subscription.cancelled' || event === 'subscription.halted' || event === 'subscription.pending') {
       user.subscription.isActive = false;
-      user.isActive = false;
       user.subscription.status = event === 'subscription.cancelled' ? 'cancelled' : 'active'; // keep active but inactive if pending
       await user.save();
       
@@ -456,7 +455,8 @@ exports.getSubscriptionDetails = async (req, res) => {
     const User = require('../models/User');
     const user = await User.findById(req.user.id).populate('subscription.plan');
     
-    if (!user.subscription || !user.subscription.isActive) {
+    // Strict check: If status is cancelled, treat as inactive for immediate revocation
+    if (!user.subscription || !user.subscription.isActive || user.subscription.status === 'cancelled') {
       return res.status(200).json({ 
         success: true, 
         data: { isActive: false } 
@@ -482,36 +482,63 @@ exports.getSubscriptionDetails = async (req, res) => {
 };
 
 // @desc    Cancel subscription
-// @route   POST /api/user/subscription/cancel
 exports.cancelSubscription = async (req, res) => {
   try {
     const User = require('../models/User');
     const user = await User.findById(req.user.id);
 
     if (!user || !user.subscription || !user.subscription.razorpay_subscription_id) {
-      return res.status(400).json({ success: false, message: 'No active subscription found' });
+      return res.status(400).json({ success: false, message: 'No active subscription found or subscription ID missing' });
     }
 
     const rzp = razorpayService.getInstance();
+    const subscriptionId = user.subscription.razorpay_subscription_id;
 
-    // Cancel in Razorpay (at end of cycle)
-    await rzp.subscriptions.cancel(user.subscription.razorpay_subscription_id);
+    console.log(`📂 Attempting to cancel subscription: ${subscriptionId} for user: ${user.email}`);
 
-    // Update DB
-    user.subscription.status = 'cancelled';
-    await user.save();
+    try {
+      // 1. Fetch current status from Razorpay
+      const rzpSub = await rzp.subscriptions.fetch(subscriptionId);
+      
+      // 2. Only call cancel if it's in a cancellable state
+      if (['created', 'authenticated', 'active', 'pending'].includes(rzpSub.status)) {
+        // Pass cancel_at_cycle_end: 0 for immediate cancellation
+        await rzp.subscriptions.cancel(subscriptionId, { cancel_at_cycle_end: 0 });
+        console.log(`✅ Razorpay subscription ${subscriptionId} cancelled IMMEDIATELY.`);
+      } else {
+        console.log(`ℹ️ Razorpay subscription ${subscriptionId} is already in state: ${rzpSub.status}. Skipping Razorpay cancel call.`);
+      }
+    } catch (rzpErr) {
+      console.error('⚠️ Razorpay cancellation error (might be already cancelled):', rzpErr.message);
+    }
 
+    // 3. Update User DB - IMMEDIATE DEACTIVATION (Forceful update)
+    // We update using findOneAndUpdate to bypass potential schema save conflicts/middlewares
+    await User.findOneAndUpdate(
+      { _id: req.user.id },
+      { 
+        $set: { 
+          'subscription.status': 'cancelled',
+          'subscription.isActive': false 
+        } 
+      }
+    );
+    
+    console.log(`✅ Database updated: User ${user.email} subscription deactivated.`);
+
+    // 4. Update CustomerSubscription record
     const CustomerSubscription = require('../models/CustomerSubscription');
     await CustomerSubscription.findOneAndUpdate(
-      { razorpaySubscriptionId: user.subscription.razorpay_subscription_id },
+      { razorpaySubscriptionId: subscriptionId },
       { status: 'cancelled' }
     );
 
     res.status(200).json({ 
       success: true, 
-      message: 'Subscription cancelled successfully. You will have access until ' + new Date(user.subscription.endDate).toLocaleDateString() 
+      message: 'Subscription cancelled immediately. You no longer have access to premium content.' 
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('❌ Final Cancel Error:', err);
+    res.status(500).json({ success: false, message: 'Internal Server Error: ' + err.message });
   }
 };

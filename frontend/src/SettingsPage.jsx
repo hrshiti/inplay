@@ -62,13 +62,33 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     };
 
     const handleCancelSub = async () => {
-        if (!confirm("Are you sure you want to cancel your subscription? You will still have access until your current period ends.")) return;
+        if (!confirm("Are you sure? Your subscription will be cancelled IMMEDIATELY and you will lose access to all premium content. You will need to subscribe again to watch videos.")) return;
         
         setIsSaving(true);
         try {
             await subscriptionService.cancelSubscription();
-            setMessage({ text: 'Subscription cancelled successfully!', type: 'success' });
+            setMessage({ text: 'Subscription cancelled! Access revoked.', type: 'success' });
+            
+            // Refresh detailed sub status for the modal
             fetchSubStatus();
+            
+            // CRITICAL: Refresh the full user profile to update the main settings list and global app state
+            const updatedUser = await authService.getProfile();
+            
+            // Force local state to inactive so App.jsx redirects immediately
+            if (updatedUser && updatedUser.subscription) {
+              updatedUser.subscription.isActive = false;
+              updatedUser.subscription.status = 'cancelled';
+            }
+            
+            if (onUpdateUser) onUpdateUser(updatedUser);
+
+            // Close modal after a short delay
+            setTimeout(() => {
+                setActiveModal(null);
+                navigate('/plan'); // Redirect to plans since they no longer have access
+            }, 2000);
+            
         } catch (err) {
             setMessage({ text: err.message || 'Failed to cancel subscription', type: 'error' });
         } finally {
@@ -122,7 +142,13 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     const userName = currentUser?.name || MY_SPACE_DATA.user.name;
     const userEmail = currentUser?.email || 'john.doe@example.com';
     const userAvatar = currentUser?.avatar; // No fallback to mock
-    const userPlan = currentUser?.subscription?.plan?.name || MY_SPACE_DATA.user.plan;
+    
+    // Improved plan display logic
+    const userPlan = currentUser?.subscription?.isActive 
+        ? (currentUser.subscription.status === 'cancelled' 
+            ? `${currentUser.subscription.plan?.name || 'Premium'} (Cancelled)` 
+            : (currentUser.subscription.plan?.name || 'Premium Plan'))
+        : 'No Active Plan';
 
     const handleSaveProfile = async () => {
         setIsSaving(true);
@@ -600,7 +626,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                                  style={{ width: '30px', height: '30px', border: '3px solid #ff4d4d', borderTopColor: 'transparent', borderRadius: '50%' }}
                                              />
                                          </div>
-                                     ) : subDetails?.isActive ? (
+                                     ) : (subDetails?.isActive && subDetails?.status !== 'cancelled') ? (
                                          <div style={{
                                              background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
                                              borderRadius: '24px',
