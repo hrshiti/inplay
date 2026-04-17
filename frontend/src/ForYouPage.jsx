@@ -20,6 +20,61 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     const [activeReelId, setActiveReelId] = useState(null);
     const [activeIndex, setActiveIndex] = useState(0);
 
+    const containerRef = useRef(null);
+    const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
+    const touchEndX = useRef(0);
+    const touchEndY = useRef(0);
+
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e) => {
+        touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = () => {
+        const deltaX = touchStartX.current - touchEndX.current;
+        const deltaY = touchStartY.current - touchEndY.current;
+        const threshold = 40; // Lower threshold for better sensitivity
+
+        // Only trigger if horizontal movement is greater than vertical movement
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
+            if (deltaX < -threshold) {
+                // Swipe Right (Finger Left -> Right) -> Next Video
+                const nextIndex = Math.min(activeIndex + 1, reels.length - 1);
+                if (nextIndex !== activeIndex && containerRef.current) {
+                    const scrollAmount = nextIndex * containerRef.current.offsetHeight;
+                    containerRef.current.scrollTo({
+                        top: scrollAmount,
+                        behavior: 'smooth'
+                    });
+                }
+            } else if (deltaX > threshold) {
+                // Swipe Left (Finger Right -> Left) -> Previous Video
+                const prevIndex = Math.max(activeIndex - 1, 0);
+                if (prevIndex !== activeIndex && containerRef.current) {
+                    const scrollAmount = prevIndex * containerRef.current.offsetHeight;
+                    containerRef.current.scrollTo({
+                        top: scrollAmount,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+        
+        // Reset values
+        touchStartX.current = 0;
+        touchStartY.current = 0;
+        touchEndX.current = 0;
+        touchEndY.current = 0;
+    };
+
     useEffect(() => {
         const fetchReels = async () => {
             const data = await contentService.getForYouReels();
@@ -36,7 +91,23 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     }, []);
 
     return (
-        <div className="reels-container" data-lenis-prevent style={{ background: 'black', height: '100vh', width: '100%', overflowY: 'scroll', scrollSnapType: 'y mandatory', zIndex: 20000, position: 'relative' }}>
+        <div 
+            ref={containerRef}
+            className="reels-container" 
+            data-lenis-prevent 
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ 
+                background: 'black', 
+                height: '100vh', 
+                width: '100%', 
+                overflowY: 'scroll', 
+                scrollSnapType: 'y mandatory', 
+                zIndex: 20000, 
+                position: 'relative' 
+            }}
+        >
             {/* Top Back Navigation Overlay */}
             <div style={{
                 position: 'fixed', top: 0, left: 0, width: '100%', padding: '20px 16px',
