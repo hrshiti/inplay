@@ -81,7 +81,7 @@ export default function DynamicTabPage({ tab, onMovieClick }) {
                                         <img
                                             src={getImageUrl(movie.poster?.url || movie.image)}
                                             alt={movie.title}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                                             onError={(e) => { e.target.src = `https://placehold.co/160x230/333/FFF?text=${movie.title}` }}
                                         />
                                         {movie.isPaid && (
@@ -130,7 +130,7 @@ export default function DynamicTabPage({ tab, onMovieClick }) {
                                     <img
                                         src={getImageUrl(movie.poster?.url || movie.image)}
                                         alt={movie.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                                         onError={(e) => { e.target.src = `https://placehold.co/160x230/333/FFF?text=${movie.title}` }}
                                     />
                                     {movie.isPaid && (

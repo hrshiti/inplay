@@ -97,6 +97,7 @@ const createContent = [
       // Convert string numbers
       if (contentData.year) contentData.year = parseInt(contentData.year);
       if (contentData.rating) contentData.rating = parseFloat(contentData.rating);
+      if (contentData.views) contentData.views = parseInt(contentData.views);
 
       // Transform req.files (array from upload.any()) to object for service
       // Also keep original array for episode processing if needed
@@ -182,6 +183,7 @@ const updateContent = [
       // Convert string numbers
       if (contentData.year) contentData.year = parseInt(contentData.year);
       if (contentData.rating) contentData.rating = parseFloat(contentData.rating);
+      if (contentData.views) contentData.views = parseInt(contentData.views);
 
       const filesMap = {};
       if (req.files && Array.isArray(req.files)) {

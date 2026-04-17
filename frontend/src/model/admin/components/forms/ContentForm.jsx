@@ -9,6 +9,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     genre: content?.genre ? (Array.isArray(content.genre) ? content.genre.join(', ') : content.genre) : '',
     year: content?.year || new Date().getFullYear(),
     rating: content?.rating || '',
+    views: content?.views || '',
     status: content?.status || 'draft',
     type: content?.type || 'bhojpuri',
     image: content?.image || '',
@@ -91,6 +92,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         genre: Array.isArray(content.genre) ? content.genre.join(', ') : (content.genre || ''),
         year: content.year || new Date().getFullYear(),
         rating: content.rating || '',
+        views: content.views || '',
         status: content.status || 'draft',
         type: content.type || 'bhojpuri',
         image: getUrl('image') || getUrl('poster') || '',
@@ -598,6 +600,28 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
               }}
             />
             {errors.rating && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.rating}</p>}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Views
+            </label>
+            <input
+              type="number"
+              name="views"
+              value={formData.views}
+              onChange={handleInputChange}
+              min="0"
+              placeholder="0"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
           </div>
 
           <div>

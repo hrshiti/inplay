@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard } from 'lucide-react';
+import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -48,6 +48,13 @@ import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, reques
 import Header from './Header';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import FloatingAudioPlayer from './components/FloatingAudioPlayer';
+
+const formatViews = (views) => {
+  if (!views) return '0';
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+  if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+  return views.toString();
+};
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -984,7 +991,7 @@ function App() {
                                       src={getImageUrl(show.image)}
                                       alt={show.title}
                                       className="poster-img"
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                                       onError={(e) => { e.target.src = 'https://placehold.co/200x300/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
                                     />
                                     {/* Play Overlay */}
@@ -1072,7 +1079,7 @@ function App() {
                                       <img
                                         src={getImageUrl(verticalItem.image)}
                                         alt={verticalItem.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                                       />
                                       <div style={{
                                         position: 'absolute',
@@ -1087,9 +1094,10 @@ function App() {
                                           <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <Play size={10} fill="white" stroke="none" />
                                           </div>
-                                          {verticalItem.rating && (
-                                            <span style={{ fontSize: '10px', fontWeight: 'bold' }}>★ {verticalItem.rating}</span>
-                                          )}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                            <Eye size={10} color="#fff" />
+                                            <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{formatViews(verticalItem.views)}</span>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1175,7 +1183,7 @@ function App() {
                                       <img
                                         src={getImageUrl(image)}
                                         alt={item.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                                         onError={(e) => { e.target.src = 'https://placehold.co/150x267/333/FFF?text=' + (item.title || 'InPlay')?.substring(0, 5) }}
                                       />
 
@@ -1195,6 +1203,10 @@ function App() {
                                           <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
                                             {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
                                           </span>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: '4px' }}>
+                                            <Eye size={10} color="#fff" />
+                                            <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{formatViews(item.views)}</span>
+                                          </div>
                                         </div>
 
                                         {episodeDuration && item.watchedSeconds !== undefined && (
@@ -1332,7 +1344,7 @@ function App() {
                                       src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
                                       alt={movie.title}
                                       className="hero-image"
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', background: '#111' }}
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', background: '#000' }}
                                       onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}
                                     />
                                     <div className="hero-overlay" style={{
@@ -2031,8 +2043,8 @@ function HeroSlide({ movie, onClick }) {
 
           <motion.div variants={itemVariants} className="hero-meta">
             <div className="rating-badge">
-              <Star size={14} fill="#FFD700" stroke="none" />
-              {movie.rating}
+              <Eye size={14} color="#fff" strokeWidth={2.5} />
+              {formatViews(movie.views)}
             </div>
             <span>|</span>
             <span>{movie.genre}</span>
@@ -2208,7 +2220,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedMovie(movie)}
             >
-              <img src={getImageUrl(movie.poster?.url || movie.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }} />
+              <img src={getImageUrl(movie.poster?.url || movie.image)} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }} />
               <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
               </div>

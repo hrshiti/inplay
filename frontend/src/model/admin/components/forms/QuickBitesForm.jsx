@@ -15,6 +15,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         isTV: content?.isTV || false,
         isPopular: content?.isPopular || false,
         status: content?.status || 'published',
+        views: content?.views || 0,
         type: 'reel'
     });
 
@@ -88,6 +89,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 submissionData.append('isPopular', formData.isPopular);
                 submissionData.append('type', 'reel');
                 submissionData.append('status', formData.status);
+                submissionData.append('views', formData.views);
 
                 if (files.videos && files.videos.length > 0) {
                     files.videos.forEach(file => {
@@ -297,6 +299,18 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                             name="rating"
                             step="0.1"
                             value={formData.rating}
+                            onChange={handleInputChange}
+                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                            Views
+                        </label>
+                        <input
+                            type="number"
+                            name="views"
+                            value={formData.views}
                             onChange={handleInputChange}
                             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
                         />

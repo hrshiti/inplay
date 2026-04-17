@@ -67,7 +67,7 @@ const createQuickByteHandler = async (req, res) => {
     try {
         const {
             title, status, audioTitle, description,
-            genre, year, rating,
+            genre, year, rating, views,
             isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular
         } = req.body;
         const files = req.files || {};
@@ -81,6 +81,7 @@ const createQuickByteHandler = async (req, res) => {
             genre: genre || 'Entertainment',
             year: year || new Date().getFullYear(),
             rating: rating || 0,
+            views: views || 0,
             isNewAndHot: isNewAndHot === 'true' || isNewAndHot === true,
             isOriginal: isOriginal === 'true' || isOriginal === true,
             isRanking: isRanking === 'true' || isRanking === true,
@@ -184,7 +185,7 @@ const updateQuickByteHandler = async (req, res) => {
     try {
         const {
             title, status, audioTitle, description,
-            genre, year, rating,
+            genre, year, rating, views,
             isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular
         } = req.body;
         const files = req.files || {};
@@ -199,6 +200,7 @@ const updateQuickByteHandler = async (req, res) => {
         if (genre !== undefined) quickByte.genre = genre;
         if (year !== undefined) quickByte.year = year;
         if (rating !== undefined) quickByte.rating = rating;
+        if (views !== undefined) quickByte.views = views;
         if (isNewAndHot !== undefined) quickByte.isNewAndHot = isNewAndHot === 'true' || isNewAndHot === true;
         if (isOriginal !== undefined) quickByte.isOriginal = isOriginal === 'true' || isOriginal === true;
         if (isRanking !== undefined) quickByte.isRanking = isRanking === 'true' || isRanking === true;
