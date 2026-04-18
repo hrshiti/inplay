@@ -21,59 +21,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     const [activeIndex, setActiveIndex] = useState(0);
 
     const containerRef = useRef(null);
-    const touchStartX = useRef(0);
-    const touchStartY = useRef(0);
-    const touchEndX = useRef(0);
-    const touchEndY = useRef(0);
 
-    const handleTouchStart = (e) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchStartY.current = e.touches[0].clientY;
-        touchEndX.current = e.touches[0].clientX;
-        touchEndY.current = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e) => {
-        touchEndX.current = e.touches[0].clientX;
-        touchEndY.current = e.touches[0].clientY;
-    };
-
-    const handleTouchEnd = () => {
-        const deltaX = touchStartX.current - touchEndX.current;
-        const deltaY = touchStartY.current - touchEndY.current;
-        const threshold = 40; // Lower threshold for better sensitivity
-
-        // Only trigger if horizontal movement is greater than vertical movement
-        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
-            if (deltaX < -threshold) {
-                // Swipe Right (Finger Left -> Right) -> Next Video
-                const nextIndex = Math.min(activeIndex + 1, reels.length - 1);
-                if (nextIndex !== activeIndex && containerRef.current) {
-                    const scrollAmount = nextIndex * containerRef.current.offsetHeight;
-                    containerRef.current.scrollTo({
-                        top: scrollAmount,
-                        behavior: 'smooth'
-                    });
-                }
-            } else if (deltaX > threshold) {
-                // Swipe Left (Finger Right -> Left) -> Previous Video
-                const prevIndex = Math.max(activeIndex - 1, 0);
-                if (prevIndex !== activeIndex && containerRef.current) {
-                    const scrollAmount = prevIndex * containerRef.current.offsetHeight;
-                    containerRef.current.scrollTo({
-                        top: scrollAmount,
-                        behavior: 'smooth'
-                    });
-                }
-            }
-        }
-        
-        // Reset values
-        touchStartX.current = 0;
-        touchStartY.current = 0;
-        touchEndX.current = 0;
-        touchEndY.current = 0;
-    };
 
     useEffect(() => {
         const fetchReels = async () => {
@@ -95,9 +43,6 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
             ref={containerRef}
             className="reels-container" 
             data-lenis-prevent 
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
             style={{ 
                 background: 'black', 
                 height: '100vh', 
@@ -156,6 +101,46 @@ function ReelItem({
     const [isLiked, setIsLiked] = useState(isAlreadyLiked);
     const [showComments, setShowComments] = useState(false);
     const viewCounted = useRef(false);
+
+    // Touch Handling for Episodes Swipe
+    const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
+    const touchEndX = useRef(0);
+    const touchEndY = useRef(0);
+
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e) => {
+        touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e) => {
+        const deltaX = touchStartX.current - touchEndX.current;
+        const deltaY = touchStartY.current - touchEndY.current;
+        const threshold = 50;
+
+        // Horizontal swipe detected (Next/Prev Episode)
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
+            if (deltaX > threshold) {
+                // Swipe Left (Next Episode)
+                if (currentEpIndex < episodes.length - 1) {
+                    setCurrentEpIndex(prev => prev + 1);
+                }
+            } else if (deltaX < -threshold) {
+                // Swipe Right (Prev Episode)
+                if (currentEpIndex > 0) {
+                    setCurrentEpIndex(prev => prev - 1);
+                }
+            }
+        }
+    };
+
 
     // Fix: Use ref to access latest isPlaying state inside Observer without re-triggering effect
     const isPlayingRef = useRef(isPlaying);
@@ -350,7 +335,13 @@ function ReelItem({
     // Note: I will keep existing hooks but ensure they work with dynamic src.
 
     return (
-        <div className="reel-item" style={{ height: '100vh', scrollSnapAlign: 'start', position: 'relative', width: '100%', overflow: 'hidden' }}>
+        <div 
+            className="reel-item" 
+            style={{ height: '100vh', scrollSnapAlign: 'start', position: 'relative', width: '100%', overflow: 'hidden' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             <div className="reel-video-wrapper" onClick={handlePlayPause} style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <video
                     ref={videoRef}

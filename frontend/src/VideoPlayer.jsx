@@ -290,6 +290,45 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const controlsTimeoutRef = useRef(null);
 
+    // Touch Handling for Swipe
+    const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
+    const touchEndX = useRef(0);
+    const touchEndY = useRef(0);
+
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e) => {
+        touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e) => {
+        const deltaX = touchStartX.current - touchEndX.current;
+        const deltaY = touchStartY.current - touchEndY.current;
+        const threshold = 70;
+
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
+            if (deltaX > threshold) {
+                // Swipe Left -> Next
+                if (currentIndex < playlist.length - 1) {
+                    setCurrentIndex(prev => prev + 1);
+                }
+            } else if (deltaX < -threshold) {
+                // Swipe Right -> Prev
+                if (currentIndex > 0) {
+                    setCurrentIndex(prev => prev - 1);
+                }
+            }
+        }
+    };
+
+
     // Auto-hide controls
     useEffect(() => {
         if (isPlaying && showControls) {
@@ -409,6 +448,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             <div
                 ref={mainContainerRef}
                 onClick={handleScreenTap}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 style={{ position: 'fixed', inset: 0, background: 'black', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
                 {/* Top Controls (Title, Speed, Quality, Close) */}
@@ -712,6 +754,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             <div
                 ref={mainContainerRef}
                 onClick={handleScreenTap}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 style={{
                     width: '100%',
                     // Maintain aspect ratio or full height depending on screen mode/size
