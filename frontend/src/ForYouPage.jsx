@@ -76,7 +76,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
                         setActiveReelId={setActiveReelId}
                         setActiveIndex={setActiveIndex}
                         isActiveIndex={activeIndex === index}
-                        shouldPreload={index > activeIndex && index <= activeIndex + 2}
+                        shouldPreload={index > activeIndex && index <= activeIndex + 3}
                         isAlreadyLiked={likedVideos.some(v => (v._id || v.id) === reel._id)}
                         onToggleLike={onToggleLike}
                     />

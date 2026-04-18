@@ -691,6 +691,17 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     </div>
                 )}
 
+                {/* Background Preloader for Next Episode */}
+                {currentIndex < playlist.length - 1 && (
+                    <video
+                        key={`preload-${currentIndex + 1}`}
+                        src={getVideoUrl(playlist[currentIndex + 1])}
+                        preload="auto"
+                        muted
+                        style={{ display: 'none' }}
+                    />
+                )}
+
                 {/* Bottom Progress Bar */}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', background: 'rgba(255,255,255,0.3)', zIndex: 101 }}>
                     <div style={{ width: `${progress}%`, height: '100%', background: '#ff0000', transition: 'width 0.1s linear' }}></div>
@@ -780,6 +791,18 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     onTimeUpdate={handleTimeUpdate}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
+
+                {/* Background Preloader for Next Episode (Standard Player) */}
+                {currentIndex < playlist.length - 1 && (
+                    <video
+                        key={`preload-std-${currentIndex + 1}`}
+                        src={getVideoUrl(playlist[currentIndex + 1])}
+                        preload="auto"
+                        muted
+                        style={{ display: 'none' }}
+                    />
+                )}
+
 
                 {/* Reuse Episode List Overlay (Scoped to Video Container for Fullscreen support) */}
                 {showEpisodeList && (
