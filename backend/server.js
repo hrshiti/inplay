@@ -133,10 +133,14 @@ app.use('/api/admin/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/public', require('./routes/publicTabRoutes'));
 
 // SERVE STATIC FILES - All uploaded media (images, videos, audio)
-// Files are stored in backend/uploads/ and served at /uploads/ URL path
-// This makes files publicly accessible via: http://localhost:5001/uploads/...
-// const path = require('path'); // Already imported at top
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Optimized with 7-day browser caching for "Fast Mode"
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '7d',
+  immutable: true,
+  setHeaders: (res, path) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+  }
+}));
 
 // -------------------
 // Multer Storage Setup

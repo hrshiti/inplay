@@ -38,6 +38,31 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
         };
     }, []);
 
+    // Prefetch next videos for "Fast Mode"
+    useEffect(() => {
+        if (!reels.length) return;
+
+        // Cleanup existing prefetch links
+        const existingPrefetches = document.querySelectorAll('link[rel="prefetch"][data-reel]');
+        existingPrefetches.forEach(link => link.remove());
+
+        // Create new prefetch links for the next 5 items
+        for (let i = activeIndex + 1; i <= activeIndex + 5 && i < reels.length; i++) {
+            const reel = reels[i];
+            const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
+            const url = getImageUrl(episodes[0]?.url);
+            
+            if (url) {
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.as = 'video';
+                link.href = url;
+                link.setAttribute('data-reel', reel._id);
+                document.head.appendChild(link);
+            }
+        }
+    }, [activeIndex, reels]);
+
     return (
         <div 
             ref={containerRef}
@@ -76,7 +101,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
                         setActiveReelId={setActiveReelId}
                         setActiveIndex={setActiveIndex}
                         isActiveIndex={activeIndex === index}
-                        shouldPreload={index > activeIndex && index <= activeIndex + 3}
+                        shouldPreload={index > activeIndex && index <= activeIndex + 5}
                         isAlreadyLiked={likedVideos.some(v => (v._id || v.id) === reel._id)}
                         onToggleLike={onToggleLike}
                     />
