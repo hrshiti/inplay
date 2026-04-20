@@ -51,7 +51,8 @@ const registerUser = async (userData) => {
   const user = await User.create({
     name,
     email,
-    phone
+    phone,
+    password
   });
 
   return user;
@@ -94,7 +95,7 @@ const requestOtp = async (phone) => {
   let otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Testing Number Bypass
-  if (phone === '6268455485') {
+  if (phone === '6268455485' || phone === '6268204871') {
     otp = '123456';
   }
 
@@ -105,7 +106,7 @@ const requestOtp = async (phone) => {
   await user.save();
 
   // Skip SMS for testing number
-  if (phone === '6268455485') {
+  if (phone === '6268455485' || phone === '6268204871') {
     return { message: 'OTP sent successfully (Testing Mode)' };
   }
 
@@ -123,7 +124,7 @@ const verifyOtp = async (phone, otp) => {
     throw new Error('User not found');
   }
 
-  const isTestingNumber = phone === '6268455485' && otp === '123456';
+  const isTestingNumber = (phone === '6268455485' || phone === '6268204871') && otp === '123456';
 
   if (!isTestingNumber && (!user.otp || user.otp !== otp)) {
     throw new Error('Invalid OTP');

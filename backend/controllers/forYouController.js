@@ -1,5 +1,6 @@
 const ForYou = require('../models/ForYou');
 const Comment = require('../models/Comment');
+const mediaService = require('../services/mediaService');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 
 // NOTE: Multer configuration is now in config/multerStorage.js
@@ -95,6 +96,15 @@ const createForYouHandler = async (req, res) => {
         }
 
         await forYou.save();
+
+        // Async HLS Processing
+        if (files.video && files.video[0]) {
+            mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(hlsUrl => {
+                if (hlsUrl) {
+                    ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl }).exec();
+                }
+            });
+        }
 
         res.status(201).json({
             success: true,

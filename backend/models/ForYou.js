@@ -16,6 +16,7 @@ const forYouSchema = new mongoose.Schema({
         public_id: String,
         url: String,
         secure_url: String,
+        hls_url: String,
         duration: Number
     },
     thumbnail: {

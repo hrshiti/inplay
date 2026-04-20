@@ -1,5 +1,6 @@
 const QuickByte = require('../models/QuickByte');
 const Comment = require('../models/Comment');
+const mediaService = require('../services/mediaService');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 const { notifyAllUsers } = require('../utils/notificationHelper');
 
@@ -128,6 +129,31 @@ const createQuickByteHandler = async (req, res) => {
         }
 
         await quickByte.save();
+
+        // Async HLS Processing
+        if (files.video && files.video[0]) {
+            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(hlsUrl => {
+                if (hlsUrl) {
+                    QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl }).exec();
+                }
+            });
+        }
+
+        if (files.videos && files.videos.length > 0) {
+            quickByte.episodes.forEach((ep, idx) => {
+                const epFile = files.videos[idx];
+                if (epFile) {
+                    mediaService.handleVideoHLS(epFile.path, ep._id, 'quickbyte_episode').then(hlsUrl => {
+                        if (hlsUrl) {
+                            QuickByte.updateOne(
+                                { _id: quickByte._id, "episodes._id": ep._id },
+                                { $set: { "episodes.$.hls_url": hlsUrl } }
+                            ).exec();
+                        }
+                    });
+                }
+            });
+        }
 
         res.status(201).json({
             success: true,
@@ -258,6 +284,15 @@ const updateQuickByteHandler = async (req, res) => {
         }
 
         await quickByte.save();
+
+        // Async HLS Processing for Updates
+        if (files.video && files.video[0]) {
+            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(hlsUrl => {
+                if (hlsUrl) {
+                    QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl }).exec();
+                }
+            });
+        }
 
         res.status(200).json({
             success: true,

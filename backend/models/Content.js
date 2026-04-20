@@ -254,14 +254,13 @@ contentSchema.virtual('formattedDuration').get(function () {
 });
 
 // Pre-save middleware to calculate totals for series
-contentSchema.pre('save', function (next) {
+contentSchema.pre('save', function () {
   if ((this.type === 'series' || this.type === 'hindi_series') && this.seasons) {
     this.totalSeasons = this.seasons.length;
     this.totalEpisodes = this.seasons.reduce((total, season) => {
       return total + (season.episodes ? season.episodes.length : 0);
     }, 0);
   }
-  next();
 });
 
 module.exports = mongoose.model('Content', contentSchema);
