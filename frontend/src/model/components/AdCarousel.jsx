@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Volume2, VolumeX } from 'lucide-react';
+import HlsPlayer from '../../components/HlsPlayer';
 import { getImageUrl } from '../../utils/imageUtils';
 
 const AdCarousel = ({ promotions }) => {
@@ -17,6 +18,11 @@ const AdCarousel = ({ promotions }) => {
 
         return () => clearInterval(interval);
     }, [promotions]);
+
+    useEffect(() => {
+        // Simple swipe/interval logic remains the same. 
+        // HlsPlayer will handle its own manifest loading.
+    }, [currentIndex, promotions]);
 
     if (!promotions || promotions.length === 0) return null;
 
@@ -36,15 +42,14 @@ const AdCarousel = ({ promotions }) => {
                 >
                     {isVideo ? (
                         <div style={{ width: '100%', height: '100%', position: 'relative', background: '#111' }}>
-                            <video
+                            <HlsPlayer
                                 ref={videoRef}
                                 src={getImageUrl(currentPromo.promoVideoUrl)}
+                                hlsUrl={currentPromo.hls_url}
                                 poster={getImageUrl(currentPromo.posterImageUrl)}
-                                autoPlay
-                                muted={isMuted}
-                                loop
-                                playsInline
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center', background: '#111' }}
+                                isMuted={isMuted}
+                                isLoop={true}
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
                             />
                             <button
                                 onClick={() => setIsMuted(!isMuted)}

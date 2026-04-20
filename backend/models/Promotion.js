@@ -13,6 +13,10 @@ const promotionSchema = new mongoose.Schema({
         type: String,
         required: false, // Optional
     },
+    hls_url: {
+        type: String,
+        required: false
+    },
     displayLocation: {
         type: String,
         enum: ['home', 'popular', 'both'],

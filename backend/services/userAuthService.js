@@ -153,6 +153,7 @@ const hydrateContentItem = (item) => {
     if (!media) return media;
     if (media.url) media.url = getFullUrl(media.url);
     if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+    if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
     return media;
   };
 

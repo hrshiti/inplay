@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Heart, Music, Trash2, X, Upload, Play, Pause } from 'lucide-react';
 import adminForYouService from '../../services/api/adminForYouService';
+import HlsPlayer from '../../components/HlsPlayer';
 
 const ForYouReels = () => {
     const [reels, setReels] = useState([]);
@@ -96,15 +97,23 @@ const AdminReelCard = ({ reel, onDelete }) => {
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
-                <video
-                    ref={videoRef}
+                <HlsPlayer
                     src={reel.video?.url}
-                    muted
-                    loop
+                    hlsUrl={reel.video?.hls_url}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onClick={(e) => {
+                        const video = e.target;
+                        if (video.paused) {
+                            video.play();
+                            setIsPlaying(true);
+                        } else {
+                            video.pause();
+                            setIsPlaying(false);
+                        }
+                    }}
                 />
                 {!isPlaying && (
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
                         <Play size={40} fill="white" color="white" />
                     </div>
                 )}
@@ -132,6 +141,9 @@ const AdminReelCard = ({ reel, onDelete }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ef4444', fontWeight: '600' }}>
                     <Heart size={18} fill="#ef4444" /> {reel.likes || 0}
                 </div>
+                {reel.video?.hls_url && (
+                    <div style={{ fontSize: '0.65rem', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px' }}>HLS Active</div>
+                )}
             </div>
 
 

@@ -19,6 +19,7 @@ const hydrateForYou = (doc) => {
         if (!media) return media;
         if (media.url) media.url = getFullUrl(media.url);
         if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
+        if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
         return media;
     };
 
@@ -102,6 +103,7 @@ const createForYouHandler = async (req, res) => {
             mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(hlsUrl => {
                 if (hlsUrl) {
                     ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl }).exec();
+                    console.log(`HLS Master synced for Reel: ${forYou.title}`);
                 }
             });
         }
@@ -297,6 +299,74 @@ const incrementViews = async (req, res) => {
     }
 };
 
+const updateForYouHandler = async (req, res) => {
+    try {
+        const { title, status, audioTitle, description } = req.body;
+        const files = req.files || {};
+        const forYou = await ForYou.findById(req.params.id);
+
+        if (!forYou) {
+            return res.status(404).json({ success: false, message: 'Reel not found' });
+        }
+
+        if (title) forYou.title = title;
+        if (status) forYou.status = status;
+        if (description) forYou.description = description;
+
+        // Update video
+        if (files.video && files.video[0]) {
+            // Delete old video from disk
+            if (forYou.video?.url) {
+                deleteFile(getFilePathFromUrl(forYou.video.url));
+            }
+            const result = transformFileToResponse(files.video[0]);
+            forYou.video = result;
+
+            // Trigger HLS Processing for new video
+            mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(hlsUrl => {
+                if (hlsUrl) {
+                    ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl }).exec();
+                }
+            });
+        }
+
+        // Update poster
+        if (files.poster && files.poster[0]) {
+            if (forYou.thumbnail?.url) {
+                deleteFile(getFilePathFromUrl(forYou.thumbnail.url));
+            }
+            forYou.thumbnail = transformFileToResponse(files.poster[0]);
+        }
+
+        // Update audio
+        if (files.audio && files.audio[0]) {
+            if (forYou.audio?.url) {
+                deleteFile(getFilePathFromUrl(forYou.audio.url));
+            }
+            const result = transformFileToResponse(files.audio[0]);
+            forYou.audio = {
+                ...result,
+                title: audioTitle || forYou.audio?.title || 'Original Audio'
+            };
+        } else if (audioTitle && forYou.audio) {
+            forYou.audio.title = audioTitle;
+        }
+
+        await forYou.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Reel updated successfully',
+            data: hydrateForYou(forYou)
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllForYou,
     createForYou: [
@@ -307,11 +377,19 @@ module.exports = {
         ]),
         createForYouHandler
     ],
-    deleteForYou,
-    toggleLike,
     addComment,
     getComments,
     deleteComment,
     toggleCommentLike,
-    incrementViews
+    incrementViews,
+    deleteForYou,
+    toggleLike,
+    updateForYou: [
+        uploadMixed.fields([
+            { name: 'video', maxCount: 1 },
+            { name: 'poster', maxCount: 1 },
+            { name: 'audio', maxCount: 1 }
+        ]),
+        updateForYouHandler
+    ]
 };

@@ -658,19 +658,25 @@ const ViewContent = () => {
               {content.video?.url && (
                 <div style={{ marginTop: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '20px' }}>
                   <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#374151', marginBottom: '12px' }}>Video Source</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <a
                       href={content.video.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        flex: 1, textDecoration: 'none', background: '#111827', color: 'white',
-                        padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', gap: '8px', fontWeight: '600'
+                        textDecoration: 'none', background: '#111827', color: 'white',
+                        padding: '10px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem'
                       }}
                     >
-                      <Film size={18} /> Open Video Link
+                      <Film size={16} /> Open MP4 Link
                     </a>
+                    {(content.hls_url || content.video?.hls_url) && (
+                      <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '10px', borderRadius: '8px' }}>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', color: '#0369a1', fontWeight: 'bold' }}>HLS STREAM URL</p>
+                        <code style={{ fontSize: '0.75rem', wordBreak: 'break-all', color: '#0c4a6e' }}>{content.hls_url || content.video.hls_url}</code>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -695,11 +701,18 @@ const ViewContent = () => {
                           <span style={{ fontWeight: '600', color: '#374151' }}>{episode.title}</span>
                           <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6b7280' }}>{episode.description?.substring(0, 100)}{episode.description?.length > 100 ? '...' : ''}</p>
                         </div>
-                        {episode.video?.url && (
-                          <a href={episode.video.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none' }}>
-                            View Video
-                          </a>
-                        )}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                            {episode.video?.url && (
+                              <a href={episode.video.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none' }}>
+                                View MP4
+                              </a>
+                            )}
+                            {episode.hls_url && (
+                              <span style={{ fontSize: '0.7rem', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={episode.hls_url}>
+                                HLS: {episode.hls_url}
+                              </span>
+                            )}
+                          </div>
                       </div>
                     ))}
                   </div>
@@ -1745,6 +1758,49 @@ const ViewQuickBite = () => {
                 <InfoItem label="Views" value={content.views?.toLocaleString() || 0} />
                 <InfoItem label="Rating" value={`★ ${content.rating || 0}`} />
               </div>
+
+              {/* Episode List for QuickBites */}
+              {content.episodes && content.episodes.length > 0 && (
+                <div style={{ marginTop: '8px' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#111827', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Smartphone size={18} color="#46d369" /> Episodes ({content.episodes.length})
+                  </h4>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {content.episodes.map((episode, idx) => (
+                      <div key={episode._id || idx} style={{
+                        background: '#f9fafb', border: '1px solid #f3f4f6', padding: '12px 16px',
+                        borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontWeight: '700', color: '#111827', fontSize: '0.9rem' }}>
+                            {idx + 1}. {episode.title || `Episode ${idx + 1}`}
+                          </p>
+                          {episode.hls_url && (
+                            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '0.7rem', color: '#059669', background: '#ecfdf5', padding: '1px 5px', borderRadius: '4px', fontWeight: 'bold' }}>HLS</span>
+                              <code style={{ fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>
+                                {episode.hls_url}
+                              </code>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          {episode.url && (
+                            <a href={getImageUrl(episode.url)} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.8rem', fontWeight: '600', textDecoration: 'none' }}>
+                              MP4
+                            </a>
+                          )}
+                          {episode.hls_url && (
+                            <a href={episode.hls_url} target="_blank" rel="noopener noreferrer" style={{ color: '#059669', fontSize: '0.8rem', fontWeight: '600', textDecoration: 'none' }}>
+                              HLS
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

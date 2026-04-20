@@ -15,6 +15,20 @@ const createPromotion = async (req, res) => {
             isActive,
         });
 
+        // Async HLS Processing for Promotion Video
+        if (promoVideoUrl && promoVideoUrl.startsWith('/uploads')) {
+            const { getFilePathFromUrl } = require('../config/multerStorage');
+            const mediaService = require('../services/mediaService');
+            const localPath = getFilePathFromUrl(promoVideoUrl);
+
+            mediaService.handleVideoHLS(localPath, promotion._id, 'promotion').then(hlsUrl => {
+                if (hlsUrl) {
+                    Promotion.findByIdAndUpdate(promotion._id, { hls_url: hlsUrl }).exec();
+                    console.log(`HLS synced for Promotion: ${promotion.title}`);
+                }
+            });
+        }
+
         res.status(201).json(promotion);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -59,9 +73,10 @@ const getAllPromotions = async (req, res) => {
 // @access  Private/Admin
 const updatePromotion = async (req, res) => {
     try {
-        const promotion = await Promotion.findById(req.params.id);
+        const { promoVideoUrl } = req.body;
+        const oldPromotion = await Promotion.findById(req.params.id);
 
-        if (!promotion) {
+        if (!oldPromotion) {
             return res.status(404).json({ message: 'Promotion not found' });
         }
 
@@ -70,6 +85,19 @@ const updatePromotion = async (req, res) => {
             req.body,
             { new: true }
         );
+
+        // Process HLS if video changed
+        if (promoVideoUrl && promoVideoUrl !== oldPromotion.promoVideoUrl && promoVideoUrl.startsWith('/uploads')) {
+            const { getFilePathFromUrl } = require('../config/multerStorage');
+            const mediaService = require('../services/mediaService');
+            const localPath = getFilePathFromUrl(promoVideoUrl);
+
+            mediaService.handleVideoHLS(localPath, updatedPromotion._id, 'promotion').then(hlsUrl => {
+                if (hlsUrl) {
+                    Promotion.findByIdAndUpdate(updatedPromotion._id, { hls_url: hlsUrl }).exec();
+                }
+            });
+        }
 
         res.json(updatedPromotion);
     } catch (error) {

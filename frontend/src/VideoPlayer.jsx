@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import Hls from 'hls.js';
 import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
 import { SpeedSheet, QualitySheet } from './PlayerSheets';
+import HlsPlayer from './components/HlsPlayer';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
     // User logic: Playing all content as movie content (Standard Landscape Player)
@@ -33,6 +35,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     });
 
     const videoRef = useRef(null);
+    const hlsRef = useRef(null);
     const lastSyncTime = useRef(0);
 
     const currentItem = playlist[currentIndex];
@@ -40,6 +43,11 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     // Helper to get URL dynamically
     const getVideoUrl = (item) => {
         if (!item) return '';
+
+        // Prioritize HLS Streaming URL if available
+        if (item.hls_url) return item.hls_url;
+        if (item.video?.hls_url) return item.video.hls_url;
+
         let url = '';
         // QuickByte episode (direct url field)
         if (item.url && !item.video) url = item.url;
@@ -85,21 +93,77 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         );
     }
 
-    // Resume Logic (Only for first item/movie context)
+    // Video Loading & Support for HLS
     useEffect(() => {
-        // Reset time if switching items
-        if (videoRef.current) {
-            videoRef.current.currentTime = 0;
-            videoRef.current.play().catch(() => { });
+        const video = videoRef.current;
+        if (!video || !videoSrc) return;
+
+        // Clean up previous HLS instance
+        if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
         }
 
-        // If it's the main movie (index 0) and we have resume time
-        if (currentIndex === 0 && movie.watchedSeconds && videoRef.current) {
-            // Only resume if playlist is 1 item or it's checking strictly
-            // Since we don't track episode index in resume yet, this is best effort
-            videoRef.current.currentTime = movie.watchedSeconds;
+        const onVideoReady = () => {
+            // Reset time if switching items
+            video.currentTime = 0;
+
+            // Resume Logic (Only for first item/movie context or if episode has saved progress)
+            if (currentIndex === 0 && movie.watchedSeconds) {
+                video.currentTime = movie.watchedSeconds;
+            }
+
+            if (isPlaying) {
+                video.play().catch(() => { });
+            }
+        };
+
+        if (videoSrc.includes('.m3u8')) {
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                hlsRef.current = hls;
+                hls.loadSource(videoSrc);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, onVideoReady);
+                
+                // Error handling
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS (Safari)
+                video.src = videoSrc;
+                video.addEventListener('loadedmetadata', onVideoReady, { once: true });
+            }
+        } else {
+            // Standard MP4
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', onVideoReady, { once: true });
         }
-    }, [currentIndex, movie.watchedSeconds, videoSrc]);
+
+        return () => {
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+                hlsRef.current = null;
+            }
+            video.removeEventListener('loadedmetadata', onVideoReady);
+        };
+    }, [videoSrc, currentIndex, movie.watchedSeconds]);
 
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
@@ -383,7 +447,17 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     const applyQuality = (quality) => {
         setVideoQuality(quality);
-        // Mock Quality Change logic (Real would switch HLS levels)
+        if (hlsRef.current) {
+            if (quality === 'Auto') {
+                hlsRef.current.currentLevel = -1;
+            } else {
+                // Find matching level height
+                const levelIndex = hlsRef.current.levels.findIndex(l => l.height === parseInt(quality));
+                if (levelIndex !== -1) {
+                    hlsRef.current.currentLevel = levelIndex;
+                }
+            }
+        }
     };
 
     const handleShare = async () => {
@@ -674,11 +748,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 )}
 
                 {videoSrc ? (
-                    <video
+                    <HlsPlayer
                         ref={videoRef}
                         src={videoSrc}
-                        autoPlay
-                        playsInline
+                        hlsUrl={currentItem.hls_url || currentItem.video?.hls_url}
+                        isMuted={false}
+                        isLoop={false}
                         onPause={() => syncProgress()}
                         onEnded={handleVideoEnd}
                         onTimeUpdate={handleTimeUpdate}
@@ -781,11 +856,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     zIndex: 50
                 }}
             >
-                <video
+                <HlsPlayer
                     ref={videoRef}
                     src={videoSrc}
-                    autoPlay
-                    playsInline
+                    hlsUrl={currentItem.hls_url || currentItem.video?.hls_url}
+                    isMuted={false}
+                    isLoop={false}
                     onPause={() => syncProgress()}
                     onEnded={handleVideoEnd}
                     onTimeUpdate={handleTimeUpdate}

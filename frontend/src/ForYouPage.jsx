@@ -4,6 +4,7 @@ import { getImageUrl } from './utils/imageUtils';
 import { io } from 'socket.io-client';
 import contentService from './services/api/contentService';
 import authService from './services/api/authService';
+import HlsPlayer from './components/HlsPlayer';
 
 // Initialize Socket outside component to prevent multiple connections
 // Initialize Socket outside component to prevent multiple connections
@@ -51,7 +52,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
             const reel = reels[i];
             const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
             const url = getImageUrl(episodes[0]?.url);
-            
+
             if (url) {
                 const link = document.createElement('link');
                 link.rel = 'prefetch';
@@ -64,18 +65,18 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     }, [activeIndex, reels]);
 
     return (
-        <div 
+        <div
             ref={containerRef}
-            className="reels-container" 
-            data-lenis-prevent 
-            style={{ 
-                background: 'black', 
-                height: '100vh', 
-                width: '100%', 
-                overflowY: 'scroll', 
-                scrollSnapType: 'y mandatory', 
-                zIndex: 20000, 
-                position: 'relative' 
+            className="reels-container"
+            data-lenis-prevent
+            style={{
+                background: 'black',
+                height: '100vh',
+                width: '100%',
+                overflowY: 'scroll',
+                scrollSnapType: 'y mandatory',
+                zIndex: 20000,
+                position: 'relative'
             }}
         >
             {/* Top Back Navigation Overlay */}
@@ -115,10 +116,10 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     );
 }
 
-function ReelItem({ 
-    reel, muted, toggleMute, setActiveReelId, 
+function ReelItem({
+    reel, muted, toggleMute, setActiveReelId,
     setActiveIndex, index, isActiveIndex, shouldPreload,
-    isAlreadyLiked, onToggleLike 
+    isAlreadyLiked, onToggleLike
 }) {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -360,24 +361,23 @@ function ReelItem({
     // Note: I will keep existing hooks but ensure they work with dynamic src.
 
     return (
-        <div 
-            className="reel-item" 
+        <div
+            className="reel-item"
             style={{ height: '100vh', scrollSnapAlign: 'start', position: 'relative', width: '100%', overflow: 'hidden' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
             <div className="reel-video-wrapper" onClick={handlePlayPause} style={{ width: '100%', height: '100%', position: 'relative' }}>
-                <video
+                <HlsPlayer
                     ref={videoRef}
                     src={currentVideoSrc}
+                    hlsUrl={reel.hls_url || (reel.video?.hls_url)}
                     className="reel-video"
-                    loop={episodes.length === 1} // Only native loop if single video. Multi-video loops via state.
-                    playsInline
-                    muted={muted}
-                    preload={isActiveIndex || shouldPreload ? "auto" : "metadata"}
+                    isLoop={episodes.length === 1}
+                    isMuted={muted}
                     onEnded={handleVideoEnd}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
                 {!isPlaying && (
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>

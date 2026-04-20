@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Upload, X, Save, ArrowLeft, Plus, Trash, ChevronDown, ChevronUp, Video } from 'lucide-react';
 import adminTabService from '../../../../services/api/adminTabService';
+import HlsPlayer from '../../../../components/HlsPlayer';
 
 export default function ContentForm({ content = null, onSave, onCancel, isUploading = false }) {
   const [formData, setFormData] = useState({
@@ -80,6 +81,8 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
       const val = content[field];
       if (!val) return '';
       if (typeof val === 'string') return val;
+      // Prefer HLS for preview if available
+      if (typeof val === 'object' && val.hls_url) return val.hls_url;
       if (typeof val === 'object' && val.url) return val.url;
       return '';
     };
@@ -913,7 +916,14 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                                           <span style={{ fontSize: '0.7rem' }}>Large File Selected</span>
                                         </div>
                                       ) : (
-                                        <video controls src={episode.video.url} style={{ width: '100%', maxHeight: '150px', borderRadius: '4px', backgroundColor: 'black' }} />
+                                        <HlsPlayer
+                                          src={episode.video.url}
+                                          hlsUrl={episode.video.hls_url}
+                                          controls
+                                          isMuted={false}
+                                          isLoop={false}
+                                          style={{ width: '100%', maxHeight: '150px', borderRadius: '4px', backgroundColor: 'black' }}
+                                        />
                                       )}
                                     </div>
                                   )}
@@ -1002,7 +1012,14 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                         <p style={{ fontSize: '0.75rem', marginTop: '8px', color: '#94a3b8' }}>Preview disabled to save memory</p>
                       </div>
                     ) : (
-                      <video controls src={formData.video} style={{ width: '100%', maxHeight: '300px', borderRadius: '6px', backgroundColor: 'black' }} />
+                      <HlsPlayer
+                        src={formData.video}
+                        hlsUrl={content?.video?.hls_url || content?.hls_url}
+                        controls
+                        isMuted={false}
+                        isLoop={false}
+                        style={{ width: '100%', maxHeight: '300px', borderRadius: '6px', backgroundColor: 'black' }}
+                      />
                     )}
                   </div>
                 )}
