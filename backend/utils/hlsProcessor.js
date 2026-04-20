@@ -4,9 +4,9 @@ const fs = require('fs');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
-// Detect FFmpeg path for Windows (fallback to absolute if PATH not yet updated)
-const FFMPEG_BIN = 'C:\\Users\\admin\\Downloads\\ffmpeg-2026-04-16-git-5abc240a27-full_build\\ffmpeg-2026-04-16-git-5abc240a27-full_build\\bin\\ffmpeg.exe';
-const FFMPEG = fs.existsSync(FFMPEG_BIN) ? `"${FFMPEG_BIN}"` : 'ffmpeg';
+// Detect FFmpeg path from environment variables or use system default
+const FFMPEG_BIN = process.env.FFMPEG_PATH;
+const FFMPEG = (FFMPEG_BIN && fs.existsSync(FFMPEG_BIN)) ? `"${FFMPEG_BIN}"` : 'ffmpeg';
 
 /**
  * Process a video file into HLS format with multiple qualities
