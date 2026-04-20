@@ -525,7 +525,17 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{ position: 'fixed', inset: 0, background: 'black', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ 
+                    position: 'fixed', 
+                    inset: 0, 
+                    background: 'black', 
+                    zIndex: 9999, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '100vw',
+                    height: '100vh'
+                }}
             >
                 {/* Top Controls (Title, Speed, Quality, Close) */}
                 {showControls && (
@@ -757,7 +767,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         onPause={() => syncProgress()}
                         onEnded={handleVideoEnd}
                         onTimeUpdate={handleTimeUpdate}
-                        style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: 'contain' }}
+                        style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: isQuickBite ? 'cover' : 'contain' }}
                     />
                 ) : (
                     <div style={{ color: 'white', textAlign: 'center' }}>
@@ -865,7 +875,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     onPause={() => syncProgress()}
                     onEnded={handleVideoEnd}
                     onTimeUpdate={handleTimeUpdate}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
 
                 {/* Background Preloader for Next Episode (Standard Player) */}

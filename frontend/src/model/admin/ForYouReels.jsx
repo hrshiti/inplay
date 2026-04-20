@@ -100,7 +100,7 @@ const AdminReelCard = ({ reel, onDelete }) => {
                 <HlsPlayer
                     src={reel.video?.url}
                     hlsUrl={reel.video?.hls_url}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     onClick={(e) => {
                         const video = e.target;
                         if (video.paused) {
@@ -225,7 +225,7 @@ const AddReelModal = ({ onClose, onSuccess }) => {
                                 background: '#f9fafb', transition: 'border-color 0.2s', height: '120px', overflow: 'hidden', position: 'relative'
                             }}>
                                 {previews.video ? (
-                                    <video src={previews.video} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <video src={previews.video} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                 ) : (
                                     <>
                                         <Upload size={24} color="#6b7280" style={{ marginBottom: '8px' }} />

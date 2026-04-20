@@ -377,7 +377,7 @@ function ReelItem({
                     isLoop={episodes.length === 1}
                     isMuted={muted}
                     onEnded={handleVideoEnd}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
                 {!isPlaying && (
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
