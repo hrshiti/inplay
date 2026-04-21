@@ -221,27 +221,33 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
         });
     }
 
-    // Process updated episodes HLS
-    const fileKeys = Object.keys(files);
-    for (const key of fileKeys) {
-        const match = key.match(/^season_(\d+)_episode_(\d+)_video$/);
-        if (match) {
-            const sIdx = parseInt(match[1]);
-            const eIdx = parseInt(match[2]);
-            const episode = content.seasons[sIdx]?.episodes?.[eIdx];
-            if (episode) {
-                mediaService.handleVideoHLS(files[key].path, episode._id, 'episode').then(hlsUrl => {
-                    if (hlsUrl) {
-                        Content.updateOne(
-                            { _id: content._id, "seasons.episodes._id": episode._id },
-                            { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
-                            { arrayFilters: [{ "s._id": content.seasons[sIdx]._id }, { "e._id": episode._id }] }
-                        ).exec();
+    // Process updated episodes HLS in background sequentially to avoid CPU pinning
+    (async () => {
+        const fileKeys = Object.keys(files);
+        for (const key of fileKeys) {
+            const match = key.match(/^season_(\d+)_episode_(\d+)_video$/);
+            if (match) {
+                const sIdx = parseInt(match[1]);
+                const eIdx = parseInt(match[2]);
+                const season = content.seasons[sIdx];
+                const episode = season?.episodes?.[eIdx];
+                if (episode) {
+                    try {
+                        const hlsUrl = await mediaService.handleVideoHLS(files[key].path, episode._id, 'episode');
+                        if (hlsUrl) {
+                            await Content.updateOne(
+                                { _id: content._id },
+                                { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
+                                { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
+                            ).exec();
+                        }
+                    } catch (err) {
+                        console.error(`[HLS] Failed episode conversion:`, err);
                     }
-                });
+                }
             }
         }
-    }
+    })();
 
     return hydrateContent(content);
   } catch (error) {

@@ -25,7 +25,8 @@ const processToHLS = (inputPath, outputDir) => {
             // -hls_time 6: Faster startup/buffering on mobile
             const args = [
                 '-i', inputPath,
-                '-preset', 'veryfast',
+                '-preset', 'ultrafast', // Maximum speed optimization
+                '-threads', '0',        // Use all available CPU cores
                 '-filter_complex', '[0:v]split=3[v1][v2][v3];[v1]scale=w=426:h=240[v1out];[v2]scale=w=854:h=480[v2out];[v3]scale=w=1280:h=720[v3out];[0:a]asplit=3[a1][a2][a3]',
                 // 240p - Baseline profile for maximum APK compatibility
                 '-map', '[v1out]', '-map', '[a1]', '-c:v:0', 'libx264', '-b:v:0', '400k', '-maxrate:v:0', '400k', '-bufsize:v:0', '800k', '-profile:v:0', 'baseline', '-level', '3.0',
@@ -35,7 +36,7 @@ const processToHLS = (inputPath, outputDir) => {
                 '-map', '[v3out]', '-map', '[a3]', '-c:v:2', 'libx264', '-b:v:2', '1400k', '-maxrate:v:2', '1400k', '-bufsize:v:2', '2100k',
                 '-c:a', 'aac', '-ar', '44100', '-ac', '2',
                 '-f', 'hls',
-                '-hls_time', '6',
+                '-hls_time', '10',      // Increased segment duration slightly for fewer requests on disk
                 '-hls_playlist_type', 'vod',
                 '-hls_list_size', '0',
                 '-master_pl_name', 'master.m3u8',
