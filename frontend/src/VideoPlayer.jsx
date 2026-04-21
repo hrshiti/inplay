@@ -7,12 +7,12 @@ import { SpeedSheet, QualitySheet } from './PlayerSheets';
 import HlsPlayer from './components/HlsPlayer';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
-    // User logic: Playing all content as movie content (Standard Landscape Player)
-    // as per user request to play quick byte as movie content.
-    // as per user request to play quick byte as movie content.
-    const [videoFit, setVideoFit] = useState('contain'); // Default to 'contain' to avoid cropping logos
+    // User request: Play all content (Movies, Series, Reels) in the immersive Reels-style player.
     const isVertical = movie.isVertical || movie.type === 'quick_byte' || movie.type === 'reel' || movie.category === 'Quick Bites';
-    const isQuickBite = isVertical; // Mapping for easier reference
+    // 3 Modes: 'contain' (FIT), 'cover' (FILL - Zoom), 'fill' (STRETCH - All sides touch)
+    const [videoFit, setVideoFit] = useState('cover'); 
+    // Detect if content should use the immersive Reels-style player (Quick Bites/Reels)
+    const isQuickBite = movie.type === 'quick_byte' || movie.category === 'Quick Bites' || movie.type === 'reel';
 
     // PLAYLIST LOGIC
     // Determine the list of videos to play
@@ -508,10 +508,17 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             {/* Fit/Fill Toggle */}
                             <button
-                                onClick={(e) => { e.stopPropagation(); setVideoFit(prev => prev === 'contain' ? 'cover' : 'contain'); }}
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setVideoFit(prev => {
+                                        if (prev === 'contain') return 'cover';
+                                        if (prev === 'cover') return 'fill';
+                                        return 'contain';
+                                    }); 
+                                }}
                                 style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(10px)' }}
                             >
-                                {videoFit === 'contain' ? 'FIT' : 'FILL'}
+                                {videoFit === 'contain' ? 'FIT' : (videoFit === 'cover' ? 'FILL' : 'STRETCH')}
                             </button>
 
                             {/* Speed Control */}

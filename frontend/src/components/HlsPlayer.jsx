@@ -29,7 +29,7 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                     lowLatencyMode: true,
                     backBufferLength: 90,
                     startLevel: -1,
-                    abrEwmaDefaultEstimate: 5000000,
+                    abrEwmaDefaultEstimate: 10000000, // Estimate 10Mbps to force HD quality immediately
                     // Allow CORS for production CloudFront
                     xhrSetup: (xhr) => {
                         xhr.withCredentials = false;
@@ -107,8 +107,8 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
             style={{ 
                 width: '100%', 
                 height: '100%', 
-                objectFit: 'contain', // Default to contain to avoid distortion
                 backgroundColor: 'black',
+                display: 'block',
                 ...style 
             }}
             {...props}
