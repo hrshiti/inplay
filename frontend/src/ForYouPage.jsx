@@ -325,6 +325,11 @@ function ReelItem({
     const [currentEpIndex, setCurrentEpIndex] = useState(0);
     const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
     const currentVideoSrc = getImageUrl(episodes[currentEpIndex]?.url) || '';
+    useEffect(() => {
+        if (currentVideoSrc && isActiveIndex) {
+            console.log("Playing Reel URL:", currentVideoSrc);
+        }
+    }, [currentVideoSrc, isActiveIndex]);
 
     // Reset episode index when reel changes or comes into view? 
     // Usually standard reels just play from start.

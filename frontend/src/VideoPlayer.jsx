@@ -59,6 +59,11 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     };
 
     const videoSrc = getVideoUrl(currentItem);
+    useEffect(() => {
+        if (videoSrc) {
+            console.log("Playing video URL:", videoSrc);
+        }
+    }, [videoSrc]);
 
     const isInMyList = myList.some(m => (m._id || m.id) === (movie._id || movie.id));
     const isLiked = likedVideos.some(m => (m._id || m.id) === (movie._id || movie.id));
