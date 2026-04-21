@@ -1889,7 +1889,7 @@ function WatchPageRoute({
   return (
     <AnimatePresence>
       <VideoPlayer
-        movie={{ ...movie, video: movie.video?.url || movie.video }}
+        movie={movie}
         episode={episode}
         onClose={() => navigate(-1)}
         onToggleMyList={handleToggleMyList}

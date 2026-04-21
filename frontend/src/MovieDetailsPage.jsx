@@ -190,12 +190,12 @@ export default function MovieDetailsPage({
                                         firstEpisode = displayMovie.seasons[0].episodes[0];
                                     }
                                     if (firstEpisode) {
-                                        onPlay(movie, firstEpisode);
+                                        onPlay(displayMovie, firstEpisode);
                                     } else {
-                                        onPlay(movie);
+                                        onPlay(displayMovie);
                                     }
                                 } else {
-                                    onPlay(movie);
+                                    onPlay(displayMovie);
                                 }
                             }
                         }}
@@ -376,7 +376,7 @@ export default function MovieDetailsPage({
                                             onClick={() => {
                                                 if (onPlay) {
                                                     // Pass both movie and the specific episode
-                                                    onPlay(movie, ep);
+                                                    onPlay(displayMovie, ep);
                                                 }
                                             }}
                                             style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
