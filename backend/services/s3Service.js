@@ -45,17 +45,18 @@ const uploadFile = async (filePath, s3Key) => {
  */
 const uploadFolder = async (localFolderPath, s3FolderPrefix) => {
     const files = fs.readdirSync(localFolderPath);
-
-    for (const file of files) {
+    const uploadPromises = files.map(async (file) => {
         const localPath = path.join(localFolderPath, file);
         const s3Key = path.join(s3FolderPrefix, file).replace(/\\/g, '/');
 
         if (fs.lstatSync(localPath).isDirectory()) {
-            await uploadFolder(localPath, s3Key);
+            return uploadFolder(localPath, s3Key);
         } else {
-            await uploadFile(localPath, s3Key);
+            return uploadFile(localPath, s3Key);
         }
-    }
+    });
+
+    await Promise.all(uploadPromises);
 };
 
 /**
