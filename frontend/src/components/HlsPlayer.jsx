@@ -14,6 +14,7 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
 
         // Clean up previous HLS instance
         if (hlsRef.current) {
+            hlsRef.current.detachMedia();
             hlsRef.current.destroy();
             hlsRef.current = null;
         }
@@ -27,8 +28,8 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                     enableWorker: true,
                     lowLatencyMode: true,
                     backBufferLength: 90,
-                    startLevel: -1, // Auto quality start
-                    abrEwmaDefaultEstimate: 5000000, // Estimate 5Mbps to start with higher quality
+                    startLevel: -1,
+                    abrEwmaDefaultEstimate: 5000000,
                     // Allow CORS for production CloudFront
                     xhrSetup: (xhr) => {
                         xhr.withCredentials = false;
@@ -41,47 +42,58 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     console.log(`[HlsPlayer] Manifest parsed successfully for ${effectiveSrc}`);
+                    if (props.startTime) {
+                        video.currentTime = props.startTime;
+                    }
+                    if (props.autoPlay !== false) {
+                        video.play().catch(() => {});
+                    }
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === 'manifestLoadError') {
+                        console.error('[HlsPlayer] CORS or Network Error! If you see a CORS error in console, please whitelist your domain in S3/CloudFront.');
+                    }
+
                     if (data.fatal) {
                         console.error(`[HlsPlayer] Fatal error: ${data.type} - ${data.details}`);
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.log('[HlsPlayer] Network error, trying to recover...');
                                 hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.log('[HlsPlayer] Media error, trying to recover...');
                                 hls.recoverMediaError();
                                 break;
                             default:
-                                console.error('[HlsPlayer] Unrecoverable error, destroying instance');
                                 hls.destroy();
                                 break;
                         }
-                    } else {
-                        // Non-fatal errors like buffer stalls or segment load failures
-                        console.warn(`[HlsPlayer] Non-fatal error: ${data.details}`);
                     }
                 });
 
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                console.log('[HlsPlayer] Using native HLS support (Safari/iOS/Mac)');
                 video.src = effectiveSrc;
+                video.addEventListener('loadedmetadata', () => {
+                    if (props.startTime) video.currentTime = props.startTime;
+                    if (props.autoPlay !== false) video.play().catch(() => {});
+                }, { once: true });
             }
         } else if (src) {
-            console.log(`[HlsPlayer] Using standard MP4 source: ${src}`);
             video.src = src;
+            video.addEventListener('loadedmetadata', () => {
+                if (props.startTime) video.currentTime = props.startTime;
+                if (props.autoPlay !== false) video.play().catch(() => {});
+            }, { once: true });
         }
 
         return () => {
             if (hlsRef.current) {
+                hlsRef.current.detachMedia();
                 hlsRef.current.destroy();
                 hlsRef.current = null;
             }
         };
-    }, [src, hlsUrl]);
+    }, [src, hlsUrl, props.startTime]);
 
     return (
         <video

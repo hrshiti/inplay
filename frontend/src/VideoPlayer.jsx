@@ -100,77 +100,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         );
     }
 
-    // Video Loading & Support for HLS
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !videoSrc) return;
-
-        // Clean up previous HLS instance
-        if (hlsRef.current) {
-            hlsRef.current.destroy();
-            hlsRef.current = null;
-        }
-
-        const onVideoReady = () => {
-            // Reset time if switching items
-            video.currentTime = 0;
-
-            // Resume Logic (Only for first item/movie context or if episode has saved progress)
-            if (currentIndex === 0 && movie.watchedSeconds) {
-                video.currentTime = movie.watchedSeconds;
-            }
-
-            if (isPlaying) {
-                video.play().catch(() => { });
-            }
-        };
-
-        if (videoSrc.includes('.m3u8')) {
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                });
-                hlsRef.current = hls;
-                hls.loadSource(videoSrc);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, onVideoReady);
-                
-                // Error handling
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                hls.startLoad();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                hls.recoverMediaError();
-                                break;
-                            default:
-                                hls.destroy();
-                                break;
-                        }
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Native HLS (Safari)
-                video.src = videoSrc;
-                video.addEventListener('loadedmetadata', onVideoReady, { once: true });
-            }
-        } else {
-            // Standard MP4
-            video.src = videoSrc;
-            video.addEventListener('loadedmetadata', onVideoReady, { once: true });
-        }
-
-        return () => {
-            if (hlsRef.current) {
-                hlsRef.current.destroy();
-                hlsRef.current = null;
-            }
-            video.removeEventListener('loadedmetadata', onVideoReady);
-        };
-    }, [videoSrc, currentIndex, movie.watchedSeconds]);
+    // HLS initialization is now handled by the HlsPlayer component
 
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
@@ -799,9 +729,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
                 {videoSrc ? (
                     <HlsPlayer
+                        key={`hls-quick-${currentIndex}`} // Added key for robust React cleanup
                         ref={videoRef}
                         src={videoSrc}
                         hlsUrl={currentItem.hls_url || currentItem.video?.hls_url}
+                        startTime={currentIndex === 0 ? movie.watchedSeconds : 0}
+                        autoPlay={isPlaying}
                         isMuted={false}
                         isLoop={false}
                         onPause={() => syncProgress()}
@@ -933,9 +866,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 }}
             >
                 <HlsPlayer
+                    key={`hls-std-${currentIndex}`} // Added key for robust React cleanup
                     ref={videoRef}
                     src={videoSrc}
                     hlsUrl={currentItem.hls_url || currentItem.video?.hls_url}
+                    startTime={currentIndex === 0 ? movie.watchedSeconds : 0}
+                    autoPlay={isPlaying}
                     isMuted={false}
                     isLoop={false}
                     onPause={() => syncProgress()}
