@@ -106,7 +106,7 @@ const createForYouHandler = async (req, res) => {
         if (files.video && files.video[0]) {
             mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(async (hlsUrl) => {
                 if (hlsUrl) {
-                    await ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, status: intendedStatus }).exec();
+                    await ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
                     console.log(`HLS Master synced and Published for Reel: ${forYou.title}`);
                     
                     // Note: If you want notifications for Reels too, add them here

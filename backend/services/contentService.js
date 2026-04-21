@@ -142,7 +142,7 @@ const createContent = async (contentData, adminId, files = {}) => {
             if (hlsUrl) {
                 const updatedContent = await Content.findByIdAndUpdate(
                     content._id, 
-                    { 'video.hls_url': hlsUrl, status: intendedStatus },
+                    { 'video.hls_url': hlsUrl, status: 'published' },
                     { new: true }
                 ).exec();
                 
@@ -214,9 +214,9 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
 
     // Process main video HLS if updated
     if (files.video) {
-        mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(hlsUrl => {
+        mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
             if (hlsUrl) {
-                Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl }).exec();
+                await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
             }
         });
     }

@@ -8,7 +8,7 @@ const adminQuickByteService = {
         if (!token) throw new Error('No admin token found');
 
         // Using new endpoint
-        const response = await fetch(`${API_URL}/quickbytes?status=published`, {
+        const response = await fetch(`${API_URL}/quickbytes`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

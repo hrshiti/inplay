@@ -141,7 +141,7 @@ const createQuickByteHandler = async (req, res) => {
                 if (hlsUrl) {
                     const updated = await QuickByte.findByIdAndUpdate(
                         quickByte._id, 
-                        { 'video.hls_url': hlsUrl, status: intendedStatus },
+                        { 'video.hls_url': hlsUrl, status: 'published' },
                         { new: true }
                     ).exec();
 
@@ -180,7 +180,7 @@ const createQuickByteHandler = async (req, res) => {
                                 // Sync to main video if applicable
                                 const doc = await QuickByte.findById(quickByte._id);
                                 if (doc && doc.video && doc.video.url === ep.url) {
-                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl }).exec();
+                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
                                 }
                                 console.log(`[HLS] Synced episode ${i+1}: ${hlsUrl}`);
                             }
@@ -312,9 +312,9 @@ const updateQuickByteHandler = async (req, res) => {
 
         // Async HLS Processing for Updates
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(hlsUrl => {
+            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(async (hlsUrl) => {
                 if (hlsUrl) {
-                    QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl }).exec();
+                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
                 }
             });
         }
@@ -340,7 +340,7 @@ const updateQuickByteHandler = async (req, res) => {
                                 // Sync to main video if applicable
                                 const doc = await QuickByte.findById(quickByte._id);
                                 if (doc && doc.video && doc.video.url === ep.url) {
-                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl }).exec();
+                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
                                 }
                             }
                         } catch (err) {
