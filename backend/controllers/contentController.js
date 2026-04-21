@@ -121,8 +121,6 @@ const createContent = [
         message: 'Content created successfully',
         data: content
       });
-
-      });
     } catch (error) {
       console.error(error);
       res.status(400).json({
