@@ -210,7 +210,7 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
                         Content.updateOne(
                             { _id: content._id, "seasons.episodes._id": episode._id },
                             { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
-                            { arrayFilters: [{ "s.seasonNumber": content.seasons[sIdx].seasonNumber }, { "e._id": episode._id }] }
+                            { arrayFilters: [{ "s._id": content.seasons[sIdx]._id }, { "e._id": episode._id }] }
                         ).exec();
                     }
                 });
