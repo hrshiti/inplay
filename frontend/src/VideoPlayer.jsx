@@ -9,6 +9,7 @@ import HlsPlayer from './components/HlsPlayer';
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
     // User logic: Playing all content as movie content (Standard Landscape Player)
     // as per user request to play quick byte as movie content.
+    // as per user request to play quick byte as movie content.
     const [videoFit, setVideoFit] = useState('contain'); // Default to 'contain' to avoid cropping logos
     const isVertical = movie.isVertical || movie.type === 'quick_byte' || movie.type === 'reel' || movie.category === 'Quick Bites';
     const isQuickBite = isVertical; // Mapping for easier reference
