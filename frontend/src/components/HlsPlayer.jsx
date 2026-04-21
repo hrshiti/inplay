@@ -27,6 +27,8 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                     enableWorker: true,
                     lowLatencyMode: true,
                     backBufferLength: 90,
+                    startLevel: -1, // Auto quality start
+                    abrEwmaDefaultEstimate: 5000000, // Estimate 5Mbps to start with higher quality
                     // Allow CORS for production CloudFront
                     xhrSetup: (xhr) => {
                         xhr.withCredentials = false;

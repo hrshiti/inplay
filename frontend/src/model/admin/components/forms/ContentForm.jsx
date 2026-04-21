@@ -261,26 +261,16 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
   const handleFileUpload = (field, e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check if file is too large for preview (> 100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        console.log(`File is large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Skipping memory-intensive preview.`);
-        setFormData(prev => ({
-          ...prev,
-          [field]: 'placeholder_large_file', // Special flag for large files
-          [field + 'File']: file
-        }));
-        return;
+      if (formData[field] && typeof formData[field] === 'string' && formData[field].startsWith('blob:')) {
+        URL.revokeObjectURL(formData[field]);
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          [field]: reader.result,
-          [field + 'File']: file
-        }));
-      };
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        [field]: previewUrl,
+        [field + 'File']: file
+      }));
     }
   };
 
@@ -289,33 +279,20 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
   const handleEpisodeFile = (seasonIndex, episodeIndex, e) => {
     const file = e.target.files[0];
     if (file) {
-      // Skip preview for large files (> 100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        setFormData(prev => {
-          const newSeasons = [...prev.seasons];
-          newSeasons[seasonIndex].episodes[episodeIndex].video = {
-            url: 'placeholder_large_file',
-            public_id: 'local_upload_' + Date.now()
-          };
-          newSeasons[seasonIndex].episodes[episodeIndex].videoFile = file;
-          return { ...prev, seasons: newSeasons };
-        });
-        return;
-      }
+      setFormData(prev => {
+        const newSeasons = [...prev.seasons];
+        const oldPreview = newSeasons[seasonIndex].episodes[episodeIndex].video?.url;
+        if (oldPreview && typeof oldPreview === 'string' && oldPreview.startsWith('blob:')) {
+            URL.revokeObjectURL(oldPreview);
+        }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => {
-          const newSeasons = [...prev.seasons];
-          newSeasons[seasonIndex].episodes[episodeIndex].video = {
-            url: reader.result,
-            public_id: 'local_upload_' + Date.now()
-          };
-          newSeasons[seasonIndex].episodes[episodeIndex].videoFile = file; // Store file
-          return { ...prev, seasons: newSeasons };
-        });
-      };
-      reader.readAsDataURL(file);
+        newSeasons[seasonIndex].episodes[episodeIndex].video = {
+          url: URL.createObjectURL(file), // Pointer, not data
+          public_id: 'local_upload_' + Date.now()
+        };
+        newSeasons[seasonIndex].episodes[episodeIndex].videoFile = file;
+        return { ...prev, seasons: newSeasons };
+      });
     }
   };
   const handleAddSeason = () => {
@@ -1001,26 +978,14 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                 </div>
                 {formData.video && (
                   <div style={{ marginTop: '10px' }}>
-                    {formData.video === 'placeholder_large_file' ? (
-                      <div style={{
-                        width: '100%', height: '180px', background: '#111', color: 'white',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '6px'
-                      }}>
-                        <Video size={48} color="#46d369" style={{ marginBottom: '12px' }} />
-                        <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>Large Video Selected</span>
-                        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{(formData.videoFile?.size / (1024 * 1024)).toFixed(2)} MB</span>
-                        <p style={{ fontSize: '0.75rem', marginTop: '8px', color: '#94a3b8' }}>Preview disabled to save memory</p>
-                      </div>
-                    ) : (
-                      <HlsPlayer
-                        src={formData.video}
-                        hlsUrl={content?.video?.hls_url || content?.hls_url}
-                        controls
-                        isMuted={false}
-                        isLoop={false}
-                        style={{ width: '100%', maxHeight: '300px', borderRadius: '6px', backgroundColor: 'black' }}
-                      />
-                    )}
+                    <HlsPlayer
+                      src={formData.video}
+                      hlsUrl={content?.video?.hls_url || content?.hls_url}
+                      controls
+                      isMuted={false}
+                      isLoop={false}
+                      style={{ width: '100%', maxHeight: '300px', borderRadius: '6px', backgroundColor: 'black' }}
+                    />
                   </div>
                 )}
               </div>

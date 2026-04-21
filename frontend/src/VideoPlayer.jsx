@@ -9,7 +9,9 @@ import HlsPlayer from './components/HlsPlayer';
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
     // User logic: Playing all content as movie content (Standard Landscape Player)
     // as per user request to play quick byte as movie content.
-    const isQuickBite = movie.isVertical || movie.type === 'quick_byte' || movie.category === 'Quick Bites';
+    const [videoFit, setVideoFit] = useState('contain'); // Default to 'contain' to avoid cropping logos
+    const isVertical = movie.isVertical || movie.type === 'quick_byte' || movie.type === 'reel' || movie.category === 'Quick Bites';
+    const isQuickBite = isVertical; // Mapping for easier reference
 
     // PLAYLIST LOGIC
     // Determine the list of videos to play
@@ -533,38 +535,58 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 style={{ 
                     position: 'fixed', 
                     inset: 0, 
-                    background: 'black', 
+                    backgroundColor: '#000', 
                     zIndex: 9999, 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    width: '100vw',
-                    height: '100vh'
+                    width: '100%',
+                    height: '100dvh',
+                    overflow: 'hidden',
+                    userSelect: 'none',
+                    touchAction: 'none'
                 }}
             >
                 {/* Top Controls (Title, Speed, Quality, Close) */}
                 {showControls && (
                     <div style={{
-                        position: 'absolute', top: 0, left: 0, right: 0, padding: '20px',
-                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 100
+                        position: 'absolute', top: 0, left: 0, right: 0, 
+                        padding: 'calc(env(safe-area-inset-top, 20px) + 10px) 20px 40px 20px',
+                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 40%, transparent 100%)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100
                     }}>
-                        <div style={{ color: 'white' }}>
-                            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', lineHeight: 1.2 }}>
-                                {movie.title}
-                            </h2>
-                            {playlist.length > 1 && (
-                                <span style={{ fontSize: '0.8rem', opacity: 0.8, fontWeight: '500' }}>
-                                    Episode {currentIndex + 1} / {playlist.length}
-                                </span>
-                            )}
+                        <div style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onClose(); }}
+                                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '6px', color: 'white' }}
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', letterSpacing: '-0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                                    {movie.title}
+                                </h2>
+                                {playlist.length > 1 && (
+                                    <span style={{ fontSize: '0.75rem', opacity: 0.9, fontWeight: '600', color: 'var(--accent)' }}>
+                                        EP {currentIndex + 1} OF {playlist.length}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {/* Fit/Fill Toggle */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setVideoFit(prev => prev === 'contain' ? 'cover' : 'contain'); }}
+                                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(10px)' }}
+                            >
+                                {videoFit === 'contain' ? 'FIT' : 'FILL'}
+                            </button>
+
                             {/* Speed Control */}
                             <button
                                 onClick={openSpeedSheet}
-                                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(10px)' }}
                             >
                                 {playbackSpeed}x
                             </button>
@@ -572,7 +594,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                             {/* Quality Control */}
                             <button
                                 onClick={openQualitySheet}
-                                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '4px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', cursor: 'pointer', backdropFilter: 'blur(10px)' }}
                             >
                                 {videoQuality === 'Auto' ? 'Auto' : videoQuality}
                             </button>
@@ -596,8 +618,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 {showControls && (
                     <div style={{
                         position: 'absolute', inset: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px',
-                        zIndex: 90, background: 'rgba(0,0,0,0.3)'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '40px',
+                        zIndex: 90, background: 'rgba(0,0,0,0.2)',
+                        transition: 'background 0.3s'
                     }}>
                         {/* Previous Episode */}
                         {isEpisodic && (
@@ -679,33 +702,45 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 {/* Bottom Controls Bar (Episodes & Fullscreen) */}
                 {showControls && (
                     <div style={{
-                        position: 'absolute', bottom: '20px', left: 0, right: 0, padding: '0 20px',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100
+                        position: 'absolute', bottom: 'env(safe-area-inset-bottom, 20px)', left: 0, right: 0, padding: '20px',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)'
                     }}>
                         {/* Left Side: Episode List Button (Only if Episodic) */}
                         {isEpisodic ? (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowEpisodeList(true); }}
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px',
-                                    padding: '8px 12px', color: 'white', cursor: 'pointer', backdropFilter: 'blur(4px)'
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '12px',
+                                    padding: '10px 16px', color: 'white', cursor: 'pointer', backdropFilter: 'blur(10px)',
+                                    fontWeight: '700', fontSize: '0.85rem'
                                 }}
                             >
-                                <List size={20} />
-                                <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Episodes</span>
+                                <List size={18} />
+                                <span>ALL EPISODES</span>
                             </button>
                         ) : <div></div>}
 
                         {/* Right Side: Full Screen Button */}
-                        <button
-                            onClick={toggleFullScreen}
-                            style={{
-                                background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: '8px'
-                            }}
-                        >
-                            <Maximize2 size={24} />
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                             <button
+                                onClick={handleRotate}
+                                style={{
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)'
+                                }}
+                            >
+                                <Smartphone size={20} style={{ transform: 'rotate(90deg)' }} />
+                            </button>
+                            <button
+                                onClick={toggleFullScreen}
+                                style={{
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)'
+                                }}
+                            >
+                                <Maximize2 size={20} />
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -772,7 +807,14 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         onPause={() => syncProgress()}
                         onEnded={handleVideoEnd}
                         onTimeUpdate={handleTimeUpdate}
-                        style={{ width: '100%', height: '100%', maxHeight: '100vh', objectFit: isQuickBite ? 'cover' : 'contain' }}
+                        style={{ 
+                            position: 'absolute',
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: videoFit,
+                            backgroundColor: 'black',
+                            zIndex: 1
+                        }}
                     />
                 ) : (
                     <div style={{ color: 'white', textAlign: 'center' }}>
@@ -800,8 +842,16 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 })()}
 
                 {/* Bottom Progress Bar */}
-                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', background: 'rgba(255,255,255,0.3)', zIndex: 101 }}>
-                    <div style={{ width: `${progress}%`, height: '100%', background: '#ff0000', transition: 'width 0.1s linear' }}></div>
+                <div style={{ 
+                    position: 'absolute', bottom: 0, left: 0, width: '100%', height: '3px', 
+                    background: 'rgba(255,255,255,0.1)', zIndex: 101, overflow: 'hidden' 
+                }}>
+                    <div style={{ 
+                        width: `${progress}%`, height: '100%', 
+                        background: 'var(--accent)', 
+                        transition: 'width 0.2s linear',
+                        boxShadow: '0 0 10px var(--accent)'
+                    }}></div>
                 </div>
 
                 <style>{`
@@ -867,15 +917,19 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 onTouchEnd={handleTouchEnd}
                 style={{
                     width: '100%',
-                    // Maintain aspect ratio or full height depending on screen mode/size
-                    // Using aspect-ratio ensures it looks like a player info page
-                    aspectRatio: '16/9',
+                    // Adjust aspect ratio based on content type and screen mode
+                    aspectRatio: isFullScreen ? 'unset' : (isVertical ? '9/16' : '16/9'),
+                    height: isFullScreen ? '100dvh' : 'auto',
+                    maxHeight: isFullScreen ? '100dvh' : '70vh', // Limit height on portrait mobile for standard-view
                     background: 'black',
                     flexShrink: 0,
-                    // Sticky top so video stays visible while scrolling details (optional, but good UX)
-                    position: 'sticky',
+                    position: isFullScreen ? 'fixed' : 'sticky',
+                    inset: isFullScreen ? 0 : 'auto',
                     top: 0,
-                    zIndex: 50
+                    zIndex: 50,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}
             >
                 <HlsPlayer
@@ -887,7 +941,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     onPause={() => syncProgress()}
                     onEnded={handleVideoEnd}
                     onTimeUpdate={handleTimeUpdate}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: isVertical ? videoFit : (isFullScreen ? 'contain' : 'cover'),
+                        backgroundColor: 'black'
+                    }}
                 />
 
                 {/* Background Preloader for Next Episode (Standard Player) */}

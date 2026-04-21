@@ -166,24 +166,31 @@ const createContent = async (contentData, adminId, files = {}) => {
         });
     }
 
-    // 2. Process episode videos
+    // 2. Process episode videos sequentially in background to save CPU
     if (content.type === 'series' || content.type === 'hindi_series') {
-        content.seasons.forEach((season, sIdx) => {
-            season.episodes.forEach((episode, eIdx) => {
-                const fileField = `season_${sIdx}_episode_${eIdx}_video`;
-                if (files[fileField]) {
-                    mediaService.handleVideoHLS(files[fileField].path, episode._id, 'episode').then(hlsUrl => {
-                        if (hlsUrl) {
-                            Content.updateOne(
-                                { _id: content._id, "seasons.episodes._id": episode._id },
-                                { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
-                                { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
-                            ).exec();
+        (async () => {
+            for (let sIdx = 0; sIdx < content.seasons.length; sIdx++) {
+                const season = content.seasons[sIdx];
+                for (let eIdx = 0; eIdx < season.episodes.length; eIdx++) {
+                    const episode = season.episodes[eIdx];
+                    const fileField = `season_${sIdx}_episode_${eIdx}_video`;
+                    if (files[fileField]) {
+                        try {
+                            const hlsUrl = await mediaService.handleVideoHLS(files[fileField].path, episode._id, 'episode');
+                            if (hlsUrl) {
+                                await Content.updateOne(
+                                    { _id: content._id, "seasons.episodes._id": episode._id },
+                                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
+                                    { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
+                                ).exec();
+                            }
+                        } catch (err) {
+                            console.error(`[HLS] Error in sequential backup:`, err);
                         }
-                    });
+                    }
                 }
-            });
-        });
+            }
+        })();
     }
 
     return hydrateContent(content);
