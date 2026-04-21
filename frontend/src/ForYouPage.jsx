@@ -39,7 +39,6 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
         };
     }, []);
 
-    // Prefetch next videos for "Fast Mode"
     useEffect(() => {
         if (!reels.length) return;
 
@@ -47,16 +46,21 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
         const existingPrefetches = document.querySelectorAll('link[rel="prefetch"][data-reel]');
         existingPrefetches.forEach(link => link.remove());
 
-        // Create new prefetch links for the next 5 items
-        for (let i = activeIndex + 1; i <= activeIndex + 5 && i < reels.length; i++) {
+        // Create new prefetch links for the next 3 items (Reduced from 5 to avoid overwhelming)
+        for (let i = activeIndex + 1; i <= activeIndex + 3 && i < reels.length; i++) {
             const reel = reels[i];
             const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
-            const url = getImageUrl(episodes[0]?.url);
+            
+            // Prefer HLS URL for preloading/fetching manifest
+            const hlsUrl = reel.hls_url || reel.video?.hls_url;
+            const mp4Url = getImageUrl(episodes[0]?.url);
+            const url = hlsUrl || mp4Url;
 
             if (url) {
                 const link = document.createElement('link');
                 link.rel = 'prefetch';
-                link.as = 'video';
+                // If it's HLS (.m3u8), we fetch it as a text/manifest, browser won't use it as 'video'
+                link.as = url.includes('.m3u8') ? 'fetch' : 'video';
                 link.href = url;
                 link.setAttribute('data-reel', reel._id);
                 document.head.appendChild(link);
@@ -376,8 +380,10 @@ function ReelItem({
             <div className="reel-video-wrapper" onClick={handlePlayPause} style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <HlsPlayer
                     ref={videoRef}
-                    src={currentVideoSrc}
-                    hlsUrl={reel.hls_url || (reel.video?.hls_url)}
+                    // Only provide source if the reel is active or needs preloading
+                    // This prevents 50+ Hls.js instances from starting at once
+                    src={(isActiveIndex || shouldPreload) ? currentVideoSrc : ''}
+                    hlsUrl={(isActiveIndex || shouldPreload) ? (reel.hls_url || reel.video?.hls_url) : ''}
                     className="reel-video"
                     isLoop={episodes.length === 1}
                     isMuted={muted}

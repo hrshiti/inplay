@@ -782,15 +782,22 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 )}
 
                 {/* Background Preloader for Next Episode */}
-                {currentIndex < playlist.length - 1 && (
-                    <video
-                        key={`preload-${currentIndex + 1}`}
-                        src={getVideoUrl(playlist[currentIndex + 1])}
-                        preload="auto"
-                        muted
-                        style={{ display: 'none' }}
-                    />
-                )}
+                {currentIndex < playlist.length - 1 && (() => {
+                    const nextItem = playlist[currentIndex + 1];
+                    const nextUrl = getVideoUrl(nextItem);
+                    if (nextUrl && !nextUrl.includes('.m3u8')) {
+                        return (
+                            <video
+                                key={`preload-${currentIndex + 1}`}
+                                src={nextUrl}
+                                preload="auto"
+                                muted
+                                style={{ display: 'none' }}
+                            />
+                        );
+                    }
+                    return null;
+                })()}
 
                 {/* Bottom Progress Bar */}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', background: 'rgba(255,255,255,0.3)', zIndex: 101 }}>
@@ -884,15 +891,24 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 />
 
                 {/* Background Preloader for Next Episode (Standard Player) */}
-                {currentIndex < playlist.length - 1 && (
-                    <video
-                        key={`preload-std-${currentIndex + 1}`}
-                        src={getVideoUrl(playlist[currentIndex + 1])}
-                        preload="auto"
-                        muted
-                        style={{ display: 'none' }}
-                    />
-                )}
+                {currentIndex < playlist.length - 1 && (() => {
+                    const nextItem = playlist[currentIndex + 1];
+                    const nextUrl = getVideoUrl(nextItem);
+                    // Standard <video> tag preloader only works for MP4. 
+                    // For HLS, loading manifest as video src causes browser warnings.
+                    if (nextUrl && !nextUrl.includes('.m3u8')) {
+                        return (
+                            <video
+                                key={`preload-std-${currentIndex + 1}`}
+                                src={nextUrl}
+                                preload="auto"
+                                muted
+                                style={{ display: 'none' }}
+                            />
+                        );
+                    }
+                    return null;
+                })()}
 
 
                 {/* Reuse Episode List Overlay (Scoped to Video Container for Fullscreen support) */}

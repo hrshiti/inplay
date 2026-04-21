@@ -19,23 +19,57 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
         }
 
         const effectiveSrc = hlsUrl || src;
+        console.log(`[HlsPlayer] Initializing with source: ${effectiveSrc}`);
 
         if (effectiveSrc && (effectiveSrc.includes('.m3u8') || hlsUrl)) {
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
+                    backBufferLength: 90,
+                    // Allow CORS for production CloudFront
+                    xhrSetup: (xhr) => {
+                        xhr.withCredentials = false;
+                    }
                 });
+
                 hlsRef.current = hls;
                 hls.loadSource(effectiveSrc);
                 hls.attachMedia(video);
+                
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    // Only autoplay if needed, but usually parent handles play/pause
+                    console.log(`[HlsPlayer] Manifest parsed successfully for ${effectiveSrc}`);
                 });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        console.error(`[HlsPlayer] Fatal error: ${data.type} - ${data.details}`);
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('[HlsPlayer] Network error, trying to recover...');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('[HlsPlayer] Media error, trying to recover...');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.error('[HlsPlayer] Unrecoverable error, destroying instance');
+                                hls.destroy();
+                                break;
+                        }
+                    } else {
+                        // Non-fatal errors like buffer stalls or segment load failures
+                        console.warn(`[HlsPlayer] Non-fatal error: ${data.details}`);
+                    }
+                });
+
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                console.log('[HlsPlayer] Using native HLS support (Safari/iOS/Mac)');
                 video.src = effectiveSrc;
             }
         } else if (src) {
+            console.log(`[HlsPlayer] Using standard MP4 source: ${src}`);
             video.src = src;
         }
 
