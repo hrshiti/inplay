@@ -7,12 +7,16 @@ const createPromotion = async (req, res) => {
     try {
         const { title, posterImageUrl, promoVideoUrl, displayLocation, isActive } = req.body;
 
+        // Force inactive if video needs processing
+        const intendedActive = isActive !== undefined ? (isActive === 'true' || isActive === true) : true;
+        const forceInactive = (promoVideoUrl && promoVideoUrl.startsWith('/uploads')) ? false : intendedActive;
+
         const promotion = await Promotion.create({
             title,
             posterImageUrl,
             promoVideoUrl,
             displayLocation,
-            isActive,
+            isActive: forceInactive,
         });
 
         // Async HLS Processing for Promotion Video
@@ -21,10 +25,10 @@ const createPromotion = async (req, res) => {
             const mediaService = require('../services/mediaService');
             const localPath = getFilePathFromUrl(promoVideoUrl);
 
-            mediaService.handleVideoHLS(localPath, promotion._id, 'promotion').then(hlsUrl => {
+            mediaService.handleVideoHLS(localPath, promotion._id, 'promotion').then(async (hlsUrl) => {
                 if (hlsUrl) {
-                    Promotion.findByIdAndUpdate(promotion._id, { hls_url: hlsUrl }).exec();
-                    console.log(`HLS synced for Promotion: ${promotion.title}`);
+                    await Promotion.findByIdAndUpdate(promotion._id, { hls_url: hlsUrl, isActive: intendedActive }).exec();
+                    console.log(`HLS synced and Activated for Promotion: ${promotion.title}`);
                 }
             });
         }

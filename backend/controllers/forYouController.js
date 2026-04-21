@@ -66,9 +66,13 @@ const createForYouHandler = async (req, res) => {
 
         if (!title) throw new Error('Title is required');
 
+        // Determine intended status, force draft if video needs processing
+        const intendedStatus = status || 'published';
+        const forceDraft = files.video ? 'draft' : intendedStatus;
+
         const forYou = new ForYou({
             title,
-            status: status || 'published',
+            status: forceDraft,
             description: description || ''
         });
 
@@ -100,10 +104,12 @@ const createForYouHandler = async (req, res) => {
 
         // Async HLS Processing
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(hlsUrl => {
+            mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(async (hlsUrl) => {
                 if (hlsUrl) {
-                    ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl }).exec();
-                    console.log(`HLS Master synced for Reel: ${forYou.title}`);
+                    await ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, status: intendedStatus }).exec();
+                    console.log(`HLS Master synced and Published for Reel: ${forYou.title}`);
+                    
+                    // Note: If you want notifications for Reels too, add them here
                 }
             });
         }

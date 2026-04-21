@@ -123,20 +123,45 @@ const createContent = async (contentData, adminId, files = {}) => {
       }
     }
 
+    // Determine intended status, but force draft if video needs processing
+    const intendedStatus = contentData.status || 'published';
+    const forceDraft = files.video ? 'draft' : intendedStatus;
+
     // Create content record in DB
     const content = await Content.create({
       ...contentData,
       ...mediaUrls,
+      status: forceDraft,
       createdBy: adminId
     });
 
     // START ASYNC HLS PROCESSING
     // 1. Process main video
     if (files.video) {
-        mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(hlsUrl => {
+        mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
             if (hlsUrl) {
-                Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl }).exec();
-                console.log(`HLS Master synced for: ${content.title}`);
+                const updatedContent = await Content.findByIdAndUpdate(
+                    content._id, 
+                    { 'video.hls_url': hlsUrl, status: intendedStatus },
+                    { new: true }
+                ).exec();
+                
+                console.log(`HLS Master synced and Published for: ${content.title}`);
+
+                // Send push notification only NOW when it's actually ready
+                const { notifyAllUsers } = require('../utils/notificationHelper');
+                if (updatedContent && updatedContent.status === 'published') {
+                    notifyAllUsers({
+                        title: `New ${updatedContent.type || 'Movie'} Released!`,
+                        body: updatedContent.title,
+                        imageUrl: updatedContent.poster?.url || updatedContent.poster?.secure_url,
+                        data: {
+                            type: 'content',
+                            id: updatedContent._id.toString(),
+                            link: `/movie-details/${updatedContent._id}`
+                        }
+                    });
+                }
             }
         });
     }

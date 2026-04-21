@@ -76,9 +76,13 @@ const createQuickByteHandler = async (req, res) => {
 
         if (!title) throw new Error('Title is required');
 
+        // Determine intended status, force draft if video needs processing
+        const intendedStatus = status || 'published';
+        const forceDraft = (files.video || (files.videos && files.videos.length > 0)) ? 'draft' : intendedStatus;
+
         const quickByte = new QuickByte({
             title,
-            status: status || 'published',
+            status: forceDraft,
             description: description || '',
             genre: genre || 'Entertainment',
             year: year || new Date().getFullYear(),
@@ -133,9 +137,27 @@ const createQuickByteHandler = async (req, res) => {
 
         // Async HLS Processing
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(hlsUrl => {
+            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(async (hlsUrl) => {
                 if (hlsUrl) {
-                    QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl }).exec();
+                    const updated = await QuickByte.findByIdAndUpdate(
+                        quickByte._id, 
+                        { 'video.hls_url': hlsUrl, status: intendedStatus },
+                        { new: true }
+                    ).exec();
+
+                    // Send notification if now published
+                    if (updated && updated.status === 'published') {
+                        notifyAllUsers({
+                            title: `New QuickByte Released!`,
+                            body: updated.title,
+                            imageUrl: updated.thumbnail?.url || updated.thumbnail?.secure_url,
+                            data: {
+                                type: 'quickbyte',
+                                id: updated._id.toString(),
+                                link: `/reels`
+                            }
+                        });
+                    }
                 }
             });
         }
@@ -169,19 +191,7 @@ const createQuickByteHandler = async (req, res) => {
             data: hydrateQuickByte(quickByte)
         });
 
-        // Send push notification to all users
-        if (quickByte.status === 'published') {
-            notifyAllUsers({
-                title: `New QuickByte Released!`,
-                body: quickByte.title,
-                imageUrl: quickByte.thumbnail?.url || quickByte.thumbnail?.secure_url,
-                data: {
-                    type: 'quickbyte',
-                    id: quickByte._id.toString(),
-                    link: `/reels`
-                }
-            });
-        }
+        // Removed immediate notification, now handled after HLS
 
     } catch (error) {
         // Cleanup uploaded files from disk

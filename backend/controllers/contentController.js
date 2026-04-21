@@ -122,19 +122,7 @@ const createContent = [
         data: content
       });
 
-      // Send push notification to all users
-      if (content && content.status === CONTENT_STATUS.PUBLISHED) {
-        notifyAllUsers({
-          title: `New ${content.type || 'Movie'} Released!`,
-          body: content.title,
-          imageUrl: content.poster?.url || content.poster?.secure_url,
-          data: {
-            type: 'content',
-            id: content._id.toString(),
-            link: `/movie-details/${content._id}`
-          }
-        });
-      }
+      });
     } catch (error) {
       console.error(error);
       res.status(400).json({
