@@ -17,6 +17,12 @@ const PlanPage = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (currentUser && (currentUser.phone === '6268204871' || currentUser.phone === '6268455485')) {
+      navigate('/', { replace: true });
+    }
+  }, [currentUser, navigate]);
+
   const fetchData = async () => {
     try {
       setLoading(true);

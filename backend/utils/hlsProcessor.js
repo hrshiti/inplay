@@ -19,29 +19,30 @@ const processToHLS = (inputPath, outputDir) => {
 
             const outputDirForward = outputDir.replace(/\\/g, '/');
             
-            // FFmpeg arguments for 3 qualities (240p, 480p, 720p)
-            // -preset veryfast: Faster processing
-            // -profile:v baseline -level 3.0: High compatibility for Android APK
-            // -hls_time 6: Faster startup/buffering on mobile
+            // FFmpeg arguments for 4 qualities (240p, 480p, 720p, 1080p)
+            // -preset veryfast: Good balance of speed and quality
+            // -crf 24: High quality encoding
             const args = [
                 '-i', inputPath,
-                '-preset', 'ultrafast', 
+                '-preset', 'veryfast', 
                 '-threads', '0',
-                '-tune', 'fastdecode',  // Speed up decoding/processing
-                '-filter_complex', '[0:v]split=3[v1][v2][v3];[v1]scale=w=426:h=240[v1out];[v2]scale=w=854:h=480[v2out];[v3]scale=w=1280:h=720[v3out];[0:a]asplit=3[a1][a2][a3]',
-                // 240p
-                '-map', '[v1out]', '-map', '[a1]', '-c:v:0', 'libx264', '-crf:v:0', '28', '-maxrate:v:0', '400k', '-bufsize:v:0', '800k', '-profile:v:0', 'baseline', '-level', '3.0',
-                // 480p
-                '-map', '[v2out]', '-map', '[a2]', '-c:v:1', 'libx264', '-crf:v:1', '28', '-maxrate:v:1', '800k', '-bufsize:v:1', '1200k',
-                // 720p
-                '-map', '[v3out]', '-map', '[a3]', '-c:v:2', 'libx264', '-crf:v:2', '28', '-maxrate:v:2', '1400k', '-bufsize:v:2', '2100k',
+                '-tune', 'fastdecode',
+                '-filter_complex', '[0:v]split=4[v1][v2][v3][v4];[v1]scale=-2:240[v1out];[v2]scale=-2:480[v2out];[v3]scale=-2:720[v3out];[v4]scale=-2:1080[v4out];[0:a]asplit=4[a1][a2][a3][a4]',
+                // 240p (Low Quality)
+                '-map', '[v1out]', '-map', '[a1]', '-c:v:0', 'libx264', '-crf:v:0', '26', '-maxrate:v:0', '600k', '-bufsize:v:0', '1200k', '-profile:v:0', 'baseline', '-level', '3.0',
+                // 480p (Standard Quality)
+                '-map', '[v2out]', '-map', '[a2]', '-c:v:1', 'libx264', '-crf:v:1', '24', '-maxrate:v:1', '1500k', '-bufsize:v:1', '3000k',
+                // 720p (High Quality)
+                '-map', '[v3out]', '-map', '[a3]', '-c:v:2', 'libx264', '-crf:v:2', '24', '-maxrate:v:2', '3500k', '-bufsize:v:2', '7000k',
+                // 1080p (Full HD Quality)
+                '-map', '[v4out]', '-map', '[a4]', '-c:v:3', 'libx264', '-crf:v:3', '22', '-maxrate:v:3', '6000k', '-bufsize:v:3', '12000k',
                 '-c:a', 'aac', '-ar', '44100', '-ac', '2',
                 '-f', 'hls',
-                '-hls_time', '10',
+                '-hls_time', '6',
                 '-hls_playlist_type', 'vod',
                 '-hls_list_size', '0',
                 '-master_pl_name', 'master.m3u8',
-                '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2',
+                '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3',
                 '-hls_segment_filename', `${outputDirForward}/output_%v_%03d.ts`,
                 `${outputDirForward}/output_%v.m3u8`
             ];

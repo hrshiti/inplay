@@ -237,7 +237,8 @@ function App() {
         
         // STRICT REDIRECT: If user is NOT active, send to plan page.
         // We use !isSubscribed to catch false, null, and undefined.
-        if (!isSubscribed) {
+        // Skip for dev testing numbers
+        if (!isSubscribed && currentUser.phone !== '6268204871' && currentUser.phone !== '6268455485') {
            navigate('/plan', { replace: true });
         }
       }
