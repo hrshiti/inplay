@@ -1021,15 +1021,15 @@ function App() {
 
                         {/* Quick Bites (Vertical Content) Section */}
                         {/* This section contains ONLY vertical content as requested */}
-                        <section className="section" style={{ marginBottom: '40px' }}>
+                        <section className="section" style={{ marginBottom: '0px' }}>
                           <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
-                              <h2 className="section-title" style={{ fontSize: '1.4rem', fontWeight: '800' }}>Quick Bites</h2>
+                              <h2 className="section-title">Quick Bites</h2>
                               <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Shorts</span>
                             </div>
                           </div>
-                          <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 20px' }}>
+                          <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 0' }}>
                             {quickBites
                               .filter(item => item.status === 'published')
                               .filter(item => {
@@ -1117,11 +1117,11 @@ function App() {
 
                         {/* Continue Watching (Quick Bites) Section */}
                         {qbContinueWatching.length > 0 && (
-                          <section className="section" style={{ marginBottom: '40px' }}>
-                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
+                          <section className="section" style={{ marginBottom: '24px' }}>
+                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '10px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
-                                <h2 className="section-title" style={{ fontSize: '1.4rem', fontWeight: '800' }}>Continue Watching</h2>
+                                <h2 className="section-title">Continue Watching</h2>
                               </div>
                             </div>
                             <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 20px' }}>
