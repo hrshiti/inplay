@@ -50,7 +50,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
         for (let i = activeIndex + 1; i <= activeIndex + 3 && i < reels.length; i++) {
             const reel = reels[i];
             const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
-            
+
             // Prefer HLS URL for preloading/fetching manifest
             const hlsUrl = reel.hls_url || reel.video?.hls_url;
             const mp4Url = getImageUrl(episodes[0]?.url);

@@ -133,7 +133,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 hls.loadSource(videoSrc);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, onVideoReady);
-                
+
                 // Error handling
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     if (data.fatal) {
@@ -530,13 +530,13 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{ 
-                    position: 'fixed', 
-                    inset: 0, 
-                    background: 'black', 
-                    zIndex: 9999, 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'black',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     width: '100vw',
                     height: '100vh'
