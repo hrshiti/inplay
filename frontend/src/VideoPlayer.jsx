@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Hls from 'hls.js';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
 import { SpeedSheet, QualitySheet } from './PlayerSheets';
@@ -306,6 +306,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     };
 
     const handleTouchMove = (e) => {
+        if (e.cancelable) e.preventDefault(); // Stop browser from scrolling during swipe
         touchEndX.current = e.touches[0].clientX;
         touchEndY.current = e.touches[0].clientY;
     };
@@ -313,16 +314,17 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const handleTouchEnd = (e) => {
         const deltaX = touchStartX.current - touchEndX.current;
         const deltaY = touchStartY.current - touchEndY.current;
-        const threshold = 70;
+        const threshold = 40; // Lower threshold for better sensitivity
 
-        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold) {
-            if (deltaX > threshold) {
-                // Swipe Left -> Next
+        // Prioritize vertical swipes (Y-axis) for Reels-style navigation
+        if (Math.abs(deltaY) > threshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+            if (deltaY > 0) {
+                // Swipe Up -> Next
                 if (currentIndex < playlist.length - 1) {
                     setCurrentIndex(prev => prev + 1);
                 }
-            } else if (deltaX < -threshold) {
-                // Swipe Right -> Prev
+            } else {
+                // Swipe Down -> Prev
                 if (currentIndex > 0) {
                     setCurrentIndex(prev => prev - 1);
                 }
@@ -572,7 +574,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     transition: 'opacity 0.2s'
                                 }}
                             >
-                                <ChevronLeft size={48} />
+                                <ChevronUp size={48} />
                             </button>
                         )}
 
@@ -631,7 +633,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     transition: 'opacity 0.2s'
                                 }}
                             >
-                                <ChevronRight size={48} />
+                                <ChevronDown size={48} />
                             </button>
                         )}
                     </div>
@@ -869,8 +871,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     top: 0,
                     zIndex: 50,
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    touchAction: 'none'
                 }}
             >
                 <HlsPlayer

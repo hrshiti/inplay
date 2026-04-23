@@ -1089,11 +1089,7 @@ function App() {
                                         justifyContent: 'flex-end',
                                         padding: '10px'
                                       }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                          <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Play size={10} fill="white" stroke="none" />
-                                          </div>
-                                        </div>
+
                                       </div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -1192,9 +1188,7 @@ function App() {
                                         padding: '10px'
                                       }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                                          <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Play size={10} fill="white" stroke="none" />
-                                          </div>
+
                                           <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
                                             {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
                                           </span>
