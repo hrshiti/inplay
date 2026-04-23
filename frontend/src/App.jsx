@@ -228,22 +228,22 @@ function App() {
   useEffect(() => {
     const checkAccess = async () => {
       // Don't redirect on public or admin routes
-      if (currentUser && !location.pathname.startsWith('/admin') && 
-          location.pathname !== '/plan' && location.pathname !== '/login' && 
-          location.pathname !== '/signup') {
-        
+      if (currentUser && !location.pathname.startsWith('/admin') &&
+        location.pathname !== '/plan' && location.pathname !== '/login' &&
+        location.pathname !== '/signup') {
+
         const isSubscribed = currentUser.subscription?.isActive;
         const isTrialUsed = currentUser.subscription?.isTrialUsed;
-        
+
         // STRICT REDIRECT: If user is NOT active, send to plan page.
         // We use !isSubscribed to catch false, null, and undefined.
         // Skip for dev testing numbers
         if (!isSubscribed && currentUser.phone !== '6268204871' && currentUser.phone !== '6268455485') {
-           navigate('/plan', { replace: true });
+          navigate('/plan', { replace: true });
         }
       }
     };
-    
+
     checkAccess();
   }, [currentUser?._id, location.pathname, navigate]);
 
@@ -639,7 +639,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
-  }, []);  const lenisRef = useRef(null);
+  }, []); const lenisRef = useRef(null);
 
   // Smooth Scroll Setup with GSAP Sync
   useEffect(() => {
@@ -1093,10 +1093,6 @@ function App() {
                                           <div style={{ background: '#e50914', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <Play size={10} fill="white" stroke="none" />
                                           </div>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                            <Eye size={10} color="#fff" />
-                                            <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{formatViews(verticalItem.views)}</span>
-                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1113,8 +1109,8 @@ function App() {
                                       }}>
                                         {verticalItem.title}
                                       </span>
-                                      <span style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
-                                        {verticalItem.genre || 'Short'} • {verticalItem.year || '2024'}
+                                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Eye size={10} /> {formatViews(verticalItem.views)} Views
                                       </span>
                                     </div>
                                   </motion.div>
@@ -1202,11 +1198,7 @@ function App() {
                                           <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
                                             {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
                                           </span>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: '4px' }}>
-                                            <Eye size={10} color="#fff" />
-                                            <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{formatViews(item.views)}</span>
                                           </div>
-                                        </div>
 
                                         {episodeDuration && item.watchedSeconds !== undefined && (
                                           <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -1229,8 +1221,8 @@ function App() {
                                       }}>
                                         {item.title}
                                       </span>
-                                      <span style={{ fontSize: '9px', color: '#888', fontWeight: '500' }}>
-                                        {item.genre || 'Short'} • {formatDuration(episodeDuration)}
+                                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Eye size={10} /> {formatViews(item.views)} Views • {formatDuration(episodeDuration)}
                                       </span>
                                     </div>
                                   </motion.div>
