@@ -964,7 +964,7 @@ function App() {
                         {/* Continue Watching Section */}
                         {continueWatching.length > 0 && (
                           <section className="section" style={{
-                            marginTop: '0',
+                            marginTop: '10px',
                             background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
                             paddingTop: '20px',
                             paddingBottom: '20px',
@@ -1029,7 +1029,7 @@ function App() {
                               <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Shorts</span>
                             </div>
                           </div>
-                          <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 0' }}>
+                          <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
                             {quickBites
                               .filter(item => item.status === 'published')
                               .filter(item => {
@@ -1092,7 +1092,7 @@ function App() {
 
                                       </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                       <span style={{
                                         fontSize: '12px',
                                         fontWeight: '700',
@@ -1117,14 +1117,14 @@ function App() {
 
                         {/* Continue Watching (Quick Bites) Section */}
                         {qbContinueWatching.length > 0 && (
-                          <section className="section" style={{ marginBottom: '24px' }}>
-                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '10px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <section className="section" style={{ marginBottom: '32px', marginTop: '20px' }}>
+                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
-                                <h2 className="section-title">Continue Watching</h2>
+                                <h2 className="section-title" style={{ fontSize: '1.1rem' }}>Continue Watching</h2>
                               </div>
                             </div>
-                            <div className="horizontal-list hide-scrollbar" style={{ gap: '14px', padding: '0 20px 20px' }}>
+                            <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
                               {qbContinueWatching.map((item, index) => {
                                 // Get the proper image from the QuickByte data
                                 const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
@@ -1202,7 +1202,7 @@ function App() {
                                       </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                       <span style={{
                                         fontSize: '12px',
                                         fontWeight: '700',
