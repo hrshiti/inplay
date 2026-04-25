@@ -16,7 +16,7 @@ router.post('/', protect, authorize('admin'), uploadMixed.single('file'), async 
         const result = transformFileToResponse(req.file);
 
         // Hydrate URL if local
-        const backendUrl = process.env.BACKEND_URL;
+        const backendUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : '';
         const finalUrl = result.secure_url && result.secure_url.startsWith('/')
             ? `${backendUrl}${result.secure_url}`
             : result.secure_url;
