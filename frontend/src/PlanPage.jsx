@@ -183,11 +183,13 @@ const PlanPage = () => {
             }}
           >
             <video
+              ref={(el) => { if (el) el.playbackRate = 1.5; }}
               src={trialSettings?.promoVideoHlsUrl || getImageUrl(trialSettings?.promoVideoUrl)}
               autoPlay
               muted
               loop
               playsInline
+              preload="auto"
               poster={getImageUrl(trialSettings?.promoVideoThumbnail)}
               onCanPlay={(e) => e.target.play().catch(() => {})}
               style={{ width: '100%', height: '100%', minHeight: '280px', objectFit: 'cover', display: 'block' }}
