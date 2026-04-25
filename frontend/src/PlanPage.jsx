@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Zap, Crown, Shield, ArrowRight, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Check, Zap, Crown, Shield, ArrowRight, Star, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import authService from './services/api/authService';
 import subscriptionService from './services/api/subscriptionService';
 import { initRazorpayPayment } from './lib/utils/razorpay';
@@ -14,6 +14,12 @@ const PlanPage = () => {
   const [trialSettings, setTrialSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [expandedPlans, setExpandedPlans] = useState({});
+  const [isMuted, setIsMuted] = useState(true);
+
+  const togglePlanDetails = (planId) => {
+    setExpandedPlans(prev => ({ ...prev, [planId]: !prev[planId] }));
+  };
 
   useEffect(() => {
     fetchData();
@@ -28,16 +34,28 @@ const PlanPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [allPlans, appSettings, profile] = await Promise.all([
-        subscriptionService.getPlans(),
-        subscriptionService.getAppSettings(),
-        authService.getProfile()
-      ]);
+      
+      let profile = null;
+      try {
+        profile = await authService.getProfile();
+      } catch (err) {
+        // User not logged in
+      }
+
+      let allPlans = [];
+      try {
+        allPlans = await subscriptionService.getPlans();
+      } catch (err) {
+        console.warn('Could not fetch plans (maybe not logged in):', err.message);
+      }
+
+      const appSettings = await subscriptionService.getAppSettings();
+
       setPlans(allPlans.filter(p => p.isActive));
       setTrialSettings(appSettings?.subscriptionSettings);
       setCurrentUser(profile);
     } catch (err) {
-      console.error('Failed to load plans:', err);
+      console.error('Failed to load settings:', err);
     } finally {
       setLoading(false);
     }
@@ -111,10 +129,10 @@ const PlanPage = () => {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <Crown size={48} color="#EAB308" style={{ marginBottom: '16px' }} />
-          <h1 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '0 0 8px' }}>Choose Your Plan</h1>
-          <p style={{ color: '#9CA3AF', fontSize: '1.1rem' }}>Unlimited access to all movies, series, and exclusives</p>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <Crown size={32} color="#EAB308" style={{ marginBottom: '8px' }} />
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '0 0 6px' }}>Choose Your Plan</h1>
+          <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>Unlimited access to all movies & series</p>
         </div>
 
         {/* Trial Offer - Featured */}
@@ -123,44 +141,54 @@ const PlanPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             style={{
-              background: 'linear-gradient(135deg, #46d369 0%, #2e8b44 100%)',
-              borderRadius: '24px',
-              padding: '30px',
-              marginBottom: '40px',
+              background: 'linear-gradient(135deg, #DFB556 0%, #FDF4B8 30%, #DFB556 70%, #AA771C 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              marginBottom: '30px',
               position: 'relative',
               overflow: 'hidden',
-              boxShadow: '0 10px 30px rgba(70, 211, 105, 0.3)'
+              boxShadow: '0 8px 20px rgba(223, 181, 86, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
             }}
           >
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-              <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: '700', marginBottom: '12px' }}>
-                  <Zap size={14} /> NEW USER OFFER
-                </div>
-                <h2 style={{ fontSize: '2rem', fontWeight: '900', margin: '0 0 4px' }}>{trialSettings?.trialDurationDays} Days Trial</h2>
-                <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.9 }}>Get full access for just ₹{trialSettings?.trialPrice}</p>
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: '#5c430e', marginBottom: '4px' }}>
+                <Crown size={12} fill="currentColor" /> VIP OFFER
               </div>
-              <button
-                onClick={handleTrial}
-                style={{
-                  background: '#fff',
-                  color: '#2e8b44',
-                  border: 'none',
-                  padding: '16px 32px',
-                  borderRadius: '12px',
-                  fontSize: '1.1rem',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                Claim Now <ArrowRight size={20} />
-              </button>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '900', margin: '0 0 2px', color: '#111' }}>{trialSettings?.trialDurationDays} Days Trial</h2>
+              <p style={{ fontSize: '0.9rem', margin: 0, color: 'rgba(17, 17, 17, 0.8)', fontWeight: '600' }}>Get full access for just ₹{trialSettings?.trialPrice}</p>
             </div>
-            <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', opacity: 0.1, pointerEvents: 'none' }}>
-              <Zap size={200} />
+            
+            <button
+              onClick={handleTrial}
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                background: '#111',
+                color: '#FDF4B8',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: '0.9rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+              }}
+            >
+              Claim <ArrowRight size={16} />
+            </button>
+            
+            <div style={{ position: 'absolute', right: '10%', top: '50%', transform: 'translateY(-50%)', opacity: 0.3, pointerEvents: 'none', color: '#FFF' }}>
+              <Crown size={100} />
             </div>
           </motion.div>
         ) : null}
@@ -170,6 +198,7 @@ const PlanPage = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             style={{
+              position: 'relative',
               width: 'calc(100% + 40px)',
               marginLeft: '-20px',
               marginRight: '-20px',
@@ -186,7 +215,7 @@ const PlanPage = () => {
               ref={(el) => { if (el) el.playbackRate = 1.5; }}
               src={trialSettings?.promoVideoHlsUrl || getImageUrl(trialSettings?.promoVideoUrl)}
               autoPlay
-              muted
+              muted={isMuted}
               loop
               playsInline
               preload="auto"
@@ -194,103 +223,137 @@ const PlanPage = () => {
               onCanPlay={(e) => e.target.play().catch(() => {})}
               style={{ width: '100%', height: '100%', minHeight: '280px', objectFit: 'cover', display: 'block' }}
             />
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              style={{
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+                background: 'rgba(0, 0, 0, 0.6)',
+                backdropFilter: 'blur(4px)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+                zIndex: 10,
+                transition: 'background 0.3s'
+              }}
+            >
+              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </button>
           </motion.div>
         ) : null}
 
         {/* Plans Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '60px' }}>
-          {plans.map((plan, index) => (
-            <motion.div
-              key={plan._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              style={{
-                background: '#111',
-                borderRadius: '24px',
-                padding: '40px',
-                border: '1px solid #333',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'relative'
-              }}
-            >
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', margin: '0 0 8px' }}>{plan.name}</h3>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <span style={{ fontSize: '2.5rem', fontWeight: '900' }}>₹{plan.price}</span>
-                  <span style={{ color: '#9CA3AF' }}>/{plan.duration}</span>
-                </div>
-              </div>
-
-              <div style={{ color: '#D1D5DB', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '30px', flex: 1 }}>
-                {plan.description}
-              </div>
-
-              <div style={{ marginBottom: '30px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Check size={18} color="#46d369" /> <span>Original Series & Movies</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Check size={18} color="#46d369" /> <span>High Quality Streaming</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Check size={18} color="#46d369" /> <span>Ad-free Experience</span>
-                </div>
-              </div>
-
-              <button
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          gap: '12px', 
+          marginBottom: '60px',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          paddingBottom: '8px'
+        }}>
+          {plans.map((plan, index) => {
+            const gradients = [
+              'linear-gradient(135deg, #A8E063 0%, #56AB2F 100%)', // Green
+              'linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%)', // Red
+              'linear-gradient(135deg, #B28DFF 0%, #8A4FFF 100%)', // Purple
+              'linear-gradient(135deg, #84FAB0 0%, #8FD3F4 100%)'  // Blue
+            ];
+            const gradient = gradients[index % gradients.length];
+            
+            return (
+              <motion.button
+                key={plan._id}
                 onClick={() => handleSubscribe(plan._id)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 style={{
-                  background: 'transparent',
-                  color: '#fff',
-                  border: '2px solid #333',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  fontWeight: '700',
+                  background: '#111',
+                  borderRadius: '16px',
+                  padding: '20px 12px',
+                  border: '1px solid #333',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: '1 1 0',
+                  minWidth: '90px',
+                  maxWidth: '120px',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
                 }}
-                onMouseEnter={(e) => { e.target.style.borderColor = '#46d369'; e.target.style.color = '#46d369'; }}
-                onMouseLeave={(e) => { e.target.style.borderColor = '#333'; e.target.style.color = '#fff'; }}
               >
-                Select {plan.name}
-              </button>
-            </motion.div>
-          ))}
+                <div style={{
+                  background: gradient,
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '12px',
+                  color: '#FFF',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                }}>
+                  ₹{plan.price}
+                </div>
+                <span style={{ color: '#E5E7EB', fontSize: '0.85rem', fontWeight: '600', textTransform: 'capitalize', textAlign: 'center' }}>
+                  {plan.duration || plan.name}
+                </span>
+              </motion.button>
+            );
+          })}
         </div>
 
         {/* Benefits Section */}
         <div style={{
           background: '#0F172A',
-          borderRadius: '32px',
-          padding: '60px 40px',
-          textAlign: 'center',
-          boxShadow: 'inset 0 0 100px rgba(70, 211, 105, 0.05)'
+          borderRadius: '24px',
+          padding: '30px 20px',
+          boxShadow: 'inset 0 0 100px rgba(70, 211, 105, 0.05)',
+          width: 'calc(100% + 40px)',
+          marginLeft: '-20px',
+          marginRight: '-20px'
         }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '40px' }}>Wait... Why InPlay?</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px' }}>
-            <div>
-              <div style={{ width: '60px', height: '60px', background: 'rgba(70, 211, 105, 0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <Shield size={30} color="#46d369" />
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '24px', textAlign: 'center' }}>Wait... Why InPlay?</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}>
+              <div style={{ width: '48px', height: '48px', flexShrink: 0, background: 'rgba(70, 211, 105, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Shield size={24} color="#46d369" />
               </div>
-              <h4 style={{ margin: '0 0 8px' }}>Safe & Secure</h4>
-              <p style={{ color: '#9CA3AF', fontSize: '0.9rem', margin: 0 }}>End-to-end encrypted payments via Razorpay</p>
+              <div>
+                <h4 style={{ margin: '0 0 4px', fontSize: '1rem' }}>Safe & Secure</h4>
+                <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>End-to-end encrypted payments via Razorpay</p>
+              </div>
             </div>
-            <div>
-              <div style={{ width: '60px', height: '60px', background: 'rgba(70, 211, 105, 0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <Star size={30} color="#46d369" />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}>
+              <div style={{ width: '48px', height: '48px', flexShrink: 0, background: 'rgba(70, 211, 105, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Star size={24} color="#46d369" />
               </div>
-              <h4 style={{ margin: '0 0 8px' }}>Premium Quality</h4>
-              <p style={{ color: '#9CA3AF', fontSize: '0.9rem', margin: 0 }}>4K Ultra HD and immersive surround sound</p>
+              <div>
+                <h4 style={{ margin: '0 0 4px', fontSize: '1rem' }}>Premium Quality</h4>
+                <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>4K Ultra HD and immersive surround sound</p>
+              </div>
             </div>
-            <div>
-              <div style={{ width: '60px', height: '60px', background: 'rgba(70, 211, 105, 0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <Crown size={30} color="#46d369" />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}>
+              <div style={{ width: '48px', height: '48px', flexShrink: 0, background: 'rgba(70, 211, 105, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Crown size={24} color="#46d369" />
               </div>
-              <h4 style={{ margin: '0 0 8px' }}>Cancel Anytime</h4>
-              <p style={{ color: '#9CA3AF', fontSize: '0.9rem', margin: 0 }}>No long term commitment. Stop when you want.</p>
+              <div>
+                <h4 style={{ margin: '0 0 4px', fontSize: '1rem' }}>Cancel Anytime</h4>
+                <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>No long term commitment. Stop when you want.</p>
+              </div>
             </div>
           </div>
         </div>
