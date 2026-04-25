@@ -212,10 +212,8 @@ const PlanPage = () => {
             }}
           >
             <video
-              ref={(el) => { if (el) el.playbackRate = 1.5; }}
               src={trialSettings?.promoVideoHlsUrl || getImageUrl(trialSettings?.promoVideoUrl)}
               autoPlay
-              muted={isMuted}
               loop
               playsInline
               preload="auto"
@@ -223,29 +221,6 @@ const PlanPage = () => {
               onCanPlay={(e) => e.target.play().catch(() => {})}
               style={{ width: '100%', height: '100%', minHeight: '280px', objectFit: 'cover', display: 'block' }}
             />
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              style={{
-                position: 'absolute',
-                bottom: '16px',
-                right: '16px',
-                background: 'rgba(0, 0, 0, 0.6)',
-                backdropFilter: 'blur(4px)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#fff',
-                zIndex: 10,
-                transition: 'background 0.3s'
-              }}
-            >
-              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-            </button>
           </motion.div>
         ) : null}
 
