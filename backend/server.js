@@ -13,7 +13,7 @@ dns.setDefaultResultOrder("ipv4first");
 require('dotenv').config();
 
 const PORT = process.env.PORT || 5001;
-const BACKEND_URL = process.env.BACKEND_URL;
+const BACKEND_URL = process.env.BACKEND_URL || 'https://api.inplays.in';
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
