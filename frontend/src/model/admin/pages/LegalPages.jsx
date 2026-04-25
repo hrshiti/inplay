@@ -162,7 +162,7 @@ export default function LegalPages() {
                     <p style={{ color: '#666', fontSize: '0.9rem' }}>Manage help center, privacy policy and about information</p>
                 </div>
                 <button
-                    onClick={handleSave}
+                    onClick={() => handleSave()}
                     disabled={isSaving}
                     style={{
                         display: 'flex',
