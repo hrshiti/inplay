@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import appSettingsService from '../../../services/api/appSettingsService';
 import uploadService from '../../../services/api/uploadService';
+import { getImageUrl } from '../../../utils/imageUtils';
 import { Save, AlertCircle, CheckCircle2, Plus, Trash2, Upload, Loader, X } from 'lucide-react';
 
 export default function LegalPages() {
@@ -444,7 +445,7 @@ export default function LegalPages() {
                                 {settings.subscriptionSettings?.promoVideoUrl ? (
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <video
-                                            src={settings.subscriptionSettings.promoVideoUrl}
+                                            src={getImageUrl(settings.subscriptionSettings.promoVideoUrl)}
                                             controls
                                             style={{
                                                 width: '100%',

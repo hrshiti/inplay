@@ -6,6 +6,7 @@ import authService from './services/api/authService';
 import subscriptionService from './services/api/subscriptionService';
 import { initRazorpayPayment } from './lib/utils/razorpay';
 import HlsPlayer from './components/HlsPlayer';
+import { getImageUrl } from './utils/imageUtils';
 
 const PlanPage = () => {
   const navigate = useNavigate();
@@ -182,12 +183,12 @@ const PlanPage = () => {
             }}
           >
             <video
-              src={trialSettings?.promoVideoUrl || trialSettings?.promoVideoHlsUrl}
+              src={trialSettings?.promoVideoHlsUrl || getImageUrl(trialSettings?.promoVideoUrl)}
               autoPlay
               muted
               loop
               playsInline
-              poster={trialSettings?.promoVideoThumbnail}
+              poster={getImageUrl(trialSettings?.promoVideoThumbnail)}
               onCanPlay={(e) => e.target.play().catch(() => {})}
               style={{ width: '100%', height: '100%', minHeight: '280px', objectFit: 'cover', display: 'block' }}
             />
