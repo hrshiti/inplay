@@ -24,7 +24,12 @@ const subscriptionService = {
 
     async getAppSettings() {
         const response = await fetch(`${API_URL}/app-settings`, {
-            method: 'GET'
+            method: 'GET',
+            cache: 'no-store',  // Always fetch fresh data, bypass browser cache
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
         });
 
         const data = await response.json();

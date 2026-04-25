@@ -19,6 +19,12 @@ const getAppSettings = async (req, res) => {
             });
         }
 
+        // Disable caching so clients always get fresh data after admin updates
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
+
         res.status(200).json({
             success: true,
             data: settings
@@ -42,10 +48,22 @@ const updateAppSettings = async (req, res) => {
             settings = new AppSetting(req.body);
         } else {
             // Update fields
-            if (req.body.helpCenter) settings.helpCenter = req.body.helpCenter;
-            if (req.body.privacyPolicy) settings.privacyPolicy = req.body.privacyPolicy;
-            if (req.body.aboutInPlay) settings.aboutInPlay = req.body.aboutInPlay;
-            if (req.body.subscriptionSettings) settings.subscriptionSettings = req.body.subscriptionSettings;
+            if (req.body.helpCenter) {
+                settings.helpCenter = req.body.helpCenter;
+                settings.markModified('helpCenter');
+            }
+            if (req.body.privacyPolicy) {
+                settings.privacyPolicy = req.body.privacyPolicy;
+                settings.markModified('privacyPolicy');
+            }
+            if (req.body.aboutInPlay) {
+                settings.aboutInPlay = req.body.aboutInPlay;
+                settings.markModified('aboutInPlay');
+            }
+            if (req.body.subscriptionSettings) {
+                settings.subscriptionSettings = req.body.subscriptionSettings;
+                settings.markModified('subscriptionSettings'); // Required for Mongoose to detect nested object changes
+            }
         }
 
         await settings.save();
