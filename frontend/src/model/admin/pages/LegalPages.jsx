@@ -94,11 +94,11 @@ export default function LegalPages() {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = async (dataToSave = null) => {
         try {
             setIsSaving(true);
             setMessage({ type: '', text: '' });
-            await appSettingsService.updateSettings(settings);
+            await appSettingsService.updateSettings(dataToSave || settings);
             setMessage({ type: 'success', text: 'Settings updated successfully!' });
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         } catch (err) {
@@ -456,7 +456,11 @@ export default function LegalPages() {
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setSettings(prev => ({ ...prev, subscriptionSettings: { ...prev.subscriptionSettings, promoVideoUrl: '' } }))}
+                                            onClick={() => {
+                                                const cleared = { ...settings, subscriptionSettings: { ...settings.subscriptionSettings, promoVideoUrl: '' } };
+                                                setSettings(cleared);
+                                                handleSave(cleared); // Save cleared data directly to DB
+                                            }}
                                             style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '26px', height: '26px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
                                         >
                                             <X size={14} />
