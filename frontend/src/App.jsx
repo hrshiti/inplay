@@ -1326,10 +1326,10 @@ function App() {
                                     zIndex: 2
                                   }}>
                                     <img
-                                      src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)}
+                                      src={getImageUrl(movie.poster?.url || movie.backdrop?.url || movie.image)}
                                       alt={movie.title}
                                       className="hero-image"
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', background: '#000' }}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', background: '#000' }}
                                       onError={(e) => { e.target.src = `https://placehold.co/600x300/111/FFF?text=${movie.title?.substring(0, 10)}` }}
                                     />
                                     <div className="hero-overlay" style={{

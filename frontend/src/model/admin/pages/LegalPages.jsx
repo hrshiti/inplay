@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import appSettingsService from '../../../services/api/appSettingsService';
-import { Save, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import uploadService from '../../../services/api/uploadService';
+import { Save, AlertCircle, CheckCircle2, Plus, Trash2, Upload, Loader, X } from 'lucide-react';
 
 export default function LegalPages() {
     const [settings, setSettings] = useState({
@@ -18,6 +19,14 @@ export default function LegalPages() {
             website: '',
             twitter: '',
             instagram: ''
+        },
+        subscriptionSettings: {
+            trialPrice: 0,
+            trialDurationDays: 0,
+            isTrialActive: true,
+            promoVideoUrl: '',
+            promoVideoHlsUrl: '',
+            promoVideoThumbnail: ''
         }
     });
 
@@ -25,6 +34,8 @@ export default function LegalPages() {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [activeTab, setActiveTab] = useState('help');
+    const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
 
     useEffect(() => {
         fetchSettings();
@@ -35,13 +46,51 @@ export default function LegalPages() {
             setIsLoading(true);
             const data = await appSettingsService.getSettings();
             if (data) {
-                setSettings(data);
+                setSettings(prev => ({
+                    ...prev,
+                    ...data,
+                    subscriptionSettings: {
+                        ...prev.subscriptionSettings,
+                        ...(data.subscriptionSettings || {})
+                    }
+                }));
             }
         } catch (err) {
             console.error("Failed to fetch settings", err);
             setMessage({ type: 'error', text: 'Failed to load settings' });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handlePromoUpload = async (e, type) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            if (type === 'video') setUploadingVideo(true);
+            else setUploadingThumbnail(true);
+
+            const uploadType = type === 'video' ? 'video' : 'image';
+            const result = await uploadService.uploadFile(file, uploadType);
+            const url = result.data.url;
+
+            if (type === 'video') {
+                setSettings(prev => ({
+                    ...prev,
+                    subscriptionSettings: { ...prev.subscriptionSettings, promoVideoUrl: url }
+                }));
+            } else {
+                setSettings(prev => ({
+                    ...prev,
+                    subscriptionSettings: { ...prev.subscriptionSettings, promoVideoThumbnail: url }
+                }));
+            }
+        } catch (err) {
+            console.error('Upload failed', err);
+            alert('Upload failed. Please try again.');
+        } finally {
+            if (type === 'video') setUploadingVideo(false);
+            else setUploadingThumbnail(false);
         }
     };
 
@@ -101,7 +150,8 @@ export default function LegalPages() {
     const tabs = [
         { id: 'help', label: 'Help Center' },
         { id: 'privacy', label: 'Privacy Policy' },
-        { id: 'about', label: 'About InPlay' }
+        { id: 'about', label: 'About InPlay' },
+        { id: 'subscription', label: 'Subscription Video' }
     ];
 
     return (
@@ -176,7 +226,7 @@ export default function LegalPages() {
             <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
 
                 {/* HELP CENTER */}
-                {activeTab === 'help' && (
+                {activeTab === 'help' ? (
                     <div>
                         <div style={{ marginBottom: '24px' }}>
                             <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>Chat Support Description</label>
@@ -237,10 +287,10 @@ export default function LegalPages() {
                             )}
                         </div>
                     </div>
-                )}
+                ) : null}
 
                 {/* PRIVACY POLICY */}
-                {activeTab === 'privacy' && (
+                {activeTab === 'privacy' ? (
                     <div>
                         <div style={{ marginBottom: '24px' }}>
                             <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>Last Updated Date</label>
@@ -267,10 +317,10 @@ export default function LegalPages() {
                             />
                         </div>
                     </div>
-                )}
+                ) : null}
 
                 {/* ABOUT INPLAY */}
-                {activeTab === 'about' && (
+                {activeTab === 'about' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div>
                             <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>Description</label>
@@ -335,8 +385,172 @@ export default function LegalPages() {
                             </div>
                         </div>
                     </div>
-                )}
+                ) : null}
+                {/* SUBSCRIPTION SETTINGS */}
+                {activeTab === 'subscription' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', color: '#111' }}>
+                        <h3 style={{ fontWeight: '700', marginBottom: '8px', color: '#111' }}>Plan Page Promotional Video</h3>
+                        <p style={{ color: '#555', fontSize: '0.9rem', marginTop: '-12px', marginBottom: '12px' }}>
+                            This video will be displayed to users on the plan selection page to encourage subscriptions.
+                        </p>
 
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                            <div>
+                                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>Trial Price (₹)</label>
+                                <input
+                                    type="number"
+                                    value={settings.subscriptionSettings?.trialPrice}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        subscriptionSettings: { ...settings.subscriptionSettings, trialPrice: Number(e.target.value) }
+                                    })}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111', background: '#fff' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>Trial Duration (Days)</label>
+                                <input
+                                    type="number"
+                                    value={settings.subscriptionSettings?.trialDurationDays}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        subscriptionSettings: { ...settings.subscriptionSettings, trialDurationDays: Number(e.target.value) }
+                                    })}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111', background: '#fff' }}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.subscriptionSettings?.isTrialActive}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        subscriptionSettings: { ...settings.subscriptionSettings, isTrialActive: e.target.checked }
+                                    })}
+                                />
+                                Is Trial Active?
+                            </label>
+                        </div>
+
+                        <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '10px 0' }} />
+
+                        {/* VIDEO UPLOAD */}
+                        <div>
+                            <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>Promo Video</label>
+                            <div style={{ border: '2px dashed #d1d5db', padding: '20px', borderRadius: '8px', textAlign: 'center', position: 'relative', overflow: 'hidden', background: '#fafafa', marginBottom: '8px' }}>
+                                {settings.subscriptionSettings?.promoVideoUrl ? (
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <video
+                                            src={settings.subscriptionSettings.promoVideoUrl}
+                                            controls
+                                            style={{
+                                                width: '100%',
+                                                maxHeight: '220px',
+                                                borderRadius: '8px',
+                                                background: '#000',
+                                                display: 'block'
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setSettings(prev => ({ ...prev, subscriptionSettings: { ...prev.subscriptionSettings, promoVideoUrl: '' } }))}
+                                            style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '26px', height: '26px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : uploadingVideo ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666' }}>
+                                        <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                                        <span style={{ marginTop: '8px', fontSize: '0.9rem' }}>Uploading video...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload size={24} style={{ color: '#9ca3af', marginBottom: '8px' }} />
+                                        <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Click to upload video (MP4)</p>
+                                        <input
+                                            type="file"
+                                            accept="video/*"
+                                            onChange={(e) => handlePromoUpload(e, 'video')}
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 4px' }}>Or paste URL directly:</p>
+                            <input
+                                type="text"
+                                value={settings.subscriptionSettings?.promoVideoUrl || ''}
+                                onChange={(e) => setSettings({ ...settings, subscriptionSettings: { ...settings.subscriptionSettings, promoVideoUrl: e.target.value } })}
+                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111', background: '#fff', boxSizing: 'border-box' }}
+                                placeholder="https://example.com/video.mp4"
+                            />
+                        </div>
+
+                        {/* HLS URL */}
+                        <div>
+                            <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>Promo Video HLS URL (.m3u8) <span style={{ fontWeight: '400', color: '#9ca3af' }}>(Optional)</span></label>
+                            <input
+                                type="text"
+                                value={settings.subscriptionSettings?.promoVideoHlsUrl || ''}
+                                onChange={(e) => setSettings({ ...settings, subscriptionSettings: { ...settings.subscriptionSettings, promoVideoHlsUrl: e.target.value } })}
+                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111', background: '#fff' }}
+                                placeholder="https://example.com/video/playlist.m3u8"
+                            />
+                        </div>
+
+                        {/* THUMBNAIL UPLOAD */}
+                        <div>
+                            <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>Video Thumbnail</label>
+                            <div style={{ border: '2px dashed #d1d5db', padding: '20px', borderRadius: '8px', textAlign: 'center', position: 'relative', overflow: 'hidden', background: '#fafafa', marginBottom: '8px' }}>
+                                {settings.subscriptionSettings?.promoVideoThumbnail ? (
+                                    <div style={{ position: 'relative', width: '100%', height: '180px' }}>
+                                        <img
+                                            src={settings.subscriptionSettings.promoVideoThumbnail}
+                                            alt="Thumbnail"
+                                            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }}
+                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setSettings(prev => ({ ...prev, subscriptionSettings: { ...prev.subscriptionSettings, promoVideoThumbnail: '' } }))}
+                                            style={{ position: 'absolute', top: 5, right: 5, background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : uploadingThumbnail ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666' }}>
+                                        <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                                        <span style={{ marginTop: '8px', fontSize: '0.9rem' }}>Uploading image...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload size={24} style={{ color: '#9ca3af', marginBottom: '8px' }} />
+                                        <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Click to upload thumbnail image</p>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handlePromoUpload(e, 'thumbnail')}
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0 4px' }}>Or paste URL directly:</p>
+                            <input
+                                type="text"
+                                value={settings.subscriptionSettings?.promoVideoThumbnail || ''}
+                                onChange={(e) => setSettings({ ...settings, subscriptionSettings: { ...settings.subscriptionSettings, promoVideoThumbnail: e.target.value } })}
+                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111', background: '#fff', boxSizing: 'border-box' }}
+                                placeholder="https://example.com/thumbnail.jpg"
+                            />
+                        </div>
+                    </div>
+                ) : null}
             </div>
         </div>
     );

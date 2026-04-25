@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import authService from './services/api/authService';
 import subscriptionService from './services/api/subscriptionService';
 import { initRazorpayPayment } from './lib/utils/razorpay';
+import HlsPlayer from './components/HlsPlayer';
 
 const PlanPage = () => {
   const navigate = useNavigate();
@@ -110,13 +111,13 @@ const PlanPage = () => {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          < Crown size={48} color="#EAB308" style={{ marginBottom: '16px' }} />
+          <Crown size={48} color="#EAB308" style={{ marginBottom: '16px' }} />
           <h1 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '0 0 8px' }}>Choose Your Plan</h1>
           <p style={{ color: '#9CA3AF', fontSize: '1.1rem' }}>Unlimited access to all movies, series, and exclusives</p>
         </div>
 
         {/* Trial Offer - Featured */}
-        {trialSettings?.isTrialActive && !currentUser?.subscription?.isTrialUsed && (
+        {trialSettings?.isTrialActive && !currentUser?.subscription?.isTrialUsed ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -161,7 +162,37 @@ const PlanPage = () => {
               <Zap size={200} />
             </div>
           </motion.div>
-        )}
+        ) : null}
+        {/* Featured Promotional Video */}
+        {(trialSettings?.promoVideoUrl || trialSettings?.promoVideoHlsUrl) ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{
+              width: 'calc(100% + 40px)',
+              marginLeft: '-20px',
+              marginRight: '-20px',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              marginBottom: '40px',
+              border: '1px solid #333',
+              background: '#111',
+              minHeight: '280px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+            }}
+          >
+            <video
+              src={trialSettings?.promoVideoUrl || trialSettings?.promoVideoHlsUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster={trialSettings?.promoVideoThumbnail}
+              onCanPlay={(e) => e.target.play().catch(() => {})}
+              style={{ width: '100%', height: '100%', minHeight: '280px', objectFit: 'cover', display: 'block' }}
+            />
+          </motion.div>
+        ) : null}
 
         {/* Plans Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '60px' }}>

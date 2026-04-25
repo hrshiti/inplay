@@ -16,7 +16,10 @@ export default function SplashScreen() {
                 left: 0,
                 width: '100vw',
                 height: '100vh',
-                background: 'radial-gradient(circle at center, #1a1a1a 0%, #000000 100%)',
+                backgroundImage: 'url("/WhatsApp Image 2026-04-15 at 12.49.13 PM.jpeg")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -25,6 +28,9 @@ export default function SplashScreen() {
                 overflow: 'hidden'
             }}
         >
+            {/* Dark overlay on top of background image */}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.52)', zIndex: 0 }} />
+
             {/* Background Glow Effect */}
             <motion.div
                 animate={{

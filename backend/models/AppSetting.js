@@ -57,6 +57,18 @@ const appSettingSchema = new mongoose.Schema({
         isTrialActive: {
             type: Boolean,
             default: true
+        },
+        promoVideoUrl: {
+            type: String,
+            default: ''
+        },
+        promoVideoHlsUrl: {
+            type: String,
+            default: ''
+        },
+        promoVideoThumbnail: {
+            type: String,
+            default: ''
         }
     }
 }, { timestamps: true });
