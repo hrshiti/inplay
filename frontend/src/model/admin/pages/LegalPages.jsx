@@ -72,7 +72,7 @@ export default function LegalPages() {
 
             const uploadType = type === 'video' ? 'video' : 'image';
             const result = await uploadService.uploadFile(file, uploadType);
-            const url = result.data.url;
+            const url = result.url;
 
             if (type === 'video') {
                 setSettings(prev => ({
