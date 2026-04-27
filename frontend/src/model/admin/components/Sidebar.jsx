@@ -11,12 +11,14 @@ import {
   Shield,
   Layout,
   CreditCard,
-  Repeat
+  Repeat,
+  Megaphone
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Content', href: '/admin/content/library', icon: Film },
+  { name: 'Promotions', href: '/admin/promotions', icon: Megaphone },
   { name: 'Quick Bites', href: '/admin/quick-bytes', icon: Zap },
   { name: 'For You', href: '/admin/for-you', icon: Smartphone },
   { name: 'Audio Series', href: '/admin/audio-series', icon: Film },
