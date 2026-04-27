@@ -13,9 +13,9 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     views: content?.views || '',
     status: content?.status || 'draft',
     type: content?.type || 'bhojpuri',
-    image: content?.image || '',
-    backdrop: content?.backdrop || '',
-    video: content?.video || '',
+    image: content ? (content.image || content.poster?.url || content.poster?.secure_url || content.thumbnail || content.poster || '') : '',
+    backdrop: content ? (content.backdrop?.url || content.backdrop?.secure_url || content.backdrop || content.background || '') : '',
+    video: content ? (content.video?.url || content.video?.secure_url || content.video?.hls_url || content.videoUrl || content.video_url || (typeof content.video === 'string' ? content.video : content.url || content.link || '')) : '',
     seasons: content?.seasons || [], // Initialize seasons
     isNewAndHot: content?.isNewAndHot || false,
     isOriginal: content?.isOriginal || false,
@@ -27,7 +27,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     isBroadcast: content?.isBroadcast || false,
     isAudioSeries: content?.isAudioSeries || false,
     isCrimeShow: content?.isCrimeShow || false,
-    cast: content?.cast || '',
+    cast: content?.cast ? (Array.isArray(content.cast) ? content.cast.join(', ') : content.cast) : '',
     producer: content?.producer || '',
     production: content?.production || '',
     releaseDate: content?.releaseDate || '',
@@ -78,12 +78,40 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     // Helper to safely get url from possible object structure
     const getUrl = (field) => {
       if (!content) return '';
-      const val = content[field];
+      
+      // Try to find the value in various possible field names
+      let val = content[field];
+      
+      // Fallbacks for specific field types if not found directly
+      if (!val) {
+        if (field === 'video') {
+          val = content.videoUrl || content.video_url || content.url || content.link || content.video_link || content.path || content.trailer;
+        } else if (field === 'image' || field === 'poster') {
+          val = content.posterUrl || content.imageUrl || content.image_url || content.thumbnail || content.poster || content.image;
+        } else if (field === 'backdrop') {
+          val = content.backdropUrl || content.backdrop_url || content.background;
+        }
+      }
+
       if (!val) return '';
+      
+      // If it's a string, return it directly
       if (typeof val === 'string') return val;
-      // Prefer HLS for preview if available
-      if (typeof val === 'object' && val.hls_url) return val.hls_url;
-      if (typeof val === 'object' && val.url) return val.url;
+      
+      // If it's an array, take the first element
+      if (Array.isArray(val)) {
+        if (val.length === 0) return '';
+        const first = val[0];
+        if (typeof first === 'string') return first;
+        if (typeof first === 'object') return first.hls_url || first.secure_url || first.url || first.link || '';
+        return '';
+      }
+      
+      // If it's an object, try to find a URL property
+      if (typeof val === 'object') {
+        return val.hls_url || val.secure_url || val.url || val.link || val.path || '';
+      }
+      
       return '';
     };
 
@@ -98,9 +126,9 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         views: content.views || '',
         status: content.status || 'draft',
         type: content.type || 'bhojpuri',
-        image: getUrl('image') || getUrl('poster') || '',
+        image: getUrl('image') || getUrl('poster') || getUrl('thumbnail') || '',
         backdrop: getUrl('backdrop') || '',
-        video: getUrl('video') || '',
+        video: getUrl('video') || getUrl('videoUrl') || getUrl('url') || getUrl('link') || '',
         seasons: content.seasons || [],
         isNewAndHot: content.isNewAndHot || false,
         isOriginal: content.isOriginal || false,
@@ -111,7 +139,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         isBroadcast: content.isBroadcast || false,
         isAudioSeries: content.isAudioSeries || false,
         isCrimeShow: content.isCrimeShow || false,
-        cast: content.cast || '',
+        cast: Array.isArray(content.cast) ? content.cast.join(', ') : (content.cast || ''),
         producer: content.producer || '',
         production: content.production || '',
         releaseDate: content.releaseDate || '',
@@ -123,7 +151,8 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
   }, [content]);
 
   const [errors, setErrors] = useState({});
-  const [expandedSeason, setExpandedSeason] = useState(0); // Index of expanded season
+  const [expandedSeason, setExpandedSeason] = useState(0);
+  const [videoMeta, setVideoMeta] = useState(null); // { width, height, duration, size }
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -217,6 +246,10 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
       if (!formData.backdropFile && formData.backdrop && (!submissionData.backdrop || !submissionData.backdrop.url)) {
         submissionData.backdrop = { url: formData.backdrop };
       }
+      // Fix: wrap existing video URL as object if no new video file uploaded
+      if (!formData.videoFile && formData.video && typeof formData.video === 'string') {
+        submissionData.video = { url: formData.video };
+      }
       // Clean up files and huge Base64 strings from JSON to avoid payload issues
       if (formData.imageFile) { delete submissionData.image; delete submissionData.poster; }
       if (formData.backdropFile) { delete submissionData.backdrop; }
@@ -261,11 +294,43 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
   const handleFileUpload = (field, e) => {
     const file = e.target.files[0];
     if (file) {
+      // File size limits
+      const MAX_VIDEO_SIZE = 10 * 1024 * 1024 * 1024; // 10GB
+      const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
+      if (field === 'video' && file.size > MAX_VIDEO_SIZE) {
+        alert(`Video file is too large! Maximum allowed size is 10GB.\nYour file: ${(file.size / (1024 * 1024 * 1024)).toFixed(2)} GB`);
+        e.target.value = '';
+        return;
+      }
+      if ((field === 'image' || field === 'backdrop') && file.size > MAX_IMAGE_SIZE) {
+        alert(`Image file is too large! Maximum allowed size is 10MB.\nYour file: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+        e.target.value = '';
+        return;
+      }
+
       if (formData[field] && typeof formData[field] === 'string' && formData[field].startsWith('blob:')) {
         URL.revokeObjectURL(formData[field]);
       }
 
       const previewUrl = URL.createObjectURL(file);
+
+      // Extract video metadata for dimension/size info card
+      if (field === 'video') {
+        const tempVideo = document.createElement('video');
+        tempVideo.preload = 'metadata';
+        tempVideo.src = previewUrl;
+        tempVideo.onloadedmetadata = () => {
+          setVideoMeta({
+            width: tempVideo.videoWidth,
+            height: tempVideo.videoHeight,
+            duration: tempVideo.duration,
+            size: file.size
+          });
+          URL.revokeObjectURL(tempVideo.src);
+        };
+      }
+
       setFormData(prev => ({
         ...prev,
         [field]: previewUrl,
@@ -986,6 +1051,52 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                       isLoop={false}
                       style={{ width: '100%', maxHeight: '300px', borderRadius: '6px', backgroundColor: 'black' }}
                     />
+                  </div>
+                )}
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+                  Max video size: <strong>10 GB</strong> &nbsp;|&nbsp; Supported formats: MP4, MKV, MOV, AVI
+                </p>
+
+                {/* Video Metadata Info Card */}
+                {videoMeta && (
+                  <div style={{
+                    marginTop: '10px',
+                    padding: '12px 16px',
+                    background: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                    gap: '10px'
+                  }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resolution</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.95rem', fontWeight: '700', color: '#0c4a6e' }}>
+                        {videoMeta.width} × {videoMeta.height}px
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duration</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.95rem', fontWeight: '700', color: '#0c4a6e' }}>
+                        {Math.floor(videoMeta.duration / 60)}m {Math.floor(videoMeta.duration % 60)}s
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>File Size</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.95rem', fontWeight: '700', color: '#0c4a6e' }}>
+                        {videoMeta.size >= 1024 * 1024 * 1024
+                          ? `${(videoMeta.size / (1024 * 1024 * 1024)).toFixed(2)} GB`
+                          : `${(videoMeta.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Aspect Ratio</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.95rem', fontWeight: '700', color: '#0c4a6e' }}>
+                        {videoMeta.width && videoMeta.height
+                          ? (videoMeta.width / videoMeta.height > 1.7 ? '16:9 Landscape' : videoMeta.width / videoMeta.height < 0.7 ? '9:16 Portrait' : '4:3')
+                          : '—'}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

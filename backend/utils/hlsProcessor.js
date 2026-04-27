@@ -2,9 +2,23 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// Detect FFmpeg path from environment variables or use system default
+// Detect FFmpeg: 1. .env FFMPEG_PATH, 2. system PATH, 3. ffmpeg-static bundled binary
+let FFMPEG = 'ffmpeg'; // default: system PATH
 const FFMPEG_BIN = process.env.FFMPEG_PATH;
-const FFMPEG = (FFMPEG_BIN && fs.existsSync(FFMPEG_BIN)) ? FFMPEG_BIN : 'ffmpeg';
+if (FFMPEG_BIN && fs.existsSync(FFMPEG_BIN)) {
+  FFMPEG = FFMPEG_BIN;
+} else {
+  // Use ffmpeg-static bundled binary as fallback
+  try {
+    const ffmpegStatic = require('ffmpeg-static');
+    if (ffmpegStatic && fs.existsSync(ffmpegStatic)) {
+      FFMPEG = ffmpegStatic;
+      console.log('Using bundled ffmpeg-static:', FFMPEG);
+    }
+  } catch (e) {
+    console.warn('ffmpeg-static not found, falling back to system ffmpeg');
+  }
+}
 
 /**
  * Process a video file into HLS format with multiple qualities

@@ -494,8 +494,6 @@ const EditContent = () => {
   }, [id, navigate]);
 
   const handleUpdate = async (formData) => {
-    setLoading(true); // Reuse loading state or create specific one, but `loading` controls the whole page view here?
-    // The previous loading state was for fetching. Let's create a new one to avoid hiding the form.
     setIsUploading(true);
     try {
       await adminContentService.updateContent(id, formData);
@@ -506,7 +504,6 @@ const EditContent = () => {
       alert('Failed to update content: ' + (err.message || 'Unknown error'));
     } finally {
       setIsUploading(false);
-      setLoading(false); // Just in case
     }
   };
 
