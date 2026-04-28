@@ -38,6 +38,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     });
 
     const videoRef = useRef(null);
+    const introRef = useRef(null);
     const hlsRef = useRef(null);
     const lastSyncTime = useRef(0);
 
@@ -103,25 +104,39 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     // HLS initialization is now handled by the HlsPlayer component
 
+    const [showIntro, setShowIntro] = useState(true);
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
 
+    // Pause main video while intro is playing, play after
+    useEffect(() => {
+        if (videoRef.current) {
+            if (showIntro) {
+                videoRef.current.pause();
+            } else if (isPlaying) {
+                videoRef.current.play().catch(e => console.log("Playback failed after intro:", e));
+            }
+        }
+    }, [showIntro, isPlaying]);
+
     const togglePlay = (e) => {
         if (e) e.stopPropagation();
-        if (videoRef.current) {
-            if (videoRef.current.paused) {
-                videoRef.current.play();
+        const activeRef = showIntro ? introRef : videoRef;
+        if (activeRef.current) {
+            if (activeRef.current.paused) {
+                activeRef.current.play();
                 setIsPlaying(true);
             } else {
-                videoRef.current.pause();
+                activeRef.current.pause();
                 setIsPlaying(false);
             }
         }
     };
 
     const skipTime = (seconds) => {
-        if (videoRef.current) {
-            videoRef.current.currentTime += seconds;
+        const activeRef = showIntro ? introRef : videoRef;
+        if (activeRef.current) {
+            activeRef.current.currentTime += seconds;
         }
     };
 
@@ -146,8 +161,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     // Handle Video Progress
     const handleTimeUpdate = () => {
-        if (videoRef.current && videoRef.current.duration) {
-            const percentage = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+        const activeRef = showIntro ? introRef : videoRef;
+        if (activeRef.current && activeRef.current.duration) {
+            const percentage = (activeRef.current.currentTime / activeRef.current.duration) * 100;
             setProgress(percentage);
         }
     };
@@ -155,16 +171,29 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     // Auto-update isPlaying state on external pause/play events
     useEffect(() => {
         const video = videoRef.current;
-        if (!video) return;
+        const intro = introRef.current;
         const onPlay = () => setIsPlaying(true);
         const onPause = () => setIsPlaying(false);
-        video.addEventListener('play', onPlay);
-        video.addEventListener('pause', onPause);
+        
+        if (video) {
+            video.addEventListener('play', onPlay);
+            video.addEventListener('pause', onPause);
+        }
+        if (intro) {
+            intro.addEventListener('play', onPlay);
+            intro.addEventListener('pause', onPause);
+        }
         return () => {
-            video.removeEventListener('play', onPlay);
-            video.removeEventListener('pause', onPause);
+            if (video) {
+                video.removeEventListener('play', onPlay);
+                video.removeEventListener('pause', onPause);
+            }
+            if (intro) {
+                intro.removeEventListener('play', onPlay);
+                intro.removeEventListener('pause', onPause);
+            }
         };
-    }, []);
+    }, [showIntro]);
 
     // Track view count when video loads and starts playing
     useEffect(() => {
@@ -306,7 +335,6 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     };
 
     const handleTouchMove = (e) => {
-        if (e.cancelable) e.preventDefault(); // Stop browser from scrolling during swipe
         touchEndX.current = e.touches[0].clientX;
         touchEndY.current = e.touches[0].clientY;
     };
@@ -737,6 +765,23 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     </div>
                 )}
 
+                {showIntro && (
+                    <video
+                        ref={introRef}
+                        src="/WhatsApp Video 2026-04-27 at 2.46.31 PM.mp4"
+                        autoPlay
+                        playsInline
+                        onEnded={() => setShowIntro(false)}
+                        style={{ 
+                            position: 'absolute',
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: videoFit,
+                            backgroundColor: 'black',
+                            zIndex: 2
+                        }}
+                    />
+                )}
                 {videoSrc ? (
                     <HlsPlayer
                         key={`hls-quick-${currentIndex}`} // Added key for robust React cleanup
@@ -756,7 +801,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                             height: '100%', 
                             objectFit: videoFit,
                             backgroundColor: 'black',
-                            zIndex: 1
+                            zIndex: 1,
+                            opacity: showIntro ? 0 : 1,
+                            pointerEvents: showIntro ? 'none' : 'auto'
                         }}
                     />
                 ) : (
@@ -875,6 +922,24 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     touchAction: 'none'
                 }}
             >
+                {showIntro && (
+                    <video
+                        ref={introRef}
+                        src="/WhatsApp Video 2026-04-27 at 2.46.31 PM.mp4"
+                        autoPlay
+                        playsInline
+                        onEnded={() => setShowIntro(false)}
+                        style={{ 
+                            position: 'absolute',
+                            inset: 0,
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: isVertical ? videoFit : (isFullScreen ? 'contain' : 'cover'),
+                            backgroundColor: 'black',
+                            zIndex: 2
+                        }}
+                    />
+                )}
                 <HlsPlayer
                     key={`hls-std-${currentIndex}`} // Added key for robust React cleanup
                     ref={videoRef}
@@ -891,7 +956,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         width: '100%', 
                         height: '100%', 
                         objectFit: isVertical ? videoFit : (isFullScreen ? 'contain' : 'cover'),
-                        backgroundColor: 'black'
+                        backgroundColor: 'black',
+                        opacity: showIntro ? 0 : 1,
+                        pointerEvents: showIntro ? 'none' : 'auto'
                     }}
                 />
 
