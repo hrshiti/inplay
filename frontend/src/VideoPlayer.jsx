@@ -104,7 +104,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     // HLS initialization is now handled by the HlsPlayer component
 
-    const [showIntro, setShowIntro] = useState(true);
+    // Intro video should only show for large content (movies, series), NOT Quick Bites/Reels
+    const [showIntro, setShowIntro] = useState(!isQuickBite);
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
 
@@ -114,7 +115,11 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             if (showIntro) {
                 videoRef.current.pause();
             } else if (isPlaying) {
-                videoRef.current.play().catch(e => console.log("Playback failed after intro:", e));
+                // Intro ended or skipped, force play the main video
+                const playPromise = videoRef.current.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => console.log("Playback failed after intro:", e));
+                }
             }
         }
     }, [showIntro, isPlaying]);
@@ -173,7 +178,13 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         const video = videoRef.current;
         const intro = introRef.current;
         const onPlay = () => setIsPlaying(true);
-        const onPause = () => setIsPlaying(false);
+        const onPause = (e) => {
+            // Prevent intro video's auto-pause at the end from pausing the main video
+            if (showIntro && e.target === intro) {
+                return;
+            }
+            setIsPlaying(false);
+        };
         
         if (video) {
             video.addEventListener('play', onPlay);
@@ -771,7 +782,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         src="/WhatsApp Video 2026-04-27 at 2.46.31 PM.mp4"
                         autoPlay
                         playsInline
-                        onEnded={() => setShowIntro(false)}
+                        onEnded={() => {
+                            setShowIntro(false);
+                            setIsPlaying(true); // Force play state
+                        }}
                         style={{ 
                             position: 'absolute',
                             width: '100%', 
@@ -928,7 +942,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         src="/WhatsApp Video 2026-04-27 at 2.46.31 PM.mp4"
                         autoPlay
                         playsInline
-                        onEnded={() => setShowIntro(false)}
+                        onEnded={() => {
+                            setShowIntro(false);
+                            setIsPlaying(true); // Force play state
+                        }}
                         style={{ 
                             position: 'absolute',
                             inset: 0,

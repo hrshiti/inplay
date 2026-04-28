@@ -1326,7 +1326,7 @@ function App() {
                                     zIndex: 2
                                   }}>
                                     <img
-                                      src={getImageUrl(movie.poster?.url || movie.backdrop?.url || movie.image)}
+                                      src={getImageUrl(movie.backdrop?.url || movie.poster?.url || movie.image)}
                                       alt={movie.title}
                                       className="hero-image"
                                       style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', background: '#000' }}

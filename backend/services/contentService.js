@@ -123,15 +123,15 @@ const createContent = async (contentData, adminId, files = {}) => {
       }
     }
 
-    // Determine intended status, but force draft if video needs processing
+    // Use admin's intended status — do NOT force draft even when video is uploaded.
+    // HLS processing happens in background; content is published immediately with MP4 fallback.
     const intendedStatus = contentData.status || 'published';
-    const forceDraft = files.video ? 'draft' : intendedStatus;
 
     // Create content record in DB
     const content = await Content.create({
       ...contentData,
       ...mediaUrls,
-      status: forceDraft,
+      status: intendedStatus,
       createdBy: adminId
     });
 
@@ -214,8 +214,12 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
     if (files.video) mediaUrls.video = transformFileToResponse(files.video);
     if (files.trailer) mediaUrls.trailer = transformFileToResponse(files.trailer);
 
+    // Capture admin's intended status before Object.assign can override it
+    const intendedUpdateStatus = updateData.status || content.status;
+
     // Update record
     Object.assign(content, updateData, mediaUrls);
+    content.status = intendedUpdateStatus; // Always respect admin's status choice
     content.updatedBy = adminId;
     await content.save();
 

@@ -239,18 +239,28 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         });
       }
 
-      // Map legacy structure for URLs (if no new file)
-      if (!formData.imageFile && formData.image && (!submissionData.poster || !submissionData.poster.url)) {
-        submissionData.poster = { url: formData.image };
+      // Map media URLs to proper object format (only if a new file is NOT being uploaded)
+      if (!formData.imageFile) {
+        if (formData.image && typeof formData.image === 'string' && !formData.image.startsWith('blob:')) {
+          submissionData.poster = { url: formData.image };
+        } else {
+          delete submissionData.poster; // don't send empty/blob string
+        }
       }
-      if (!formData.backdropFile && formData.backdrop && (!submissionData.backdrop || !submissionData.backdrop.url)) {
-        submissionData.backdrop = { url: formData.backdrop };
+
+      if (!formData.backdropFile) {
+        if (formData.backdrop && typeof formData.backdrop === 'string' && !formData.backdrop.startsWith('blob:')) {
+          submissionData.backdrop = { url: formData.backdrop };
+        } else {
+          delete submissionData.backdrop; // CRITICAL: prevents "Cast to Object" Mongoose error
+        }
       }
-      // Fix: wrap existing video URL as object if no new video file uploaded
+
       if (!formData.videoFile && formData.video && typeof formData.video === 'string') {
         submissionData.video = { url: formData.video };
       }
-      // Clean up files and huge Base64 strings from JSON to avoid payload issues
+
+      // Clean up files and blob URLs from JSON to avoid payload issues
       if (formData.imageFile) { delete submissionData.image; delete submissionData.poster; }
       if (formData.backdropFile) { delete submissionData.backdrop; }
       if (formData.videoFile) { delete submissionData.video; }
@@ -258,6 +268,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
       delete submissionData.backdropFile;
       delete submissionData.videoFile;
       delete submissionData.trailerFile;
+      delete submissionData.image; // always use submissionData.poster instead
 
       // Clean up episode files from JSON
       if (submissionData.seasons) {
@@ -265,9 +276,6 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
           if (season.episodes) {
             season.episodes.forEach(ep => {
               if (ep.videoFile) {
-                // IMPORTANT: If we are uploading a new file, we MUST remove the Base64 preview URL
-                // from the JSON payload, otherwise it exceeds the server's field size limits.
-                // The backend will generate a new URL from the uploaded file.
                 ep.video = { url: '' };
               }
               delete ep.videoFile;
@@ -290,6 +298,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
       onSave(fd);
     }
   };
+
 
   const handleFileUpload = (field, e) => {
     const file = e.target.files[0];

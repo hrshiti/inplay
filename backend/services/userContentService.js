@@ -433,13 +433,12 @@ const getContentByCategory = async (category, limit = 20) => {
   return content.map(item => hydrateContentItem(item));
 };
 
-// Get new releases content
+// Get new releases content — shows latest published content (any type), newest first
 const getNewReleases = async (limit = 10) => {
-  const content = await Content.find({
-    status: 'published'
-  })
-    .select('title poster type rating year genre video seasons createdAt')
-    .sort({ createdAt: -1 }) // Latest first
+  // Return most recently published content with backdrop field included
+  const content = await Content.find({ status: 'published' })
+    .select('title poster backdrop type rating year genre video seasons createdAt image')
+    .sort({ createdAt: -1 })
     .limit(limit);
 
   return content.map(item => hydrateContentItem(item));
