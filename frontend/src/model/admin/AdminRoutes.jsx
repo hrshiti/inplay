@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap } from 'lucide-react';
+import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap, Bell, Users as UsersIcon } from 'lucide-react';
+import adminNotificationService from '../../services/api/adminNotificationService';
 import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
 import ContentForm from './components/forms/ContentForm';
@@ -17,6 +18,7 @@ import AdPromotionPage from './pages/AdPromotionPage';
 import LegalPages from './pages/LegalPages';
 import TabManagementPage from './pages/TabManagementPage';
 import adminTabService from '../../services/api/adminTabService';
+import AdminNotifications from './AdminNotifications';
 const getImageUrl = (path) => {
   if (!path) return "https://placehold.co/300x450/111/FFF?text=No+Image";
   // Fallback to the utility if available, or just use the same logic
@@ -1881,6 +1883,9 @@ const Settings = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [notification, setNotification] = useState({ title: '', body: '', target: 'all', userId: '' });
+  const [usersList, setUsersList] = useState([]);
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -1889,20 +1894,65 @@ const Settings = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [profile, appSettings] = await Promise.all([
+      const [profile, appSettings, allUsers] = await Promise.all([
         adminAuthService.getProfile(),
-        adminUserService.getAppSettings()
+        adminUserService.getAppSettings(),
+        adminUserService.getAllUsers().catch(() => [])
       ]);
       setAdminProfile({ name: profile.name, email: profile.email });
       if (appSettings?.subscriptionSettings) {
         setTrialSettings(appSettings.subscriptionSettings);
       }
+      setUsersList(allUsers);
       setError(null);
     } catch (err) {
       console.error('Failed to load data', err);
       setError('Failed to load settings data.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    if (!notification.title || !notification.body) {
+      setError('Title and message are required');
+      return;
+    }
+
+    try {
+      setSendingNotification(true);
+      setError(null);
+      setSuccess(null);
+
+      let response;
+      const payload = { title: notification.title, body: notification.body };
+
+      if (notification.target === 'all') {
+        response = await adminNotificationService.sendToAll(payload);
+      } else if (notification.target === 'subscribed') {
+        response = await adminNotificationService.sendToSubscribed(payload);
+      } else if (notification.target === 'user') {
+        if (!notification.userId) {
+          setError('Please select a user');
+          setSendingNotification(false);
+          return;
+        }
+        response = await adminNotificationService.sendToUser(notification.userId, payload);
+      }
+
+      if (response.success) {
+        setSuccess(response.message || 'Notification sent successfully!');
+        setNotification({ ...notification, title: '', body: '' });
+        setTimeout(() => setSuccess(null), 5000);
+      } else {
+        setError(response.message || 'Failed to send notification');
+      }
+    } catch (err) {
+      console.error('Notification failed', err);
+      setError(err.response?.data?.message || err.message || 'Failed to send notification');
+    } finally {
+      setSendingNotification(false);
     }
   };
 
@@ -1987,6 +2037,7 @@ const Settings = () => {
           {success}
         </div>
       )}
+
 
       {/* Subscription Trial Settings Section */}
       <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '32px' }}>
@@ -2197,6 +2248,7 @@ export default function AdminRoutes() {
         <Route path="promotions/edit/:id" element={<AdPromotionPage />} />
         <Route path="legal" element={<LegalPages />} />
         <Route path="tabs" element={<TabManagementPage />} />
+        <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings/app" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

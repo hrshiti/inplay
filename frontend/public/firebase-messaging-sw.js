@@ -4,12 +4,12 @@ importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compa
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyAKlnEunlW7vqC1O_CnPSVgiSP8W3EHcP8",
-    authDomain: "inplay-43123.firebaseapp.com",
-    projectId: "inplay-43123",
-    storageBucket: "inplay-43123.firebasestorage.app",
-    messagingSenderId: "213005293117",
-    appId: "1:213005293117:web:b14d89d63c4356b025bc54"
+    apiKey: "AIzaSyCd9hdXKYOlMsFxL9EED4pe8oFnKJoxTw0",
+    authDomain: "fir-notifiactions.firebaseapp.com",
+    projectId: "fir-notifiactions",
+    storageBucket: "fir-notifiactions.firebasestorage.app",
+    messagingSenderId: "877278051328",
+    appId: "1:877278051328:web:f485d5d81c11972aa32ce5"
 };
 
 // Initialize Firebase

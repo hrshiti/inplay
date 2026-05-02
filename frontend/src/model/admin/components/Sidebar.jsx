@@ -27,6 +27,7 @@ const navigation = [
   { name: 'Subscription', href: '/admin/monetization/subscriptions', icon: Repeat },
   { name: 'Legal Pages', href: '/admin/legal', icon: Shield },
   { name: 'Tab Management', href: '/admin/tabs', icon: Layout },
+  { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },
   { name: 'Settings', href: '/admin/settings/app', icon: Settings }
 ];
 

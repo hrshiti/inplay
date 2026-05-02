@@ -56,6 +56,61 @@ const notifyAllUsers = async (payload) => {
     }
 };
 
+/**
+ * Send notification to subscribed users
+ * @param {Object} payload - { title, body, imageUrl, data }
+ */
+const notifySubscribedUsers = async (payload) => {
+    try {
+        const users = await User.find({
+            'subscription.isActive': true,
+            $or: [
+                { fcm_web: { $exists: true, $not: { $size: 0 } } },
+                { fcm_mobile: { $exists: true, $not: { $size: 0 } } }
+            ]
+        }).select('fcm_web fcm_mobile');
+
+        if (!users || users.length === 0) return;
+
+        let tokens = [];
+        users.forEach(user => {
+            if (user.fcm_web) tokens = [...tokens, ...user.fcm_web];
+            if (user.fcm_mobile) tokens = [...tokens, ...user.fcm_mobile];
+        });
+
+        const uniqueTokens = [...new Set(tokens)];
+        if (uniqueTokens.length > 0) {
+            await sendPushNotification(uniqueTokens, payload);
+        }
+    } catch (error) {
+        console.error('Error in notifySubscribedUsers:', error);
+    }
+};
+
+/**
+ * Send notification to specific user
+ * @param {string} userId
+ * @param {Object} payload - { title, body, imageUrl, data }
+ */
+const notifySpecificUser = async (userId, payload) => {
+    try {
+        const user = await User.findById(userId).select('fcm_web fcm_mobile');
+        if (!user) return;
+
+        let tokens = [...(user.fcm_web || []), ...(user.fcm_mobile || [])];
+        const uniqueTokens = [...new Set(tokens)];
+
+        if (uniqueTokens.length > 0) {
+            return await sendPushNotification(uniqueTokens, payload);
+        }
+    } catch (error) {
+        console.error('Error in notifySpecificUser:', error);
+        throw error;
+    }
+};
+
 module.exports = {
-    notifyAllUsers
+    notifyAllUsers,
+    notifySubscribedUsers,
+    notifySpecificUser
 };
