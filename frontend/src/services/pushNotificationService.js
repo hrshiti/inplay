@@ -82,13 +82,14 @@ async function registerFCMTokenWithBackend(forceUpdate = false) {
         const API_URL = getApiUrl();
         console.log(`📡 Sending token to backend: ${API_URL}/user/auth/fcm-token`);
 
+        const platform = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'web';
         const response = await fetch(`${API_URL}/user/auth/fcm-token`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
             },
-            body: JSON.stringify({ token, platform: 'web' })
+            body: JSON.stringify({ token, platform })
         });
 
         const data = await response.json();
