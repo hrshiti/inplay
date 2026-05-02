@@ -70,19 +70,21 @@ async function registerFCMTokenWithBackend(forceUpdate = false) {
             return;
         }
 
+        const platform = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'web';
         const token = await getFCMToken();
         if (!token) return;
 
-        const savedToken = localStorage.getItem('fcm_token_web');
-        if (savedToken === token && !forceUpdate) {
-            console.log('FCM token already registered locally');
+        const savedToken = localStorage.getItem('fcm_token_registered');
+        const savedPlatform = localStorage.getItem('fcm_platform');
+
+        if (savedToken === token && savedPlatform === platform && !forceUpdate) {
+            console.log(`FCM token already registered locally for ${platform}`);
             return;
         }
 
         const API_URL = getApiUrl();
         console.log(`📡 Sending token to backend: ${API_URL}/user/auth/fcm-token`);
 
-        const platform = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'web';
         const response = await fetch(`${API_URL}/user/auth/fcm-token`, {
             method: 'POST',
             headers: {
@@ -94,8 +96,9 @@ async function registerFCMTokenWithBackend(forceUpdate = false) {
 
         const data = await response.json();
         if (data.success) {
-            localStorage.setItem('fcm_token_web', token);
-            console.log('✅ FCM token registered with backend successfully');
+            localStorage.setItem('fcm_token_registered', token);
+            localStorage.setItem('fcm_platform', platform);
+            console.log(`✅ FCM token registered for ${platform} successfully`);
         } else {
             console.error('❌ Backend failed to save FCM token:', data.message);
         }
