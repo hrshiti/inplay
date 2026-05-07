@@ -2,7 +2,7 @@ const QuickByte = require('../models/QuickByte');
 const Comment = require('../models/Comment');
 const mediaService = require('../services/mediaService');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
-const { notifyAllUsers } = require('../utils/notificationHelper');
+
 
 // NOTE: Multer configuration is now in config/multerStorage.js
 // Files are automatically saved to disk by the uploadMixed middleware
@@ -145,19 +145,7 @@ const createQuickByteHandler = async (req, res) => {
                         { new: true }
                     ).exec();
 
-                    // Send notification if now published
-                    if (updated && updated.status === 'published') {
-                        notifyAllUsers({
-                            title: `New QuickByte Released!`,
-                            body: updated.title,
-                            imageUrl: updated.thumbnail?.url || updated.thumbnail?.secure_url,
-                            data: {
-                                type: 'quickbyte',
-                                id: updated._id.toString(),
-                                link: `/reels`
-                            }
-                        });
-                    }
+
                 }
             });
         }

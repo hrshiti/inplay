@@ -148,20 +148,7 @@ const createContent = async (contentData, adminId, files = {}) => {
                 
                 console.log(`HLS Master synced and Published for: ${content.title}`);
 
-                // Send push notification only NOW when it's actually ready
-                const { notifyAllUsers } = require('../utils/notificationHelper');
-                if (updatedContent && updatedContent.status === 'published') {
-                    notifyAllUsers({
-                        title: `New ${updatedContent.type || 'Movie'} Released!`,
-                        body: updatedContent.title,
-                        imageUrl: updatedContent.poster?.url || updatedContent.poster?.secure_url,
-                        data: {
-                            type: 'content',
-                            id: updatedContent._id.toString(),
-                            link: `/movie-details/${updatedContent._id}`
-                        }
-                    });
-                }
+
             }
         });
     }

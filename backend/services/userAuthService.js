@@ -493,58 +493,7 @@ const toggleLike = async (userId, contentId) => {
   return { likedContent: user.likedContent, action };
 };
 
-// Save FCM Token
-const saveFCMToken = async (userId, token, platform = 'web') => {
-  console.log(`Saving FCM token for user ${userId}, platform: ${platform}`);
-  const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
 
-  if (platform === 'web') {
-    if (!user.fcm_web) {
-      user.fcm_web = [];
-    }
-    if (!user.fcm_web.includes(token)) {
-      user.fcm_web.push(token);
-      // Limit to 10 tokens
-      if (user.fcm_web.length > 10) {
-        user.fcm_web = user.fcm_web.slice(-10);
-      }
-      console.log(`Token added to fcm_web list for user ${user.email}`);
-    } else {
-      console.log('Token already exists in fcm_web list');
-    }
-  } else if (platform === 'mobile') {
-    if (!user.fcm_mobile) {
-      user.fcm_mobile = [];
-    }
-    if (!user.fcm_mobile.includes(token)) {
-      user.fcm_mobile.push(token);
-      if (user.fcm_mobile.length > 10) {
-        user.fcm_mobile = user.fcm_mobile.slice(-10);
-      }
-      console.log(`Token added to fcm_mobile list for user ${user.email}`);
-    } else {
-      console.log('Token already exists in fcm_mobile list');
-    }
-  }
-
-  await user.save();
-  return { success: true, message: 'FCM token saved' };
-};
-
-// Remove FCM Token
-const removeFCMToken = async (userId, token, platform = 'web') => {
-  const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
-
-  if (platform === 'web' && user.fcm_web) {
-    user.fcm_web = user.fcm_web.filter(t => t !== token);
-  } else if (platform === 'mobile' && user.fcm_mobile) {
-    user.fcm_mobile = user.fcm_mobile.filter(t => t !== token);
-  }
-
-  return { success: true, message: 'FCM token removed' };
-};
 
 // Remove from watch history
 const removeFromHistory = async (userId, contentId) => {
@@ -585,8 +534,6 @@ module.exports = {
   clearHistory,
   logoutUser,
   toggleLike,
-  saveFCMToken,
-  removeFCMToken,
   requestOtp,
   verifyOtp
 };

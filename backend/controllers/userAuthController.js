@@ -356,35 +356,7 @@ const toggleLike = async (req, res) => {
   }
 };
 
-// @desc    Save FCM token
-// @route   POST /api/user/auth/fcm-token
-// @access  Private
-const saveFCMToken = async (req, res) => {
-  try {
-    const { token, platform } = req.body;
-    if (!token) {
-      return res.status(400).json({ success: false, message: 'Token is required' });
-    }
 
-    const result = await userAuthService.saveFCMToken(req.user._id, token, platform);
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Remove FCM token
-// @route   DELETE /api/user/auth/fcm-token
-// @access  Private
-const removeFCMToken = async (req, res) => {
-  try {
-    const { token, platform } = req.body;
-    const result = await userAuthService.removeFCMToken(req.user._id, token, platform);
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
 
 // @desc    Remove item from watch history
 // @route   DELETE /api/user/auth/history/:contentId
@@ -442,8 +414,6 @@ module.exports = {
   clearHistory,
   logoutUser,
   toggleLike,
-  saveFCMToken,
-  removeFCMToken,
   requestLoginOtp,
   verifyLoginOtp
 };
