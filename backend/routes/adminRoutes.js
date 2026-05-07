@@ -58,11 +58,6 @@ router.put('/subscription/plans/:id', subscriptionController.updatePlan);
 router.delete('/subscription/plans/:id', subscriptionController.deletePlan);
 router.get('/subscription/active', subscriptionController.getActiveSubscriptions);
 
-// Notification routes
-const notificationController = require('../controllers/notificationController');
-router.get('/notifications', notificationController.getNotifications);
-router.post('/notifications/send-all', notificationController.sendToAll);
-router.post('/notifications/send-subscribed', notificationController.sendToSubscribed);
-router.post('/notifications/send-user', notificationController.sendToUser);
+
 
 module.exports = router;
