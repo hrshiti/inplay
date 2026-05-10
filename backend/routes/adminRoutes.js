@@ -7,6 +7,8 @@ const contentController = require('../controllers/contentController');
 
 const adminUserController = require('../controllers/adminUserController');
 const analyticsController = require('../controllers/analyticsController');
+const notificationController = require('../controllers/notificationController');
+
 
 // Import middlewares
 const { protect, authorize } = require('../middlewares/auth');
@@ -57,6 +59,13 @@ router.post('/subscription/plans', subscriptionController.createPlan);
 router.put('/subscription/plans/:id', subscriptionController.updatePlan);
 router.delete('/subscription/plans/:id', subscriptionController.deletePlan);
 router.get('/subscription/active', subscriptionController.getActiveSubscriptions);
+
+// Notification routes
+router.get('/notifications', notificationController.getNotificationHistory);
+router.post('/notifications/send-all', notificationController.sendToAll);
+router.post('/notifications/send-subscribed', notificationController.sendToSubscribed);
+router.post('/notifications/send-user', notificationController.sendToUser);
+
 
 
 

@@ -200,7 +200,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
             title: 'Account',
             items: [
                 { id: 'profile', icon: <User size={20} />, label: 'Profile Settings', value: userName, action: () => setActiveModal('profile') },
-                { id: 'plan', icon: <Crown size={20} />, label: 'Subscription', value: userPlan, action: () => setActiveModal('plan') },
+                // { id: 'plan', icon: <Crown size={20} />, label: 'Subscription', value: userPlan, action: () => setActiveModal('plan') },
             ]
         },
         {
