@@ -1,19 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause, ArrowLeft, Send, X, Trash2 } from 'lucide-react';
 import { getImageUrl } from './utils/imageUtils';
-import { io } from 'socket.io-client';
-import contentService from './services/api/contentService';
-import authService from './services/api/authService';
-import HlsPlayer from './components/HlsPlayer';
+import socketService from './services/socketService';
 
-// Initialize Socket outside component to prevent multiple connections
-// Initialize Socket outside component to prevent multiple connections
+// Initialize Socket URL for fallback API calls
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
 // Remove trailing slash if exists and ensure /api suffix
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
-const socket = io(API_URL.replace('/api', ''), {
-    autoConnect: false
-});
 
 export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
     const [reels, setReels] = useState([]);
@@ -32,10 +25,15 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
         };
         fetchReels();
 
-        // Connect socket
-        socket.connect();
+        // Ensure socket is connected
+        const user = localStorage.getItem('inplay_current_user');
+        if (user) {
+            const userData = JSON.parse(user);
+            socketService.connect(userData._id || userData.id);
+        }
+
         return () => {
-            socket.disconnect();
+            // We don't disconnect globally here as it's managed by App.jsx
         };
     }, []);
 
@@ -109,6 +107,14 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
                         shouldPreload={index > activeIndex && index <= activeIndex + 5}
                         isAlreadyLiked={likedVideos.some(v => (v._id || v.id) === reel._id)}
                         onToggleLike={onToggleLike}
+                        onAutoNext={() => {
+                            if (index < reels.length - 1) {
+                                containerRef.current?.scrollTo({
+                                    top: (index + 1) * window.innerHeight,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        }}
                     />
                 ))
             ) : (
@@ -123,7 +129,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
 function ReelItem({
     reel, muted, toggleMute, setActiveReelId,
     setActiveIndex, index, isActiveIndex, shouldPreload,
-    isAlreadyLiked, onToggleLike
+    isAlreadyLiked, onToggleLike, onAutoNext
 }) {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -222,7 +228,10 @@ function ReelItem({
                     setActiveReelId(reel._id);
                     setActiveIndex(index);
                     // Join Reel Room for Socket events
-                    socket.emit('join_reel', reel._id);
+                    const socket = socketService.getSocket();
+                    if (socket) {
+                        socket.emit('join_reel', reel._id);
+                    }
                     if (videoRef.current) {
                         videoRef.current.currentTime = 0;
                         videoRef.current.play().catch(e => console.log("Autoplay blocked", e));
@@ -347,8 +356,13 @@ function ReelItem({
             // Next episode
             setCurrentEpIndex(prev => prev + 1);
         } else {
-            // Loop back to first episode
-            setCurrentEpIndex(0);
+            // Reach the end of this reel's episodes
+            if (onAutoNext) {
+                onAutoNext();
+            } else {
+                // Fallback: Loop back to first episode if no auto-next provided
+                setCurrentEpIndex(0);
+            }
         }
     };
 
@@ -385,7 +399,7 @@ function ReelItem({
                     src={(isActiveIndex || shouldPreload) ? currentVideoSrc : ''}
                     hlsUrl={(isActiveIndex || shouldPreload) ? (reel.hls_url || reel.video?.hls_url) : ''}
                     className="reel-video"
-                    isLoop={episodes.length === 1}
+                    isLoop={false}
                     isMuted={muted}
                     onEnded={handleVideoEnd}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -473,6 +487,9 @@ const CommentsSheet = ({ reelId, onClose }) => {
             } catch (e) { console.error(e); }
         };
         fetchComments();
+
+        const socket = socketService.getSocket();
+        if (!socket) return;
 
         // Listen for real-time comments
         socket.on('new_comment', (comment) => {

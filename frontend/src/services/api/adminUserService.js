@@ -237,6 +237,44 @@ const adminUserService = {
         }
 
         return data.data;
+    },
+
+    async forceLogoutUser(userId) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/users/${userId}/force-logout`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to trigger force logout');
+        }
+
+        return data;
+    },
+
+    async forceLogoutAll() {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/users/force-logout-all`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to trigger global force logout');
+        }
+
+        return data;
     }
 };
 

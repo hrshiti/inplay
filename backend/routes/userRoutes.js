@@ -30,6 +30,7 @@ router.put('/auth/profile', userAuthController.updateUserProfile);
 router.put('/auth/avatar', userAuthController.uploadAvatar);
 router.put('/auth/change-password', userAuthController.changeUserPassword);
 router.put('/auth/preferences', userAuthController.updateUserPreferences);
+router.delete('/auth/profile', userAuthController.deleteUserAccount);
 router.post('/auth/my-list/:contentId', userAuthController.addToMyList);
 router.delete('/auth/my-list/:contentId', userAuthController.removeFromMyList);
 router.post('/auth/like/:contentId', userAuthController.toggleLike);
@@ -37,7 +38,8 @@ router.get('/auth/watch-history', userAuthController.getWatchHistory);
 router.delete('/auth/history/:contentId', userAuthController.removeFromHistory);
 router.delete('/auth/history', userAuthController.clearHistory);
 router.post('/auth/logout', userAuthController.logoutUser);
-
+router.post('/auth/fcm-token', userAuthController.saveFCMToken);
+router.delete('/auth/fcm-token', userAuthController.removeFCMToken);
 
 // Content routes
 router.get('/my-list', userContentController.getMyList);

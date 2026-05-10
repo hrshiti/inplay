@@ -1,7 +1,7 @@
 const contentService = require('../services/contentService');
 const { CONTENT_STATUS } = require('../constants');
 const { uploadMixed } = require('../config/multerStorage');
-
+const { notifyAllUsers } = require('../utils/notificationHelper');
 
 // NOTE: Multer configuration is now in config/multerStorage.js
 // Files are automatically saved to disk by the uploadMixed middleware

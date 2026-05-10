@@ -96,6 +96,24 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
         }
     };
 
+    const handleDeleteAccount = async () => {
+        if (!window.confirm("Are you sure you want to delete your account? This action is permanent and all your data will be lost from our servers. You will need to register again to use InPlay.")) {
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await authService.deleteAccount();
+            onLogout();
+            navigate('/');
+        } catch (err) {
+            console.error("Failed to delete account:", err);
+            setMessage({ text: err.message || 'Failed to delete account', type: 'error' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     useEffect(() => {
         if (currentUser) {
             setEditData({
@@ -200,15 +218,21 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
             title: 'Account',
             items: [
                 { id: 'profile', icon: <User size={20} />, label: 'Profile Settings', value: userName, action: () => setActiveModal('profile') },
-                // { id: 'plan', icon: <Crown size={20} />, label: 'Subscription', value: userPlan, action: () => setActiveModal('plan') },
-            ]
+                { id: 'plan', icon: <Crown size={20} />, label: 'Subscription', value: userPlan, action: () => setActiveModal('plan') },
+            ].filter(item => {
+                if (item.id === 'plan') {
+                    const hiddenNumbers = ['6268204871', '6268455485'];
+                    return !hiddenNumbers.includes(currentUser?.phone);
+                }
+                return true;
+            })
         },
         {
             title: 'Support & Legal',
             items: [
-                { id: 'help', icon: <HelpCircle size={20} />, label: 'Help Center', action: () => setActiveModal('help') },
-                { id: 'privacy', icon: <Shield size={20} />, label: 'Privacy Policy', action: () => setActiveModal('privacy') },
-                { id: 'about', icon: <Info size={20} />, label: 'About InPlay', action: () => setActiveModal('about') },
+                { id: 'help', icon: <HelpCircle size={20} />, label: 'Help Center', action: () => navigate('/help') },
+                { id: 'privacy', icon: <Shield size={20} />, label: 'Privacy Policy', action: () => navigate('/privacy') },
+                { id: 'about', icon: <Info size={20} />, label: 'About InPlay', action: () => navigate('/about') },
             ]
         }
     ];
@@ -361,36 +385,54 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                     </div>
                 ))}
 
-                {/* Logout Button */}
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                        if (confirm("Are you sure you want to logout?")) {
-                            onLogout();
-                            navigate('/login');
-                        }
-                    }}
+            <div style={{ padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                    onClick={onLogout}
                     style={{
                         width: '100%',
-                        padding: '18px',
-                        borderRadius: '16px',
-                        border: '1px solid rgba(255,77,77,0.2)',
-                        background: 'rgba(255,77,77,0.05)',
-                        color: '#ff4d4d',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '12px',
+                        padding: '18px',
+                        background: '#ff4d4d',
+                        border: 'none',
+                        borderRadius: '16px',
+                        color: 'white',
                         fontSize: '1rem',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         cursor: 'pointer',
-                        marginTop: '16px'
+                        boxShadow: '0 8px 16px rgba(255, 77, 77, 0.2)'
                     }}
                 >
                     <LogOut size={20} />
                     Log Out
-                </motion.button>
+                </button>
+
+                <button
+                    onClick={handleDeleteAccount}
+                    disabled={isSaving}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        padding: '16px',
+                        background: 'rgba(255, 77, 77, 0.05)',
+                        border: '1px solid rgba(255, 77, 77, 0.3)',
+                        borderRadius: '16px',
+                        color: '#ff4d4d',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        marginTop: '12px'
+                    }}
+                >
+                    Delete Account Permanently
+                </button>
             </div>
+        </div>
 
             {/* Modal Components */}
             <AnimatePresence>
@@ -435,9 +477,6 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                     {activeModal === 'notifications' && 'Notifications'}
                                     {activeModal === 'language' && 'App Language'}
                                     {activeModal === 'appearance' && 'Appearance'}
-                                    {activeModal === 'help' && 'Help Center'}
-                                    {activeModal === 'privacy' && 'Privacy Policy'}
-                                    {activeModal === 'about' && 'About InPlay'}
                                 </h2>
                             </div>
                             {activeModal === 'profile' && (
@@ -839,94 +878,6 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                 </div>
                             )}
 
-                            {/* HELP CENTER CONTENT */}
-                            {activeModal === 'help' && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '8px' }}>Frequently Asked Questions</h3>
-                                        {(appSettings?.helpCenter?.faqs || [
-                                            { question: 'How do I cancel my subscription?', answer: 'Go to settings to cancel.' },
-                                            { question: 'Can I watch offline?', answer: 'Yes, download the videos.' },
-                                            { question: 'How to change my password?', answer: 'Go to profile settings.' },
-                                            { question: 'Devices supported by InPlay', answer: 'Mobile, Tablet, and Web.' },
-                                            { question: 'Reporting a playback issue', answer: 'Contact support with details.' }
-                                        ]).map((faq, i) => (
-                                            <details key={i} style={{
-                                                padding: '16px',
-                                                background: 'rgba(255,255,255,0.03)',
-                                                borderRadius: '12px',
-                                                cursor: 'pointer'
-                                            }}>
-                                                <summary style={{ fontSize: '0.9rem', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span>{faq.question}</span>
-                                                    <ChevronRight size={16} color="#444" />
-                                                </summary>
-                                                <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#888', lineHeight: '1.5' }}>
-                                                    {faq.answer}
-                                                </p>
-                                            </details>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* PRIVACY POLICY CONTENT */}
-                            {activeModal === 'privacy' && (
-                                <div style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                                    <h3 style={{ color: 'white', marginBottom: '16px' }}>Privacy Policy</h3>
-                                    <p style={{ marginBottom: '16px' }}>Last updated: {appSettings?.privacyPolicy?.lastUpdated ? new Date(appSettings.privacyPolicy.lastUpdated).toLocaleDateString() : 'January 2026'}</p>
-                                    <div
-                                        style={{ whiteSpace: 'pre-wrap' }}
-                                        dangerouslySetInnerHTML={{ __html: appSettings?.privacyPolicy?.content || 'InPlay ("we", "our", or "us") is committed to protecting your privacy...' }}
-                                    />
-                                </div>
-                            )}
-
-                            {/* ABOUT CONTENT */}
-                            {activeModal === 'about' && (
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{
-                                        width: '80px',
-                                        height: '80px',
-                                        background: '#ff4d4d',
-                                        borderRadius: '20px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        margin: '0 auto 24px',
-                                        boxShadow: '0 8px 32px rgba(255, 77, 77, 0.3)'
-                                    }}>
-                                        <div style={{ color: 'white', fontSize: '2rem', fontWeight: '900 italic' }}>IP</div>
-                                    </div>
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '8px' }}>InPlay</h3>
-                                    <p style={{ color: '#666', marginBottom: '32px' }}>Version {appSettings?.aboutInPlay?.version || '2.4.0 (Stable Build)'}</p>
-                                    <div style={{
-                                        background: 'rgba(255,255,255,0.03)',
-                                        borderRadius: '16px',
-                                        padding: '24px',
-                                        textAlign: 'left',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '16px'
-                                    }}>
-                                        <p style={{ color: '#888', fontSize: '0.9rem' }}>{appSettings?.aboutInPlay?.description || 'InPlay is the next generation streaming platform bringing you the best in movies, shows, and originals with an unmatched user experience.'}</p>
-                                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#555' }}>Website</span>
-                                            <a href={`https://${appSettings?.aboutInPlay?.website}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.website || 'www.inplay.com'}</a>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#555' }}>Twitter</span>
-                                            <a href={`https://twitter.com/${appSettings?.aboutInPlay?.twitter?.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.twitter || '@InPlayHQ'}</a>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ color: '#555' }}>Instagram</span>
-                                            <a href={`https://instagram.com/${appSettings?.aboutInPlay?.instagram?.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.instagram || '@inplay_official'}</a>
-                                        </div>
-                                    </div>
-                                    <p style={{ color: '#333', fontSize: '0.75rem', marginTop: '40px' }}>&copy; {new Date().getFullYear()} InPlay Entertainment Records Inc.<br />All rights reserved.</p>
-                                </div>
-                            )}
 
                             {/* Message Toast */}
                             {message.text && (

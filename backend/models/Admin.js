@@ -40,7 +40,12 @@ const adminSchema = new mongoose.Schema({
     loginCount: {
         type: Number,
         default: 0
-    }
+    },
+    tokenVersion: {
+        type: Number,
+        default: 0
+    },
+    forceLogoutAt: Date
 }, {
     timestamps: true
 });

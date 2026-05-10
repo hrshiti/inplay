@@ -1,13 +1,23 @@
 /* App Container */
+/* iOS Height Fix */
+html, body {
+  height: 100%;
+  height: -webkit-fill-available;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 .app-container {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
   background-color: var(--bg-primary);
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   position: relative;
-  padding-bottom: 80px;
-  /* bottom nav */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  /* bottom nav + safe area */
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
   /* overflow removed to allow sticky positioning to work relative to viewport */
 }
@@ -524,14 +534,14 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  height: 80px;
+  height: calc(80px + env(safe-area-inset-bottom, 0px));
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
-  padding-bottom: 10px;
+  padding-bottom: env(safe-area-inset-bottom, 10px);
   /* Safe area */
   border-radius: 0;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);

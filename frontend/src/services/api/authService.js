@@ -1,6 +1,7 @@
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
 // Remove trailing slash if exists and ensure /api suffix
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
+import socketService from '../socketService';
 
 const authService = {
     async signup(userData) {
@@ -140,8 +141,12 @@ const authService = {
         if (!data.success) {
             console.error('Profile fetch failed:', data.message, 'Status:', response.status);
             if (response.status === 401) {
-                localStorage.removeItem('inplay_token');
-                localStorage.removeItem('inplay_current_user');
+                if (data.message === 'FORCE_LOGOUT') {
+                    socketService.handleForceLogout(data.reason || 'Session expired');
+                } else {
+                    localStorage.removeItem('inplay_token');
+                    localStorage.removeItem('inplay_current_user');
+                }
             }
             throw new Error(data.message || 'Failed to fetch profile');
         }
@@ -284,9 +289,32 @@ const authService = {
         return data.data;
     },
 
+    async deleteAccount() {
+        const token = localStorage.getItem('inplay_token');
+        if (!token) throw new Error('No token found');
+
+        const response = await fetch(`${API_URL}/user/auth/profile`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            }
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to delete account');
+        }
+
+        this.logout();
+        return data;
+    },
+
     logout() {
         localStorage.removeItem('inplay_token');
         localStorage.removeItem('inplay_current_user');
+        localStorage.removeItem('fcm_token_registered');
+        localStorage.removeItem('fcm_platform');
+        localStorage.removeItem('fcm_user_id');
     }
 };
 

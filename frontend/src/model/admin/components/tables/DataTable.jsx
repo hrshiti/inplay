@@ -205,6 +205,7 @@ export default function DataTable({
                           }}
                           onMouseEnter={(e) => e.target.style.color = '#dc2626'}
                           onMouseLeave={(e) => e.target.style.color = '#ef4444'}
+                          title="Delete"
                         >
                           <Trash2 size={16} />
                         </button>

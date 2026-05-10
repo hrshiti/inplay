@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap, Bell, Users as UsersIcon } from 'lucide-react';
+import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap, Bell, Users as UsersIcon, LogOut } from 'lucide-react';
 import adminNotificationService from '../../services/api/adminNotificationService';
 import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
@@ -847,6 +847,28 @@ const Users = () => {
     setModalMode('view');
   };
 
+  const handleForceLogoutAll = async () => {
+    if (confirm('🚨 DANGER: This will log out ALL active users immediately. Are you sure?')) {
+      try {
+        await adminUserService.forceLogoutAll();
+        alert('Global force logout triggered successfully!');
+      } catch (err) {
+        alert('Failed to trigger global logout: ' + err.message);
+      }
+    }
+  };
+
+  const handleForceLogoutUser = async (userId) => {
+    if (confirm('Terminate this user\'s active session?')) {
+      try {
+        await adminUserService.forceLogoutUser(userId);
+        alert('Force logout signal sent to user.');
+      } catch (err) {
+        alert('Failed to force logout user: ' + err.message);
+      }
+    }
+  };
+
   const handleUpdateUser = async (updatedData) => {
     try {
       setIsModalLoading(true);
@@ -896,23 +918,43 @@ const Users = () => {
             )}
           </div>
         </div>
-        <button
-          style={{
-            background: '#46d369',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '0.9rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'background-color 0.3s ease'
-          }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#3ea055'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#46d369'}
-        >
-          Add New User
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={handleForceLogoutAll}
+            style={{
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <LogOut size={18} /> Force Logout All
+          </button>
+          <button
+            style={{
+              background: '#46d369',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#3ea055'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#46d369'}
+          >
+            Add New User
+          </button>
+        </div>
       </div>
 
       <DataTable
@@ -1034,26 +1076,48 @@ const Users = () => {
                     </select>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isModalLoading}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#46d369',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: '600',
-                      cursor: isModalLoading ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    {isModalLoading ? 'Saving...' : <><Save size={18} /> Update User</>}
-                  </button>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                    <button
+                      type="submit"
+                      disabled={isModalLoading}
+                      style={{
+                        flex: 2,
+                        padding: '12px',
+                        backgroundColor: '#46d369',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        cursor: isModalLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {isModalLoading ? 'Saving...' : <><Save size={18} /> Update User</>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleForceLogoutUser(selectedUser._id)}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <LogOut size={18} /> Kick
+                    </button>
+                  </div>
                 </form>
               )}
             </div>
@@ -1338,23 +1402,23 @@ const Subscriptions = () => {
   const columns = [
     { key: 'name', label: 'User Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
-    { key: 'subscription', label: 'Plan', sortable: true, render: (v) => v?.plan?.name || 'Unknown' },
-    { key: 'subscription', label: 'Starts', sortable: true, render: (v) => v?.startDate ? new Date(v.startDate).toLocaleDateString() : 'N/A' },
-    { key: 'subscription', label: 'Expires', sortable: true, render: (v) => v?.endDate ? new Date(v.endDate).toLocaleDateString() : 'N/A' },
+    { key: 'subscription_plan', label: 'Plan', sortable: true, render: (_, row) => row.subscription?.plan?.name || 'Unknown' },
+    { key: 'subscription_start', label: 'Starts', sortable: true, render: (_, row) => row.subscription?.startDate ? new Date(row.subscription.startDate).toLocaleDateString() : 'N/A' },
+    { key: 'subscription_end', label: 'Expires', sortable: true, render: (_, row) => row.subscription?.endDate ? new Date(row.subscription.endDate).toLocaleDateString() : 'N/A' },
     { 
-      key: 'subscription', 
+      key: 'subscription_status', 
       label: 'Status', 
       sortable: true, 
-      render: (v) => (
+      render: (_, row) => (
         <span style={{ 
           padding: '4px 8px', 
           borderRadius: '12px', 
           fontSize: '0.75rem', 
           fontWeight: '600', 
-          background: v?.isActive ? '#dcfce7' : '#fee2e2', 
-          color: v?.isActive ? '#166534' : '#991b1b' 
+          background: row.subscription?.isActive ? '#dcfce7' : '#fee2e2', 
+          color: row.subscription?.isActive ? '#166534' : '#991b1b' 
         }}>
-          {v?.isActive ? 'Active' : 'Expired'}
+          {row.subscription?.isActive ? 'Active' : 'Expired'}
         </span>
       ) 
     }

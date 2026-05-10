@@ -2,10 +2,64 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Force mock Service Worker at the absolute earliest moment for iOS compatibility
+      (function() {
+        if (typeof navigator !== 'undefined' && !navigator.serviceWorker) {
+          try {
+            Object.defineProperty(navigator, 'serviceWorker', {
+              configurable: true,
+              enumerable: true,
+              value: {
+                register: function() { return Promise.reject("Mock SW"); },
+                addEventListener: function() {},
+                removeEventListener: function() {},
+                ready: new Promise(function(res) { res({}); }),
+                getRegistration: function() { return Promise.resolve(null); },
+                getRegistrations: function() { return Promise.resolve([]); }
+              }
+            });
+            console.log("🚀 [MOCK] ServiceWorker forced for iOS compatibility");
+          } catch (e) {
+            console.warn("⚠️ [MOCK] Could not defineProperty on navigator", e);
+          }
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/image.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="InPlay" />
+    <link rel="apple-touch-icon" href="/image.png" />
+    <meta name="theme-color" content="#000000" />
     <title>InPlay</title>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        var message = [
+          'Message: ' + msg,
+          'URL: ' + url,
+          'Line: ' + lineNo,
+          'Column: ' + columnNo,
+          'Error object: ' + JSON.stringify(error)
+        ].join('\n');
+        console.error("❌ [GLOBAL ERROR]", message);
+        // Also show on screen for simulator debugging
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.left = '0';
+        div.style.background = 'red';
+        div.style.color = 'white';
+        div.style.zIndex = '10000';
+        div.style.padding = '10px';
+        div.style.fontSize = '12px';
+        div.innerHTML = 'JS ERROR: ' + msg;
+        document.body.appendChild(div);
+        return false;
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

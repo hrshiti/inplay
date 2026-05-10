@@ -30,6 +30,7 @@ import CategoryPage from './pages/CategoryPage';
 import AudioSeriesUserPage from './pages/AudioSeriesUserPage';
 import DynamicTabPage from './DynamicTabPage';
 import PlanPage from './PlanPage';
+import LegalPage from './LegalPage';
 
 import VideoPlayer from './VideoPlayer';
 import { AdminRoutes } from './model/admin';
@@ -43,11 +44,12 @@ import AdPromotionPage from './model/admin/pages/AdPromotionPage';
 import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
 import { getImageUrl } from './utils/imageUtils';
-
+import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission } from './services/pushNotificationService';
 
 import Header from './Header';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import FloatingAudioPlayer from './components/FloatingAudioPlayer';
+import socketService from './services/socketService';
 
 const formatViews = (views) => {
   if (!views) return '0';
@@ -55,6 +57,8 @@ const formatViews = (views) => {
   if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
   return views.toString();
 };
+
+console.log('🔥 [DEBUG] App.jsx bundle executed');
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -87,10 +91,27 @@ function App() {
   const [qbContinueWatching, setQbContinueWatching] = useState([]);
   const [dynamicStructure, setDynamicStructure] = useState([]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('🚀 [APP] Loading finished, showing main content');
+      setLoading(false);
+    }, 1500); // Reduced from 3000ms for better UX
+    return () => clearTimeout(timer);
+  }, []);
+
   // Keyboard Detection for Mobile
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   useEffect(() => {
+    // Detect if we are on iOS to apply safety fixes
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      document.documentElement.classList.add('ios-device');
+      // Force opacity on root if needed
+      const root = document.getElementById('root');
+      if (root) root.style.opacity = '1';
+    }
+
     // Only run on mobile devices
     if (window.innerWidth > 768) return;
 
@@ -126,7 +147,13 @@ function App() {
   const updateQuickByteProgress = () => {
     if (quickBites.length > 0) {
       try {
-        const progress = JSON.parse(localStorage.getItem('inplay_quickbyte_progress') || '{}');
+        let progressData = '{}';
+        try {
+          progressData = localStorage.getItem('inplay_quickbyte_progress') || '{}';
+        } catch (e) {
+          console.warn("localStorage access restricted", e);
+        }
+        const progress = JSON.parse(progressData);
         const continued = quickBites.map(item => {
           const contentId = item._id || item.id;
           const prog = progress[contentId];
@@ -209,7 +236,12 @@ function App() {
 
 
   const loadUserProfile = async () => {
-    const token = localStorage.getItem('inplay_token');
+    let token = null;
+    try {
+      token = localStorage.getItem('inplay_token');
+    } catch (e) {
+      console.warn("localStorage blocked", e);
+    }
     if (!token) return;
     try {
       const profile = await authService.getProfile();
@@ -218,9 +250,14 @@ function App() {
       setLikedVideos(profile.likedContent || []);
       setContinueWatching(profile.continueWatching || []);
       setWatchHistory(profile.history || []);
+
+      // Connect socket on profile load
+      socketService.connect(profile._id);
+
       return profile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
+      // If profile fetch fails due to 401 (handled in authService), socket shouldn't connect
     }
   };
 
@@ -238,7 +275,7 @@ function App() {
         // STRICT REDIRECT: If user is NOT active, send to plan page.
         // We use !isSubscribed to catch false, null, and undefined.
         // Skip for dev testing numbers
-        if (!isSubscribed && currentUser.phone !== '6268204871' && currentUser.phone !== '6268455485') {
+        if (!isSubscribed && currentUser.phone !== '6268204871' && currentUser.phone !== '6268455485' && currentUser.phone !== '7566331922') {
           navigate('/plan', { replace: true });
         }
       }
@@ -248,7 +285,12 @@ function App() {
   }, [currentUser?._id, location.pathname, navigate]);
 
   const handleAuthSuccess = () => {
-    const savedUser = localStorage.getItem('inplay_current_user');
+    let savedUser = null;
+    try {
+      savedUser = localStorage.getItem('inplay_current_user');
+    } catch (e) {
+      console.warn("localStorage access restricted", e);
+    }
     if (savedUser) {
       const user = JSON.parse(savedUser);
       setCurrentUser(user);
@@ -494,7 +536,59 @@ function App() {
 
   const heroRef = useRef(null);
 
+  useEffect(() => {
+    // Initialize push notifications
+    const initNotifications = async () => {
+      try {
+        console.log('🔔 [FCM] Initializing notifications...');
+        const permissionStatus = Notification.permission;
+        console.log('🔔 [FCM] Notification permission status:', permissionStatus);
 
+        if (currentUser) {
+          console.log('🔔 [FCM] Attempting to register token with backend...');
+
+          // Connect/Register Socket for real-time events
+          socketService.connect(currentUser._id || currentUser.id);
+
+          // Force update if the current user document doesn't have any tokens for this platform
+          const userAgent = navigator.userAgent;
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|Tablet|Kindle|Silk|wv|apk|app/i.test(userAgent) || window.InPlayMobile;
+          const hasTokens = isMobile ? (currentUser.fcm_mobile?.length > 0) : (currentUser.fcm_web?.length > 0);
+
+          await registerFCMTokenWithBackend(currentUser._id, !hasTokens);
+        } else if (!currentUser) {
+          console.log('🔔 [FCM] Skipping registration: No current user');
+        }
+
+        if (permissionStatus !== 'granted') {
+          console.warn('🔔 [FCM] Notification permission not currently granted (Status: ' + permissionStatus + ')');
+        }
+      } catch (err) {
+        console.error('🔔 [FCM] Notification init error:', err);
+      }
+    };
+
+    initNotifications();
+
+    // Trigger permission request on first user interaction (required for mobile browsers)
+    const handleFirstInteraction = async () => {
+      if (Notification.permission === 'default') {
+        console.log('👆 [FCM] User interaction detected, requesting notification permission...');
+        await requestNotificationPermission();
+        // After permission is granted, re-run init to get token
+        initNotifications();
+      }
+      window.removeEventListener('click', handleFirstInteraction);
+    };
+    window.addEventListener('click', handleFirstInteraction);
+
+    // Setup foreground notification handler
+    setupForegroundNotificationHandler((payload) => {
+      if (payload.notification) {
+        showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
+      }
+    });
+  }, [currentUser]);
 
   const showToast = (message) => {
     setToast(message);
@@ -611,14 +705,13 @@ function App() {
 
   const handleLogout = () => {
     authService.logout();
+    socketService.disconnect();
     setCurrentUser(null);
     showToast('Logged out successfully');
+    navigate('/login', { replace: true });
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 3000);
-    return () => clearTimeout(timer);
-  }, []); const lenisRef = useRef(null);
+  const lenisRef = useRef(null);
 
   // Smooth Scroll Setup with GSAP Sync
   useEffect(() => {
@@ -650,8 +743,21 @@ function App() {
       ScrollTrigger.getAll().forEach(t => t.kill()); // Kill all ScrollTriggers to prevent removeChild errors
       lenis.destroy();
       lenisRef.current = null;
+      socketService.disconnect();
     };
   }, []);
+
+  // Handle global force logout event
+  useEffect(() => {
+    const handleForceLogout = (e) => {
+      showToast('🚨 ' + (e.detail?.message || 'Session Expired'));
+      setCurrentUser(null);
+      navigate('/login');
+    };
+
+    window.addEventListener('inplay_force_logout', handleForceLogout);
+    return () => window.removeEventListener('inplay_force_logout', handleForceLogout);
+  }, [navigate]);
 
   // Watch for activeTab changes to toggle lenis
   useEffect(() => {
@@ -729,6 +835,9 @@ function App() {
       <Route path="/login" element={<Login onClose={() => navigate(-1)} onSwitchToSignup={() => navigate('/signup')} onLoginSuccess={handleAuthSuccess} />} />
       <Route path="/signup" element={<Signup onClose={() => navigate(-1)} onSwitchToLogin={() => navigate('/login')} onSignupSuccess={handleAuthSuccess} />} />
       <Route path="/plan" element={<PlanPage />} />
+      <Route path="/help" element={<LegalPage type="help" />} />
+      <Route path="/privacy" element={<LegalPage type="privacy" />} />
+      <Route path="/about" element={<LegalPage type="about" />} />
 
       {/* Dedicated Routes for Deep Linking */}
       <Route path="/content/:id" element={
@@ -804,7 +913,7 @@ function App() {
                 {activeTab === 'Home' && (
                   <motion.div
                     key="home"
-                    initial={{ opacity: 0 }}
+                    initial={/iPad|iPhone|iPod/.test(navigator.userAgent) ? { opacity: 1 } : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
@@ -1171,7 +1280,7 @@ function App() {
                                           <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
                                             {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
                                           </span>
-                                          </div>
+                                        </div>
 
                                         {episodeDuration && item.watchedSeconds !== undefined && (
                                           <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -1525,7 +1634,7 @@ function App() {
                 {activeTab === 'For You' && (
                   <motion.div
                     key="foryou"
-                    initial={{ opacity: 0 }}
+                    initial={/iPad|iPhone|iPod/.test(navigator.userAgent) ? { opacity: 1 } : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
@@ -1544,7 +1653,7 @@ function App() {
                 {location.pathname === '/my-space' && (
                   <motion.div
                     key="myspace"
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={/iPad|iPhone|iPod/.test(navigator.userAgent) ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
@@ -1565,7 +1674,7 @@ function App() {
                 {location.pathname === '/history' && (
                   <motion.div
                     key="history"
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={/iPad|iPhone|iPod/.test(navigator.userAgent) ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
@@ -1581,7 +1690,7 @@ function App() {
                 {location.pathname === '/my-list' && (
                   <motion.div
                     key="mylist"
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={/iPad|iPhone|iPod/.test(navigator.userAgent) ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
@@ -1596,7 +1705,7 @@ function App() {
                 {location.pathname === '/liked-videos' && (
                   <motion.div
                     key="liked-videos"
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={/iPad|iPhone|iPod/.test(navigator.userAgent) ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}

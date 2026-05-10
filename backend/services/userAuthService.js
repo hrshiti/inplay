@@ -95,7 +95,7 @@ const requestOtp = async (phone) => {
   let otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Testing Number Bypass
-  if (phone === '6268455485' || phone === '6268204871') {
+  if (phone === '6268455485' || phone === '6268204871' || phone === '7566331922') {
     otp = '123456';
   }
 
@@ -106,7 +106,7 @@ const requestOtp = async (phone) => {
   await user.save();
 
   // Skip SMS for testing number
-  if (phone === '6268455485' || phone === '6268204871') {
+  if (phone === '6268455485' || phone === '6268204871' || phone === '7566331922') {
     return { message: 'OTP sent successfully (Testing Mode)' };
   }
 
@@ -124,7 +124,7 @@ const verifyOtp = async (phone, otp) => {
     throw new Error('User not found');
   }
 
-  const isTestingNumber = (phone === '6268455485' || phone === '6268204871') && otp === '123456';
+  const isTestingNumber = (phone === '6268455485' || phone === '6268204871' || phone === '7566331922') && otp === '123456';
 
   if (!isTestingNumber && (!user.otp || user.otp !== otp)) {
     throw new Error('Invalid OTP');
@@ -493,7 +493,69 @@ const toggleLike = async (userId, contentId) => {
   return { likedContent: user.likedContent, action };
 };
 
+// Save FCM Token
+const saveFCMToken = async (userId, token, rawPlatform = 'web', userAgent = '') => {
+  let platform = (rawPlatform || 'web').toLowerCase();
+  
+  // Backend fallback: if frontend says 'web' but User-Agent looks like mobile, override it
+  if (platform === 'web' && userAgent) {
+    if (/Android|iPhone|iPad|iPod|Mobile|wv|apk|app/i.test(userAgent)) {
+      console.log(`[FCM] Platform override: Frontend sent 'web' but User-Agent suggests mobile. Changing to 'mobile'.`);
+      platform = 'mobile';
+    }
+  }
 
+  console.log(`[FCM] Saving token for user ${userId}, platform: ${platform}, User-Agent: ${userAgent.substring(0, 50)}...`);
+  
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+
+  // Handle various mobile platform names
+  const isMobile = ['mobile', 'android', 'ios', 'apk', 'wv', 'tablet', 'app'].includes(platform);
+  const field = isMobile ? 'fcm_mobile' : 'fcm_web';
+
+  // Initialize if undefined
+  if (!user[field]) {
+    user[field] = [];
+  }
+
+  // Add token if not exists
+  if (!user[field].includes(token)) {
+    user[field].push(token);
+    
+    // Limit to 10 tokens per platform
+    if (user[field].length > 10) {
+      user[field] = user[field].slice(-10);
+    }
+    
+    // Mark the field as modified (Mongoose requirement for arrays)
+    user.markModified(field);
+    await user.save();
+    console.log(`[FCM] Token added to ${field} for user ${user.email}`);
+  } else {
+    console.log(`[FCM] Token already exists in ${field} for user ${user.email}`);
+  }
+
+  return { success: true, message: `FCM token saved to ${field}` };
+};
+
+// Remove FCM Token
+const removeFCMToken = async (userId, token, rawPlatform = 'web') => {
+  const platform = (rawPlatform || 'web').toLowerCase();
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+
+  const isMobile = ['mobile', 'android', 'ios', 'apk', 'wv', 'tablet'].includes(platform);
+
+  if (isMobile && user.fcm_mobile) {
+    user.fcm_mobile = user.fcm_mobile.filter(t => t !== token);
+  } else if (user.fcm_web) {
+    user.fcm_web = user.fcm_web.filter(t => t !== token);
+  }
+
+  await user.save();
+  return { success: true, message: 'FCM token removed' };
+};
 
 // Remove from watch history
 const removeFromHistory = async (userId, contentId) => {
@@ -519,6 +581,19 @@ const clearHistory = async (userId) => {
   return { message: 'History cleared' };
 };
 
+// Delete user account (Hard delete)
+const deleteUserAccount = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Hard delete the user from database
+  await User.findByIdAndDelete(userId);
+
+  return { message: 'Account permanently deleted successfully' };
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -534,6 +609,9 @@ module.exports = {
   clearHistory,
   logoutUser,
   toggleLike,
+  saveFCMToken,
+  removeFCMToken,
   requestOtp,
-  verifyOtp
+  verifyOtp,
+  deleteUserAccount
 };

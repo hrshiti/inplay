@@ -45,6 +45,29 @@ const protect = async (req, res, next) => {
         });
       }
 
+      // Check token version (Force Logout)
+      if (user.tokenVersion !== undefined && decoded.tokenVersion !== undefined) {
+        if (user.tokenVersion !== decoded.tokenVersion) {
+          return res.status(401).json({
+            success: false,
+            message: 'FORCE_LOGOUT',
+            reason: 'Session expired due to security update'
+          });
+        }
+      }
+
+      // Check force logout timestamp
+      if (user.forceLogoutAt && decoded.iat) {
+        // decoded.iat is in seconds, user.forceLogoutAt is a Date object
+        if (decoded.iat * 1000 < user.forceLogoutAt.getTime()) {
+          return res.status(401).json({
+            success: false,
+            message: 'FORCE_LOGOUT',
+            reason: 'Session expired'
+          });
+        }
+      }
+
       // Add user to request
       req.user = user;
       next();
@@ -86,8 +109,13 @@ const authorize = (...roles) => {
 
 
 // Generate JWT token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+const generateToken = (user) => {
+  const payload = {
+    id: user._id,
+    tokenVersion: user.tokenVersion || 0
+  };
+
+  return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
@@ -95,7 +123,7 @@ const generateToken = (id) => {
 // Send token response
 const sendTokenResponse = async (user, statusCode, res, message = 'Success') => {
   // Create token
-  const token = generateToken(user._id);
+  const token = generateToken(user);
 
   // Update last login
   user.lastLogin = new Date();

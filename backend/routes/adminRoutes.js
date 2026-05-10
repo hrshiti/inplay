@@ -7,8 +7,6 @@ const contentController = require('../controllers/contentController');
 
 const adminUserController = require('../controllers/adminUserController');
 const analyticsController = require('../controllers/analyticsController');
-const notificationController = require('../controllers/notificationController');
-
 
 // Import middlewares
 const { protect, authorize } = require('../middlewares/auth');
@@ -44,6 +42,8 @@ router.get('/users', adminUserController.getAllUsers);
 router.get('/users/analytics', adminUserController.getUserAnalytics);
 router.get('/users/:id', adminUserController.getUser);
 router.patch('/users/:id/status', adminUserController.updateUserStatus);
+router.post('/users/force-logout-all', adminUserController.forceLogoutAll);
+router.post('/users/:id/force-logout', adminUserController.forceLogoutUser);
 router.delete('/users/:id', adminUserController.deleteUser);
 
 // Analytics routes
@@ -61,12 +61,10 @@ router.delete('/subscription/plans/:id', subscriptionController.deletePlan);
 router.get('/subscription/active', subscriptionController.getActiveSubscriptions);
 
 // Notification routes
-router.get('/notifications', notificationController.getNotificationHistory);
+const notificationController = require('../controllers/notificationController');
+router.get('/notifications', notificationController.getNotifications);
 router.post('/notifications/send-all', notificationController.sendToAll);
 router.post('/notifications/send-subscribed', notificationController.sendToSubscribed);
 router.post('/notifications/send-user', notificationController.sendToUser);
-
-
-
 
 module.exports = router;

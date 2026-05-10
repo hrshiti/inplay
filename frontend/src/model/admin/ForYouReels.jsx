@@ -85,7 +85,9 @@ const AdminReelCard = ({ reel, onDelete }) => {
     };
     const handleMouseLeave = () => {
         videoRef.current?.pause();
-        videoRef.current.currentTime = 0;
+        if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+        }
         setIsPlaying(false);
     };
 
@@ -98,6 +100,7 @@ const AdminReelCard = ({ reel, onDelete }) => {
                 onMouseLeave={handleMouseLeave}
             >
                 <HlsPlayer
+                    ref={videoRef}
                     src={reel.video?.url}
                     hlsUrl={reel.video?.hls_url}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}

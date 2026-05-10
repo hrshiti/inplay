@@ -1,4 +1,5 @@
 const adminUserService = require('../services/adminUserService');
+const User = require('../models/User');
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -117,10 +118,87 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// @desc    Force logout all users
+// @route   POST /api/admin/users/force-logout-all
+// @access  Private (Admin only)
+const forceLogoutAll = async (req, res) => {
+  try {
+    const forceLogoutTime = new Date();
+
+    // 1. Update database (security fallback)
+    // Option A: Increment token version
+    // await User.updateMany({ role: 'user' }, { $inc: { tokenVersion: 1 } });
+    
+    // Option B: Set forceLogoutAt (Better control)
+    await User.updateMany({ role: 'user' }, { 
+      $set: { forceLogoutAt: forceLogoutTime },
+      $inc: { tokenVersion: 1 } 
+    });
+
+    // 2. Emit socket event (real-time logout)
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('force_logout_all', { 
+        message: 'Admin has forced a logout for all sessions',
+        timestamp: forceLogoutTime
+      });
+      console.log('📢 Socket: force_logout_all emitted');
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Force logout triggered for all users'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Force logout specific user
+// @route   POST /api/admin/users/:id/force-logout
+// @access  Private (Admin only)
+const forceLogoutUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const forceLogoutTime = new Date();
+
+    // 1. Update database (security fallback)
+    await User.findByIdAndUpdate(userId, { 
+      $set: { forceLogoutAt: forceLogoutTime },
+      $inc: { tokenVersion: 1 } 
+    });
+
+    // 2. Emit socket event (real-time logout)
+    const io = req.app.get('io');
+    if (io) {
+      io.to(userId).emit('force_logout', { 
+        message: 'Your session has been terminated by an admin',
+        timestamp: forceLogoutTime
+      });
+      console.log(`📢 Socket: force_logout emitted to user ${userId}`);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Force logout triggered for the user'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUser,
   updateUserStatus,
   getUserAnalytics,
-  deleteUser
+  deleteUser,
+  forceLogoutAll,
+  forceLogoutUser
 };

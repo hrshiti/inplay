@@ -355,19 +355,25 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         const deltaY = touchStartY.current - touchEndY.current;
         const threshold = 40; // Lower threshold for better sensitivity
 
-        // Prioritize vertical swipes (Y-axis) for Reels-style navigation
-        if (Math.abs(deltaY) > threshold && Math.abs(deltaY) > Math.abs(deltaX)) {
-            if (deltaY > 0) {
-                // Swipe Up -> Next
+        // Horizontal swipes (X-axis) for Next/Prev Episode (Matches ForYouPage flow)
+        if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (deltaX > 0) {
+                // Swipe Left -> Next
                 if (currentIndex < playlist.length - 1) {
                     setCurrentIndex(prev => prev + 1);
                 }
             } else {
-                // Swipe Down -> Prev
+                // Swipe Right -> Prev
                 if (currentIndex > 0) {
                     setCurrentIndex(prev => prev - 1);
                 }
             }
+        }
+        
+        // Optional: Vertical swipe down to close?
+        if (deltaY < -threshold * 2 && Math.abs(deltaY) > Math.abs(deltaX)) {
+            syncProgress();
+            onClose();
         }
     };
 
@@ -466,29 +472,47 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     const toggleFullScreen = (e) => {
         e.stopPropagation();
-        if (!document.fullscreenElement) {
-            if (mainContainerRef.current) {
-                mainContainerRef.current.requestFullscreen().catch(err => {
-                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-                });
+        const el = mainContainerRef.current;
+        const videoEl = videoRef.current;
+        // iOS Safari uses webkitEnterFullscreen on the video element itself
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (el && el.requestFullscreen) {
+                el.requestFullscreen().catch(err => console.error(err));
+            } else if (el && el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen(); // Safari desktop
+            } else if (videoEl && videoEl.webkitEnterFullscreen) {
+                videoEl.webkitEnterFullscreen(); // iOS Safari
             }
         } else {
-            document.exitFullscreen();
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
         }
     };
 
     const handleRotate = async (e) => {
         e.stopPropagation();
         try {
-            if (!document.fullscreenElement && mainContainerRef.current) {
-                await mainContainerRef.current.requestFullscreen();
+            const el = mainContainerRef.current;
+            const videoEl = videoRef.current;
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (el && el.requestFullscreen) {
+                    await el.requestFullscreen();
+                } else if (el && el.webkitRequestFullscreen) {
+                    el.webkitRequestFullscreen();
+                } else if (videoEl && videoEl.webkitEnterFullscreen) {
+                    videoEl.webkitEnterFullscreen(); // iOS Safari fallback
+                }
             }
+            // screen.orientation.lock not supported on iOS — safely ignore
             if (screen.orientation && screen.orientation.lock) {
                 const type = screen.orientation.type;
                 if (type.startsWith('portrait')) {
-                    await screen.orientation.lock('landscape');
+                    await screen.orientation.lock('landscape').catch(() => {});
                 } else {
-                    await screen.orientation.unlock();
+                    await screen.orientation.unlock().catch(() => {});
                 }
             }
         } catch (error) {
@@ -613,7 +637,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     transition: 'opacity 0.2s'
                                 }}
                             >
-                                <ChevronUp size={48} />
+                                <ChevronLeft size={48} />
                             </button>
                         )}
 
@@ -672,7 +696,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     transition: 'opacity 0.2s'
                                 }}
                             >
-                                <ChevronDown size={48} />
+                                <ChevronRight size={48} />
                             </button>
                         )}
                     </div>
@@ -838,6 +862,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 src={nextUrl}
                                 preload="auto"
                                 muted
+                                playsInline
                                 style={{ display: 'none' }}
                             />
                         );
@@ -992,6 +1017,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                 src={nextUrl}
                                 preload="auto"
                                 muted
+                                playsInline
                                 style={{ display: 'none' }}
                             />
                         );

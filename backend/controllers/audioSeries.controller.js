@@ -1,5 +1,5 @@
 const AudioSeries = require('../models/AudioSeries');
-
+const { notifyAllUsers } = require('../utils/notificationHelper');
 
 // Helper to hydrate URLs
 const hydrateAudioSeries = (doc) => {
@@ -66,7 +66,19 @@ exports.createAudioSeries = async (req, res, next) => {
             data: hydrateAudioSeries(series)
         });
 
-
+        // Send push notification to all users
+        if (series.isActive) {
+            notifyAllUsers({
+                title: `New Audio Series Released!`,
+                body: series.title,
+                imageUrl: series.coverImage,
+                data: {
+                    type: 'audio',
+                    id: series._id.toString(),
+                    link: `/audio-details/${series._id}`
+                }
+            });
+        }
     } catch (err) {
         next(err);
     }

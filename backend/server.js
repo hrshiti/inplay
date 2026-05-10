@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+
 const multer = require("multer");
 const path = require("path");
 const mm = require('music-metadata');
@@ -32,7 +32,10 @@ if (missingVars.length > 0) {
 }
 
 // Connect to database AFTER environment variables are loaded
-require('./config/database');
+const database = require('./config/database');
+
+// Debugging: Log static root path
+console.log('📂 Static files root:', path.join(__dirname, 'uploads'));
 
 const app = express();
 
@@ -52,7 +55,19 @@ app.use(helmet({
 }));
 app.use(compression());
 
-// CORS configuration (MUST BE BEFORE LIMITER)
+// SERVE STATIC FILES - All uploaded media (images, videos, audio)
+// Moved before API routes to ensure they are handled properly
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '7d',
+  immutable: true,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    // Ensure CORS headers for cross-origin media loading
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+}));
+
+// CORS configuration
 const allowedOrigins = [
   'https://inplay-two.vercel.app',
   'http://localhost:5173',
@@ -88,12 +103,7 @@ app.use(cors({
   credentials: true
 }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Increased limit for development
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use('/api/', limiter);
+
 
 // Body parsing middleware
 app.use(express.json({ 
@@ -107,7 +117,9 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: '10gb' }));
 
 // Logging
-app.use(morgan('combined'));
+const requestLogger = require('./middlewares/requestLogger');
+app.use(requestLogger);
+app.use(morgan('dev')); // Keep morgan 'dev' for a quick one-line summary in console
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -133,15 +145,7 @@ app.use('/api/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/admin/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/public', require('./routes/publicTabRoutes'));
 
-// SERVE STATIC FILES - All uploaded media (images, videos, audio)
-// Optimized with 7-day browser caching for "Fast Mode"
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  maxAge: '7d',
-  immutable: true,
-  setHeaders: (res, path) => {
-    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-  }
-}));
+// Static files middleware moved up to improve reliability and handle requests before API routing logic.
 
 // -------------------
 // Multer Storage Setup
@@ -186,7 +190,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   relativePath = relativePath.replace('//', '/');
 
   // Generate full URL
-  const fileUrl = `${BACKEND_URL}/uploads/${req.file.path.split("uploads")[1].replace(/\\/g, "/")}`;
+  // Generate full URL - Fix double slash issue
+  const fileUrl = `${BACKEND_URL}/uploads${req.file.path.split("uploads")[1].replace(/\\/g, "/")}`;
 
   // Default response data
   let responseData = {
@@ -339,8 +344,8 @@ const startScheduledTasks = () => {
 
 };
 
-// Import database connection (it will connect automatically)
-require('./config/database');
+// Database connection is already established at the top level
+// require('./config/database');
 
 // Connect to database and start server
 const startServer = async () => {
@@ -364,10 +369,17 @@ const startServer = async () => {
   const { Server } = require('socket.io');
   const io = new Server(server, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       methods: ['GET', 'POST'],
       credentials: true
-    }
+    },
+    allowEIO3: true // Support older socket.io clients if any
   });
 
   io.on('connection', (socket) => {
@@ -376,6 +388,13 @@ const startServer = async () => {
     socket.on('join_reel', (reelId) => {
       socket.join(reelId);
       console.log(`Socket ${socket.id} joined reel ${reelId}`);
+    });
+
+    socket.on('register', (userId) => {
+      if (userId) {
+        socket.join(userId);
+        console.log(`Socket ${socket.id} registered to user room: ${userId}`);
+      }
     });
 
     socket.on('disconnect', () => {

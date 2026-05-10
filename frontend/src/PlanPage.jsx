@@ -34,7 +34,7 @@ const PlanPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       let profile = null;
       try {
         profile = await authService.getProfile();
@@ -162,7 +162,7 @@ const PlanPage = () => {
               <h2 style={{ fontSize: '1.25rem', fontWeight: '900', margin: '0 0 2px', color: '#111' }}>{trialSettings?.trialDurationDays} Days Trial</h2>
               <p style={{ fontSize: '0.9rem', margin: 0, color: 'rgba(17, 17, 17, 0.8)', fontWeight: '600' }}>Get full access for just ₹{trialSettings?.trialPrice}</p>
             </div>
-            
+
             <button
               onClick={handleTrial}
               style={{
@@ -186,7 +186,7 @@ const PlanPage = () => {
             >
               Claim <ArrowRight size={16} />
             </button>
-            
+
             <div style={{ position: 'absolute', right: '10%', top: '50%', transform: 'translateY(-50%)', opacity: 0.3, pointerEvents: 'none', color: '#FFF' }}>
               <Crown size={100} />
             </div>
@@ -218,17 +218,17 @@ const PlanPage = () => {
               playsInline
               preload="auto"
               poster={getImageUrl(trialSettings?.promoVideoThumbnail)}
-              onCanPlay={(e) => e.target.play().catch(() => {})}
+              onCanPlay={(e) => e.target.play().catch(() => { })}
               style={{ width: '100%', height: '100%', minHeight: '280px', objectFit: 'cover', display: 'block' }}
             />
           </motion.div>
         ) : null}
 
         {/* Plans Grid */}
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           justifyContent: 'center',
-          gap: '12px', 
+          gap: '12px',
           marginBottom: '60px',
           flexWrap: 'nowrap',
           overflowX: 'auto',
@@ -242,7 +242,7 @@ const PlanPage = () => {
               'linear-gradient(135deg, #84FAB0 0%, #8FD3F4 100%)'  // Blue
             ];
             const gradient = gradients[index % gradients.length];
-            
+
             return (
               <motion.button
                 key={plan._id}
@@ -310,7 +310,7 @@ const PlanPage = () => {
                 <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>End-to-end encrypted payments via Razorpay</p>
               </div>
             </div>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}>
               <div style={{ width: '48px', height: '48px', flexShrink: 0, background: 'rgba(70, 211, 105, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Star size={24} color="#46d369" />
@@ -320,7 +320,7 @@ const PlanPage = () => {
                 <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>4K Ultra HD and immersive surround sound</p>
               </div>
             </div>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left' }}>
               <div style={{ width: '48px', height: '48px', flexShrink: 0, background: 'rgba(70, 211, 105, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Crown size={24} color="#46d369" />
