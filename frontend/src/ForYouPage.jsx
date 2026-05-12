@@ -3,6 +3,7 @@ import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pau
 import { getImageUrl } from './utils/imageUtils';
 import socketService from './services/socketService';
 import contentService from './services/api/contentService';
+import HlsPlayer from './components/HlsPlayer';
 
 // Initialize Socket URL for fallback API calls
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
