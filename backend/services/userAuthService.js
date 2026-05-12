@@ -318,9 +318,17 @@ const updateUserProfile = async (userId, updateData) => {
     throw new Error('User not found');
   }
 
-  // Prevent sensitive field updates
-  const restrictedFields = ['password', 'email', 'role', 'subscription', 'isActive'];
+  // Prevent sensitive field updates (email is now allowed to be changed)
+  const restrictedFields = ['password', 'role', 'subscription', 'isActive'];
   restrictedFields.forEach(field => delete updateData[field]);
+
+  // If email is being updated, check for uniqueness
+  if (updateData.email && updateData.email !== user.email) {
+    const existingUser = await User.findOne({ email: updateData.email, _id: { $ne: userId } });
+    if (existingUser) {
+      throw new Error('This email address is already in use by another account.');
+    }
+  }
 
   // Update user
   Object.assign(user, updateData);

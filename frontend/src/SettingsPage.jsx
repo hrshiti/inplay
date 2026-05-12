@@ -16,6 +16,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     const [message, setMessage] = useState({ text: '', type: '' });
     const [editData, setEditData] = useState({
         name: '',
+        email: '',
         phone: ''
     });
 
@@ -118,6 +119,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
         if (currentUser) {
             setEditData({
                 name: currentUser.name || '',
+                email: currentUser.email || '',
                 phone: currentUser.phone || ''
             });
 
@@ -613,21 +615,19 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                                 <Mail size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444' }} />
                                                 <input
                                                     type="email"
-                                                    value={userEmail}
-                                                    disabled
+                                                    value={editData.email}
+                                                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                                                     style={{
                                                         width: '100%',
-                                                        background: '#0d0d0d',
-                                                        border: '1px solid #1a1a1a',
+                                                        background: '#1a1a1a',
+                                                        border: '1px solid #2a2a2a',
                                                         borderRadius: '16px',
                                                         padding: '16px 16px 16px 48px',
-                                                        color: '#555',
-                                                        fontSize: '1rem',
-                                                        cursor: 'not-allowed'
+                                                        color: 'white',
+                                                        fontSize: '1rem'
                                                     }}
                                                 />
                                             </div>
-                                            <p style={{ fontSize: '0.75rem', color: '#444', marginTop: '8px', marginLeft: '4px' }}>Email cannot be changed contact support.</p>
                                         </div>
 
                                         <div>

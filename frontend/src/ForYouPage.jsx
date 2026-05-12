@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause, ArrowLeft, Send, X, Trash2 } from 'lucide-react';
 import { getImageUrl } from './utils/imageUtils';
 import socketService from './services/socketService';
+import contentService from './services/api/contentService';
 
 // Initialize Socket URL for fallback API calls
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
