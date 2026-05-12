@@ -10,8 +10,8 @@ const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/a
 // Remove trailing slash if exists and ensure /api suffix
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
-export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
-    const [reels, setReels] = useState([]);
+export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, initialReels = [] }) {
+    const [reels, setReels] = useState(initialReels);
     const [muted, setMuted] = useState(true);
     const [activeReelId, setActiveReelId] = useState(null);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -21,6 +21,11 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike }) {
 
     useEffect(() => {
         const fetchReels = async () => {
+            if (initialReels && initialReels.length > 0) {
+                // If we already have reels from parent, no need to fetch again immediately
+                // unless we want to refresh. For now, let's just use them.
+                return;
+            }
             const data = await contentService.getForYouReels();
             console.log("ForYouPage Fetch Result:", data); // Debug Log
             setReels(data);

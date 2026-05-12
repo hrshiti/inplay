@@ -90,6 +90,7 @@ function App() {
   });
   const [qbContinueWatching, setQbContinueWatching] = useState([]);
   const [dynamicStructure, setDynamicStructure] = useState([]);
+  const [forYouReels, setForYouReels] = useState([]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -309,17 +310,20 @@ function App() {
           reels,
           allContentData,
           promoData,
-          newReleases
+          newReleases,
+          foryou
         ] = await Promise.all([
           contentService.getDynamicStructure().catch(e => { console.error(e); return []; }),
           contentService.getQuickBytes(20).catch(e => { console.error(e); return []; }),
           contentService.getAllContent().catch(e => { console.error(e); return []; }),
           promotionService.getActivePromotions().catch(e => { console.error(e); return []; }),
-          contentService.getNewReleases().catch(e => { console.error(e); return []; })
+          contentService.getNewReleases().catch(e => { console.error(e); return []; }),
+          contentService.getForYouReels().catch(e => { console.error(e); return []; })
         ]);
 
         setDynamicStructure(structure || []);
         setQuickBites(reels || []);
+        setForYouReels(foryou || []);
 
         const sections = {
           bhojpuri: [],
@@ -1644,6 +1648,7 @@ function App() {
                       onBack={() => navigate('/')}
                       likedVideos={likedVideos}
                       onToggleLike={handleToggleLike}
+                      initialReels={forYouReels}
                     />
                   </motion.div>
                 )}
