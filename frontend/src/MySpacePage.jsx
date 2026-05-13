@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { getImageUrl } from './utils/imageUtils';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { Clock, Download, ChevronRight, Settings, User, Plus, ThumbsUp, Play } f
 import { MY_SPACE_DATA } from './data';
 
 export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHistory, continueWatching, currentUser }) {
+    const [avatarError, setAvatarError] = useState(false);
     const containerRef = useRef(null);
     const navigate = useNavigate();
 
@@ -31,10 +32,11 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
                     style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, cursor: 'pointer' }}
                 >
                     <div style={{ position: 'relative' }}>
-                        {userAvatar ? (
+                        {userAvatar && !avatarError ? (
                             <img
                                 src={getImageUrl(userAvatar)}
                                 alt="Profile"
+                                onError={() => setAvatarError(true)}
                                 style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)', objectFit: 'cover' }}
                             />
                         ) : (
