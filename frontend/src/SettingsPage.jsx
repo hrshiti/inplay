@@ -11,6 +11,7 @@ import subscriptionService from './services/api/subscriptionService';
 export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     const navigate = useNavigate();
     const [activeModal, setActiveModal] = useState(null); // 'profile', 'plan', 'notifications', 'language', 'appearance'
+    const [avatarError, setAvatarError] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
@@ -308,10 +309,11 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                     border: '1px solid rgba(255,255,255,0.05)',
                     marginBottom: '32px'
                 }}>
-                    {userAvatar ? (
+                    {userAvatar && !avatarError ? (
                         <img
                             src={getImageUrl(userAvatar)}
                             alt="Profile"
+                            onError={() => setAvatarError(true)}
                             style={{ width: '70px', height: '70px', borderRadius: '50%', border: '2px solid #ff0000', objectFit: 'cover' }}
                         />
                     ) : (
@@ -515,10 +517,11 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                                                 overflow: 'hidden',
                                                 border: '4px solid #1a1a1a'
                                             }}>
-                                                {userAvatar ? (
+                                                {userAvatar && !avatarError ? (
                                                     <img
                                                         src={getImageUrl(userAvatar)}
                                                         alt="Profile"
+                                                        onError={() => setAvatarError(true)}
                                                         style={{
                                                             width: '100%',
                                                             height: '100%',

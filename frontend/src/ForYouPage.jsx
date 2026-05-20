@@ -601,6 +601,10 @@ const CommentsSheet = ({ reelId, onClose }) => {
             <div key={comment._id} style={{ display: 'flex', gap: '14px', marginBottom: isReply ? '16px' : '24px', marginLeft: isReply ? '44px' : '0', position: 'relative', animation: 'fadeIn 0.4s ease' }}>
                 <img
                     src={getImageUrl(comment.user?.avatar) || `https://ui-avatars.com/api/?name=${comment.user?.name || 'User'}&background=random&color=fff`}
+                    onError={(e) => {
+                        e.target.onerror = null; // Prevent infinite loops
+                        e.target.src = `https://ui-avatars.com/api/?name=${comment.user?.name || 'User'}&background=random&color=fff`;
+                    }}
                     style={{ width: isReply ? '28px' : '40px', height: isReply ? '28px' : '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #f0f0f0' }}
                 />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
