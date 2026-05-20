@@ -215,10 +215,46 @@ function App() {
   // Track the source tab for correct "More Like This" recommendations
   const [selectedSourceTab, setSelectedSourceTab] = useState(null);
 
+  // Helper to check if platform is iOS or Safari for App Store submission review
+  const isIosOrSafariPlatform = () => {
+    const userAgent = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+    return isIOS || isSafari;
+  };
+
+  // Helper to check and increment free content views on iOS/Safari
+  const checkAndRegisterFreeView = (movie) => {
+    if (currentUser) return true; // Already logged in
+    if (!isIosOrSafariPlatform()) return false; // Non-iOS/Safari requires login
+
+    const contentId = movie?._id || movie?.id;
+    if (!contentId) return false;
+
+    try {
+      const viewed = JSON.parse(localStorage.getItem('inplay_free_viewed_ids') || '[]');
+      if (viewed.includes(contentId)) {
+        return true; // Already viewed, allow again
+      }
+      if (viewed.length < 3) { // Allow up to 3 unique free contents
+        viewed.push(contentId);
+        localStorage.setItem('inplay_free_viewed_ids', JSON.stringify(viewed));
+        return true;
+      }
+    } catch (e) {
+      console.error("Failed to update free views:", e);
+    }
+    return false;
+  };
+
   const handleContentSelect = (movie, sourceTab = null) => {
     if (!currentUser) {
-      navigate('/login');
-      return;
+      if (checkAndRegisterFreeView(movie)) {
+        // Proceed without login (iOS/Safari guest review)
+      } else {
+        navigate('/login');
+        return;
+      }
     }
     // Check if content is 'For You' style (Quick Byte/Vertical)
     if (movie.type === 'quick_byte' || movie.isVertical || (movie.category === 'Quick Bites')) {
@@ -447,8 +483,12 @@ function App() {
 
   const handleFilterChange = (cat) => {
     if (!currentUser && cat !== 'Popular') {
-      navigate('/login');
-      return;
+      if (isIosOrSafariPlatform()) {
+        // Allow browsing categories on iOS/Safari without login for guest review
+      } else {
+        navigate('/login');
+        return;
+      }
     }
     setActiveFilter(cat);
 
@@ -526,8 +566,13 @@ function App() {
 
   const handleTabChange = (tab) => {
     if (tab !== 'Home' && !currentUser) {
-      navigate('/login');
-      return;
+      // Allow browsing other content-discovery tabs (For You, Search, Audio) on iOS/Safari without login
+      if (isIosOrSafariPlatform() && (tab === 'For You' || tab === 'Search' || tab === 'Audio')) {
+        // Allow proceeding
+      } else {
+        navigate('/login');
+        return;
+      }
     }
 
     setActiveTab(tab);
@@ -627,8 +672,12 @@ function App() {
 
   const handlePlay = (movie, episode = null) => {
     if (!currentUser) {
-      navigate('/login');
-      return;
+      if (checkAndRegisterFreeView(movie)) {
+        // Allow playing without login (iOS/Safari guest review)
+      } else {
+        navigate('/login');
+        return;
+      }
     }
     const contentId = movie._id || movie.id;
     // Navigate to watch route, passing movie/episode object to avoid re-fetch if possible
