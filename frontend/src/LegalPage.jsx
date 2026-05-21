@@ -32,6 +32,98 @@ export default function LegalPage({ type }) {
         }
     };
 
+    // Converts admin-panel markdown text into structured JSX elements
+    const parseAboutContent = (text) => {
+        if (!text) return null;
+
+        // Normalize line endings and split into lines
+        const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+        const elements = [];
+        let i = 0;
+
+        while (i < lines.length) {
+            const line = lines[i].trim();
+
+            // Skip empty lines
+            if (!line) { i++; continue; }
+
+            // Horizontal rule separators (standalone ---, ***)
+            if (/^-{3,}$/.test(line) || /^\*{3,}$/.test(line)) {
+                elements.push(<div key={i} style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '12px 0' }} />);
+                i++; continue;
+            }
+
+            // ### H3 headings
+            if (line.startsWith('### ')) {
+                elements.push(
+                    <h4 key={i} style={{ fontSize: '0.85rem', fontWeight: '700', color: '#ff4d4d', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '8px', marginBottom: '4px' }}>
+                        {line.replace(/^### /, '')}
+                    </h4>
+                );
+                i++; continue;
+            }
+
+            // ## H2 headings
+            if (line.startsWith('## ')) {
+                elements.push(
+                    <h3 key={i} style={{ fontSize: '1rem', fontWeight: '800', color: '#fff', marginTop: '12px', marginBottom: '6px' }}>
+                        {line.replace(/^## /, '')}
+                    </h3>
+                );
+                i++; continue;
+            }
+
+            // # H1 headings
+            if (line.startsWith('# ')) {
+                elements.push(
+                    <h2 key={i} style={{ fontSize: '1.1rem', fontWeight: '900', color: '#fff', marginTop: '16px', marginBottom: '8px' }}>
+                        {line.replace(/^# /, '')}
+                    </h2>
+                );
+                i++; continue;
+            }
+
+            // Bullet points (* or -)
+            if (/^[*-] /.test(line)) {
+                const bulletItems = [];
+                while (i < lines.length && /^[*-] /.test(lines[i].trim())) {
+                    bulletItems.push(lines[i].trim().replace(/^[*-] /, ''));
+                    i++;
+                }
+                elements.push(
+                    <ul key={`ul-${i}`} style={{ paddingLeft: '16px', margin: '4px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {bulletItems.map((item, idx) => (
+                            <li key={idx} style={{ fontSize: '0.85rem', color: '#bbb', lineHeight: '1.5', listStyle: 'none', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                <span style={{ color: '#ff4d4d', marginTop: '2px', flexShrink: 0 }}>▸</span>
+                                <span dangerouslySetInnerHTML={{ __html: inlineFormat(item) }} />
+                            </li>
+                        ))}
+                    </ul>
+                );
+                continue;
+            }
+
+            // Regular paragraph lines
+            elements.push(
+                <p key={i} style={{ fontSize: '0.85rem', color: '#aaa', lineHeight: '1.7', margin: '4px 0' }}
+                    dangerouslySetInnerHTML={{ __html: inlineFormat(line) }}
+                />
+            );
+            i++;
+        }
+
+        return elements;
+    };
+
+    // Inline formatting: **bold**, *italic*, [link](url), `code`
+    const inlineFormat = (text) => {
+        return text
+            .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff;font-weight:700">$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em style="color:#ddd">$1</em>')
+            .replace(/`(.+?)`/g, '<code style="background:rgba(255,77,77,0.15);color:#ff6b6b;padding:1px 5px;border-radius:4px;font-size:0.8em">$1</code>')
+            .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noreferrer" style="color:#ff4d4d;text-decoration:underline">$1</a>');
+    };
+
     const renderContent = () => {
         if (isLoading) {
             return (
@@ -113,23 +205,34 @@ export default function LegalPage({ type }) {
                             textAlign: 'left',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '16px',
+                            gap: '8px',
                             border: '1px solid rgba(255,255,255,0.05)'
                         }}>
-                            <p style={{ color: '#888', fontSize: '0.9rem' }}>{appSettings?.aboutInPlay?.description || 'InPlay is the next generation streaming platform bringing you the best in movies, shows, and originals with an unmatched user experience.'}</p>
-                            <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#555' }}>Website</span>
-                                <a href={`https://${appSettings?.aboutInPlay?.website || 'www.inplay.com'}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.website || 'www.inplay.com'}</a>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#555' }}>Twitter</span>
-                                <a href={`https://twitter.com/${appSettings?.aboutInPlay?.twitter?.replace('@', '') || 'InPlayHQ'}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.twitter || '@InPlayHQ'}</a>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#555' }}>Instagram</span>
-                                <a href={`https://instagram.com/${appSettings?.aboutInPlay?.instagram?.replace('@', '') || 'inplay_official'}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none' }}>{appSettings?.aboutInPlay?.instagram || '@inplay_official'}</a>
-                            </div>
+                            {/* Parsed & structured description from admin panel */}
+                            {parseAboutContent(appSettings?.aboutInPlay?.description) || (
+                                <p style={{ color: '#888', fontSize: '0.85rem' }}>
+                                    InPlay is the next generation streaming platform bringing you the best in movies, shows, and originals with an unmatched user experience.
+                                </p>
+                            )}
+                            <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '8px 0' }}></div>
+                            {appSettings?.aboutInPlay?.website && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#555', fontSize: '0.85rem' }}>Website</span>
+                                    <a href={`https://${appSettings.aboutInPlay.website}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none', fontSize: '0.85rem' }}>{appSettings.aboutInPlay.website}</a>
+                                </div>
+                            )}
+                            {appSettings?.aboutInPlay?.twitter && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#555', fontSize: '0.85rem' }}>Twitter</span>
+                                    <a href={`https://twitter.com/${appSettings.aboutInPlay.twitter.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none', fontSize: '0.85rem' }}>{appSettings.aboutInPlay.twitter}</a>
+                                </div>
+                            )}
+                            {appSettings?.aboutInPlay?.instagram && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#555', fontSize: '0.85rem' }}>Instagram</span>
+                                    <a href={`https://instagram.com/${appSettings.aboutInPlay.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff4d4d', textDecoration: 'none', fontSize: '0.85rem' }}>{appSettings.aboutInPlay.instagram}</a>
+                                </div>
+                            )}
                         </div>
                         <p style={{ color: '#333', fontSize: '0.75rem', marginTop: '40px' }}>&copy; {new Date().getFullYear()} InPlay Entertainment Records Inc.<br />All rights reserved.</p>
                     </div>
