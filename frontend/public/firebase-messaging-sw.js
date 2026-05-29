@@ -22,18 +22,25 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message', payload);
 
-    // Safeguard against missing notification object
-    const notificationTitle = payload.notification?.title || payload.data?.title || 'InPlay';
+    // If the message contains a notification payload, the browser/FCM automatically
+    // displays the notification. Manually showing it here causes duplicate (double) notifications.
+    if (payload.notification) {
+        console.log('[firebase-messaging-sw.js] Letting FCM SDK automatically display the notification banner.');
+        return;
+    }
+
+    // Handle data-only messages (manual display needed)
+    const notificationTitle = payload.data?.title || 'InPlay';
     const notificationOptions = {
-        body: payload.notification?.body || payload.data?.body || '',
-        icon: '/favicon.png', // Changed to png to match frontend
-        image: payload.notification?.image || payload.data?.image,
+        body: payload.data?.body || '',
+        icon: '/favicon.png',
+        image: payload.data?.image,
         data: payload.data,
-        tag: 'inplay-notification', // Prevent duplicate notifications
+        tag: 'inplay-notification',
         renotify: true
     };
 
-    console.log('[firebase-messaging-sw.js] Showing notification:', notificationTitle);
+    console.log('[firebase-messaging-sw.js] Manually showing data-only notification:', notificationTitle);
     return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
