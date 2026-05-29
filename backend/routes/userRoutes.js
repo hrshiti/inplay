@@ -41,6 +41,10 @@ router.post('/auth/logout', userAuthController.logoutUser);
 router.post('/auth/fcm-token', userAuthController.saveFCMToken);
 router.delete('/auth/fcm-token', userAuthController.removeFCMToken);
 
+// Notification routes
+const notificationController = require('../controllers/notificationController');
+router.post('/notifications/:id/seen', notificationController.markNotificationAsSeen);
+
 // Content routes
 router.get('/my-list', userContentController.getMyList);
 router.post('/watch-history', userContentController.updateWatchHistory);

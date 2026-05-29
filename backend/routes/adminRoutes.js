@@ -66,5 +66,6 @@ router.get('/notifications', notificationController.getNotifications);
 router.post('/notifications/send-all', notificationController.sendToAll);
 router.post('/notifications/send-subscribed', notificationController.sendToSubscribed);
 router.post('/notifications/send-user', notificationController.sendToUser);
+router.get('/notifications/:id/recipients', notificationController.getNotificationRecipients);
 
 module.exports = router;

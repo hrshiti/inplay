@@ -37,6 +37,14 @@ const adminNotificationService = {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
+  },
+
+  getRecipients: async (notificationId) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await axios.get(`${API_URL}/admin/notifications/${notificationId}/recipients`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   }
 };
 

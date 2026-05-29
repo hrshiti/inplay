@@ -44,7 +44,7 @@ import AdPromotionPage from './model/admin/pages/AdPromotionPage';
 import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
 import { getImageUrl } from './utils/imageUtils';
-import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission } from './services/pushNotificationService';
+import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission, markNotificationAsSeen } from './services/pushNotificationService';
 
 import Header from './Header';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
@@ -64,6 +64,24 @@ const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
 function App() {
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const notificationId = params.get('notificationId');
+    if (notificationId) {
+      console.log('🔔 [App] Found notificationId in URL:', notificationId);
+      markNotificationAsSeen(notificationId);
+      
+      // Clean up URL parameters dynamically
+      const newSearch = new URLSearchParams(location.search);
+      newSearch.delete('notificationId');
+      const searchString = newSearch.toString();
+      const newPath = location.pathname + (searchString ? `?${searchString}` : '');
+      window.history.replaceState(null, '', newPath);
+    }
+  }, [location]);
+
   const [activeTab, setActiveTab] = useState('Home');
   const [activeFilter, setActiveFilter] = useState('Popular');
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);

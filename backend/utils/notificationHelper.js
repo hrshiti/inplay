@@ -54,8 +54,10 @@ const notifyAllUsers = async (payload) => {
             await cleanupTokens(uniqueMobileTokens, response);
         }
 
+        return users.map(user => user._id);
     } catch (error) {
         console.error('Error in notifyAllUsers:', error);
+        return [];
     }
 };
 
@@ -90,8 +92,10 @@ const notifySubscribedUsers = async (payload) => {
             const response = await sendPushNotification(uniqueTokens, payload);
             await cleanupTokens(uniqueTokens, response);
         }
+        return users.map(user => user._id);
     } catch (error) {
         console.error('Error in notifySubscribedUsers:', error);
+        return [];
     }
 };
 

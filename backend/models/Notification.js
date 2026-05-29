@@ -21,6 +21,19 @@ const notificationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  recipients: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    seen: {
+      type: Boolean,
+      default: false
+    },
+    seenAt: {
+      type: Date
+    }
+  }],
   status: {
     type: String,
     enum: ['sent', 'failed'],

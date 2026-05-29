@@ -11,6 +11,36 @@ const AdminNotifications = () => {
   const [message, setMessage] = useState({ title: '', body: '', imageUrl: '' });
   const [status, setStatus] = useState({ type: '', text: '' });
 
+  // Reporting States
+  const [selectedReportId, setSelectedReportId] = useState(null);
+  const [reportDetails, setReportDetails] = useState(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [reportSearch, setReportSearch] = useState('');
+  const [activeReportTab, setActiveReportTab] = useState('seen');
+
+  const openReport = async (notificationId) => {
+    setSelectedReportId(notificationId);
+    setLoadingReport(true);
+    setReportDetails(null);
+    setReportSearch('');
+    setActiveReportTab('seen');
+    try {
+      const response = await adminNotificationService.getRecipients(notificationId);
+      if (response.success) {
+        setReportDetails(response.data);
+      }
+    } catch (error) {
+      console.error('Fetch recipients error:', error);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const closeReport = () => {
+    setSelectedReportId(null);
+    setReportDetails(null);
+  };
+
   useEffect(() => {
     fetchHistory();
   }, []);
@@ -248,13 +278,50 @@ const AdminNotifications = () => {
                         <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{new Date(item.sentAt || item.createdAt).toLocaleString()}</span>
                       </div>
                       <p style={{ fontSize: '0.9rem', color: '#4b5563', margin: 0 }}>{item.body}</p>
-                      <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                      <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: item.target === 'all' ? '#dbeafe' : '#fef3c7', color: item.target === 'all' ? '#1e40af' : '#92400e', fontWeight: '600', textTransform: 'uppercase' }}>
                           {item.target}
                         </span>
                         <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#f3f4f6', color: '#6b7280' }}>
                           Status: {item.status || 'sent'}
                         </span>
+                        {item.target !== 'user' && (
+                          <>
+                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}>
+                              📡 Sent: {item.sentCount || 0}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: '600' }}>
+                              👁️ Seen: {item.seenCount || 0}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#f3f4f6', color: '#4b5563', fontWeight: '600' }}>
+                              👻 Unseen: {item.unseenCount || 0}
+                            </span>
+                            
+                            <button
+                              onClick={() => openReport(item._id)}
+                              style={{ 
+                                marginLeft: 'auto',
+                                fontSize: '0.7rem', 
+                                padding: '4px 10px', 
+                                borderRadius: '8px', 
+                                background: '#f59e0b', 
+                                color: '#fff', 
+                                border: 'none', 
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 2px 4px rgba(245, 158, 11, 0.15)'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#d97706'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#f59e0b'}
+                            >
+                              📊 View Delivery Report
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -264,6 +331,240 @@ const AdminNotifications = () => {
           )}
         </div>
       </div>
+
+      {/* Detailed Delivery Report Modal Overlay */}
+      {selectedReportId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(17, 24, 39, 0.7)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px'
+        }}>
+          <div style={{
+            background: '#fff',
+            width: '100%',
+            maxWidth: '700px',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid rgba(243, 244, 246, 1)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #f3f4f6',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#fcfcfc'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#111827', margin: 0 }}>📊 Push Delivery Analytics</h3>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '4px 0 0 0' }}>Seen/unseen tracking statistics for this broadcast</p>
+              </div>
+              <button 
+                onClick={closeReport} 
+                style={{ 
+                  background: '#f3f4f6', 
+                  border: 'none', 
+                  borderRadius: '50%', 
+                  width: '32px', 
+                  height: '32px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  cursor: 'pointer',
+                  color: '#4b5563',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {loadingReport ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#6b7280', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '32px', height: '32px', border: '3px solid #f3f4f6', borderTop: '3px solid #f59e0b', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Fetching real-time statistics...</span>
+              </div>
+            ) : !reportDetails ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>Failed to load report. Please try again.</div>
+            ) : (
+              <>
+                {/* Modal Body */}
+                <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                  {/* Notification Details Card */}
+                  <div style={{ padding: '16px', borderRadius: '16px', background: '#fafafa', border: '1px solid #f3f4f6', marginBottom: '24px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', marginBottom: '6px' }}>Message Details</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>{reportDetails.title}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>{reportDetails.body}</div>
+                  </div>
+
+                  {/* Summary Counters */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ padding: '16px', borderRadius: '16px', background: '#f0f9ff', border: '1px solid #e0f2fe', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#0369a1', textTransform: 'uppercase', marginBottom: '4px' }}>Total Sent</div>
+                      <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0369a1' }}>{reportDetails.sentCount}</div>
+                    </div>
+                    <div style={{ padding: '16px', borderRadius: '16px', background: '#f0fdf4', border: '1px solid #dcfce7', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#15803d', textTransform: 'uppercase', marginBottom: '4px' }}>Seen / Opened</div>
+                      <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#15803d' }}>{reportDetails.seenCount}</div>
+                    </div>
+                    <div style={{ padding: '16px', borderRadius: '16px', background: '#fffbeb', border: '1px solid #fef3c7', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#b45309', textTransform: 'uppercase', marginBottom: '4px' }}>Open Rate</div>
+                      <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#b45309' }}>
+                        {reportDetails.sentCount > 0 ? ((reportDetails.seenCount / reportDetails.sentCount) * 100).toFixed(1) + '%' : '0%'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search and Tabs */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                    {/* Tabs */}
+                    <div style={{ display: 'flex', background: '#f3f4f6', padding: '4px', borderRadius: '12px' }}>
+                      <button
+                        onClick={() => setActiveReportTab('seen')}
+                        style={{
+                          padding: '6px 16px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: activeReportTab === 'seen' ? '#fff' : 'transparent',
+                          color: activeReportTab === 'seen' ? '#111827' : '#6b7280',
+                          boxShadow: activeReportTab === 'seen' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        👁️ Seen By ({reportDetails.seenUsers.length})
+                      </button>
+                      <button
+                        onClick={() => setActiveReportTab('unseen')}
+                        style={{
+                          padding: '6px 16px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: activeReportTab === 'unseen' ? '#fff' : 'transparent',
+                          color: activeReportTab === 'unseen' ? '#111827' : '#6b7280',
+                          boxShadow: activeReportTab === 'unseen' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        👻 Unseen By ({reportDetails.unseenUsers.length})
+                      </button>
+                    </div>
+
+                    {/* Search Input */}
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={reportSearch}
+                      onChange={(e) => setReportSearch(e.target.value)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '10px',
+                        border: '1px solid #d1d5db',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        width: '200px'
+                      }}
+                    />
+                  </div>
+
+                  {/* Users List */}
+                  <div style={{ border: '1px solid #f3f4f6', borderRadius: '16px', overflow: 'hidden' }}>
+                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                      {(() => {
+                        const list = activeReportTab === 'seen' ? reportDetails.seenUsers : reportDetails.unseenUsers;
+                        const filtered = list.filter(u => 
+                          (u.name || '').toLowerCase().includes(reportSearch.toLowerCase()) || 
+                          (u.email || '').toLowerCase().includes(reportSearch.toLowerCase()) ||
+                          (u.phone || '').toLowerCase().includes(reportSearch.toLowerCase())
+                        );
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
+                              No users match this criteria.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                            <thead>
+                              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6', color: '#4b5563', fontWeight: '600' }}>
+                                <th style={{ padding: '12px 16px' }}>User</th>
+                                <th style={{ padding: '12px 16px' }}>Phone</th>
+                                {activeReportTab === 'seen' && <th style={{ padding: '12px 16px' }}>Seen At</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filtered.map((user) => (
+                                <tr key={user._id} style={{ borderBottom: '1px solid #f3f4f6', transition: 'background 0.1s' }} onMouseOver={(e) => e.currentTarget.style.background = '#fafafa'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                                  <td style={{ padding: '12px 16px' }}>
+                                    <div style={{ fontWeight: '600', color: '#111827' }}>{user.name || 'Anonymous User'}</div>
+                                    <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>{user.email}</div>
+                                  </td>
+                                  <td style={{ padding: '12px 16px', color: '#4b5563' }}>{user.phone || 'N/A'}</td>
+                                  {activeReportTab === 'seen' && (
+                                    <td style={{ padding: '12px 16px', color: '#10b981', fontWeight: '500' }}>
+                                      {user.seenAt ? new Date(user.seenAt).toLocaleString() : 'N/A'}
+                                    </td>
+                                  )}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div style={{ padding: '16px 24px', borderTop: '1px solid #f3f4f6', background: '#fcfcfc', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={closeReport}
+                    style={{
+                      padding: '8px 18px',
+                      borderRadius: '10px',
+                      background: '#111827',
+                      color: '#fff',
+                      border: 'none',
+                      fontWeight: '600',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#1f2937'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#111827'}
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

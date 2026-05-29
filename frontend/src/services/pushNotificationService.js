@@ -236,8 +236,36 @@ function setupForegroundNotificationHandler(handler) {
     });
 }
 
+// Mark notification as seen
+async function markNotificationAsSeen(notificationId) {
+    try {
+        const authToken = localStorage.getItem('inplay_token');
+        if (!authToken) {
+            console.log('No auth token found, skipping markNotificationAsSeen');
+            return;
+        }
+
+        const API_URL = getApiUrl();
+        const response = await fetch(`${API_URL}/user/notifications/${notificationId}/seen`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (!response.ok) {
+            console.warn(`Failed to mark notification ${notificationId} as seen (Status: ${response.status})`);
+        } else {
+            console.log(`✅ Notification ${notificationId} marked as seen successfully`);
+        }
+    } catch (error) {
+        console.error('Error marking notification as seen:', error);
+    }
+}
+
 export {
     registerFCMTokenWithBackend,
     setupForegroundNotificationHandler,
-    requestNotificationPermission
+    requestNotificationPermission,
+    markNotificationAsSeen
 };
