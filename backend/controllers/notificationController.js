@@ -221,9 +221,9 @@ const markNotificationAsSeen = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found' });
     }
 
-    // Find the recipient entry for this user
+    // Find the recipient entry for this user safely
     let recipient = notification.recipients.find(
-      r => r.user.toString() === userId.toString()
+      r => r.user && r.user.toString() === userId.toString()
     );
 
     if (recipient) {

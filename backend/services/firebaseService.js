@@ -69,7 +69,8 @@ const sendPushNotification = async (tokens, payload) => {
             notification: {
                 requireInteraction: true,
                 badge: '/favicon.png',
-                icon: '/favicon.png'
+                icon: '/favicon.png',
+                click_action: payload.data?.link || '/'
             }
         }
     };
