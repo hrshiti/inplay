@@ -61,21 +61,23 @@ exports.getAudioSeries = async (req, res, next) => {
 exports.createAudioSeries = async (req, res, next) => {
     try {
         const series = await AudioSeries.create(req.body);
+        const hydrated = hydrateAudioSeries(series);
+        
         res.status(201).json({
             success: true,
-            data: hydrateAudioSeries(series)
+            data: hydrated
         });
 
         // Send push notification to all users
-        if (series.isActive) {
+        if (hydrated.isActive) {
             notifyAllUsers({
                 title: `New Audio Series Released!`,
-                body: series.title,
-                imageUrl: series.coverImage,
+                body: hydrated.title,
+                imageUrl: hydrated.coverImage,
                 data: {
-                    type: 'audio',
-                    id: series._id.toString(),
-                    link: `/audio-series?seriesId=${series._id}`
+                    type: 'audio', seriesId: hydrated._id.toString(),
+                    id: hydrated._id.toString(),
+                    link: `/audio-series?seriesId=${hydrated._id}`
                 }
             });
         }

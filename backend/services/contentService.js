@@ -193,6 +193,22 @@ const createContent = async (contentData, adminId, files = {}) => {
         })();
     }
 
+    // Send immediate notification for Web Series or Content without a main video upload
+    if (content.status === 'published' && !files.video) {
+        const { notifyAllUsers } = require('../utils/notificationHelper');
+        const hydrated = hydrateContent(content);
+        notifyAllUsers({
+            title: `New ${content.type === 'series' || content.type === 'hindi_series' ? 'Series' : 'Movie'} Released!`,
+            body: content.title,
+            imageUrl: hydrated.poster?.url || hydrated.poster?.secure_url,
+            data: {
+                type: 'content',
+                id: content._id.toString(),
+                link: `/content/${content._id}`
+            }
+        });
+    }
+
     return hydrateContent(content);
   } catch (error) {
     await cleanupUploadedFiles(mediaUrls);
