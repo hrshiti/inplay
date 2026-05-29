@@ -119,7 +119,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, ini
             {reels.length > 0 ? (
                 reels.map((reel, index) => (
                     <ReelItem
-                        key={reel._id}
+                        key={reel.reelKey || reel._id}
                         index={index}
                         reel={reel}
                         muted={muted}

@@ -95,8 +95,34 @@ function App() {
   const [toast, setToast] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
+  const [quickByteReelsList, setQuickByteReelsList] = useState([]);
   const [playingQuickByteReels, setPlayingQuickByteReels] = useState(false);
   const [quickByteReelsIndex, setQuickByteReelsIndex] = useState(0);
+  
+  useEffect(() => {
+    if (quickBites.length > 0) {
+      const publishedShows = quickBites.filter(qb => qb.status === 'published');
+      const flattened = [];
+      publishedShows.forEach(show => {
+        const episodes = show.episodes && show.episodes.length > 0 ? show.episodes : [show];
+        episodes.forEach((ep, epIdx) => {
+          flattened.push({
+            ...show,
+            _id: show._id,
+            reelKey: `${show._id}_ep_${epIdx}`,
+            episodeIndex: epIdx,
+            episodes: [ep],
+            video: ep.video || ep,
+            hls_url: ep.hls_url || ep.video?.hls_url,
+            title: `${show.title} - EP ${epIdx + 1}`,
+            description: ep.title || show.description
+          });
+        });
+      });
+      setQuickByteReelsList(flattened);
+    }
+  }, [quickBites]);
+
   const [promotions, setPromotions] = useState([]);
   const [contentSections, setContentSections] = useState({
     bhojpuri: [],
@@ -203,8 +229,7 @@ function App() {
   }, [quickBites]);
 
   const handleResumeQuickByte = (item) => {
-    const publishedBytes = quickBites.filter(qb => qb.status === 'published');
-    const idx = publishedBytes.findIndex(qb => (qb._id || qb.id) === (item._id || item.id));
+    const idx = quickByteReelsList.findIndex(reel => reel._id === item._id && reel.episodeIndex === (item.episodeIndex || 0));
     setQuickByteReelsIndex(idx !== -1 ? idx : 0);
     setPlayingQuickByteReels(true);
   };
@@ -1200,8 +1225,7 @@ function App() {
                                     whileHover={{ scale: 1.05, y: -5 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => {
-                                      const publishedBytes = quickBites.filter(qb => qb.status === 'published');
-                                      const idx = publishedBytes.findIndex(qb => (qb._id || qb.id) === (verticalItem._id || verticalItem.id));
+                                      const idx = quickByteReelsList.findIndex(reel => reel._id === verticalItem._id && reel.episodeIndex === 0);
                                       setQuickByteReelsIndex(idx !== -1 ? idx : 0);
                                       setPlayingQuickByteReels(true);
                                     }}
@@ -1719,7 +1743,7 @@ function App() {
                   >
                     <ForYouPage
                       mode="quick_byte"
-                      initialReels={quickBites.filter(item => item.status === 'published')}
+                      initialReels={quickByteReelsList}
                       initialIndex={quickByteReelsIndex}
                       onBack={() => setPlayingQuickByteReels(false)}
                       likedVideos={likedVideos}
