@@ -33,7 +33,11 @@ const notifyAllUsers = async (payload) => {
         });
 
         const uniqueWebTokens = [...new Set(webTokens)];
-        const uniqueMobileTokens = [...new Set(mobileTokens)];
+        const rawUniqueMobileTokens = [...new Set(mobileTokens)];
+        
+        // Cross-deduplicate tokens to prevent double delivery over network
+        const webTokensSet = new Set(uniqueWebTokens);
+        const uniqueMobileTokens = rawUniqueMobileTokens.filter(token => !webTokensSet.has(token));
 
         // Send to Web
         if (uniqueWebTokens.length > 0) {

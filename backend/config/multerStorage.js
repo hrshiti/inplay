@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 
 // Ensure upload directories exist
 const ensureDirectoryExists = (dirPath) => {
@@ -274,12 +275,133 @@ const transformFileToResponse = (file) => {
     };
 };
 
+// Helper function to convert a single file to WebP
+const convertFileToWebp = async (file) => {
+    if (!file || !file.path) return;
+
+    // Check if the file is an image
+    const isImage = file.mimetype.startsWith('image/') || 
+                    /\.(jpg|jpeg|png|gif|bmp|tiff|webp)$/i.test(file.originalname);
+    
+    if (!isImage) return;
+
+    const originalPath = file.path;
+    const ext = path.extname(originalPath);
+    
+    // Create new .webp path in the same folder
+    const dir = path.dirname(originalPath);
+    const baseWithoutExt = path.basename(originalPath, ext);
+    const newFilename = `${baseWithoutExt}.webp`;
+    const newPath = path.join(dir, newFilename);
+
+    try {
+        // Convert using sharp
+        await sharp(originalPath)
+            .webp({ quality: 80 })
+            .toFile(newPath);
+
+        // Delete the original file if it is not already .webp or is a different file
+        if (originalPath !== newPath) {
+            if (fs.existsSync(originalPath)) {
+                fs.unlinkSync(originalPath);
+            }
+        }
+
+        // Update the file object properties
+        file.path = newPath;
+        file.filename = newFilename;
+        file.mimetype = 'image/webp';
+        file.size = fs.statSync(newPath).size;
+        file.originalname = path.basename(file.originalname, path.extname(file.originalname)) + '.webp';
+    } catch (error) {
+        console.error(`Error converting image file ${originalPath} to webp:`, error);
+        // Fallback: Proceed with the original file if conversion fails
+    }
+};
+
+// Express middleware to convert uploaded images to WebP
+const convertImagesToWebpMiddleware = async (req, res, next) => {
+    try {
+        if (req.file) {
+            await convertFileToWebp(req.file);
+        }
+
+        if (req.files) {
+            if (Array.isArray(req.files)) {
+                for (const file of req.files) {
+                    await convertFileToWebp(file);
+                }
+            } else if (typeof req.files === 'object') {
+                for (const fieldName of Object.keys(req.files)) {
+                    const files = req.files[fieldName];
+                    if (Array.isArray(files)) {
+                        for (const file of files) {
+                            await convertFileToWebp(file);
+                        }
+                    }
+                }
+            }
+        }
+        next();
+    } catch (error) {
+        console.error('Error in convertImagesToWebpMiddleware:', error);
+        next(); // Proceed anyway so request doesn't fail
+    }
+};
+
+// Helper to wrap original multer middleware with WebP conversion
+const wrapWithWebp = (multerMiddleware) => {
+    return (req, res, next) => {
+        multerMiddleware(req, res, async (err) => {
+            if (err) {
+                return next(err);
+            }
+            try {
+                await convertImagesToWebpMiddleware(req, res, () => {});
+                next();
+            } catch (webpErr) {
+                console.error("WebP conversion failed, proceeding with original files:", webpErr);
+                next();
+            }
+        });
+    };
+};
+
+// Helper to wrap all methods of a multer instance
+const wrapMulterInstance = (multerInstance) => {
+    const originalSingle = multerInstance.single;
+    const originalArray = multerInstance.array;
+    const originalFields = multerInstance.fields;
+    const originalAny = multerInstance.any;
+
+    multerInstance.single = function(...args) {
+        return wrapWithWebp(originalSingle.apply(this, args));
+    };
+    multerInstance.array = function(...args) {
+        return wrapWithWebp(originalArray.apply(this, args));
+    };
+    multerInstance.fields = function(...args) {
+        return wrapWithWebp(originalFields.apply(this, args));
+    };
+    multerInstance.any = function(...args) {
+        return wrapWithWebp(originalAny.apply(this, args));
+    };
+
+    return multerInstance;
+};
+
+// Wrap the exported multer uploaders
+const wrappedUploadImage = wrapMulterInstance(uploadImage);
+const wrappedUploadAvatar = wrapMulterInstance(uploadAvatar);
+const wrappedUploadMixed = wrapMulterInstance(uploadMixed);
+
 module.exports = {
-    uploadImage,
+    uploadImage: wrappedUploadImage,
     uploadVideo,
     uploadAudio,
-    uploadAvatar,
-    uploadMixed,
+    uploadAvatar: wrappedUploadAvatar,
+    uploadMixed: wrappedUploadMixed,
+    convertImagesToWebpMiddleware,
     getPublicUrl,
     deleteFile,
     getFilePathFromUrl,

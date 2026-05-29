@@ -48,6 +48,7 @@ const quickByteRoutes = require('./routes/quickByteRoutes');
 const forYouRoutes = require('./routes/forYouRoutes');
 const audioSeriesRoutes = require('./routes/audioSeriesRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const { convertImagesToWebpMiddleware } = require('./config/multerStorage');
 
 // Security middleware
 app.use(helmet({
@@ -57,6 +58,51 @@ app.use(compression());
 
 // SERVE STATIC FILES - All uploaded media (images, videos, audio)
 // Moved before API routes to ensure they are handled properly
+const fs = require('fs');
+const sharp = require('sharp');
+
+const onTheFlyWebpMiddleware = async (req, res, next) => {
+  try {
+    const urlPath = req.path; // e.g. "/images/avatars/img_123.jpg"
+    
+    // Check if request is for an image and not already webp
+    const ext = path.extname(urlPath).toLowerCase();
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'];
+    
+    if (imageExtensions.includes(ext)) {
+      const uploadsDir = path.join(__dirname, 'uploads');
+      const requestedLocalPath = path.join(uploadsDir, urlPath);
+      
+      // Corresponding webp local path
+      const webpLocalPath = requestedLocalPath.replace(/\.[^/.]+$/, "") + ".webp";
+      
+      // Case A: The original requested file (e.g. .jpg) exists on disk
+      if (fs.existsSync(requestedLocalPath)) {
+        try {
+          await sharp(requestedLocalPath)
+            .webp({ quality: 80 })
+            .toFile(webpLocalPath);
+          
+          // Delete original non-webp file to save disk space
+          fs.unlinkSync(requestedLocalPath);
+        } catch (err) {
+          console.error("On-the-fly WebP conversion failed:", err);
+        }
+      }
+      
+      // Case B: The webp file exists (either just created or previously created), but original doesn't
+      if (fs.existsSync(webpLocalPath)) {
+        // Rewrite request URL so express.static serves the webp file
+        req.url = req.url.replace(/\.[^/.]+$/, "") + ".webp";
+      }
+    }
+  } catch (err) {
+    console.error("Error in onTheFlyWebpMiddleware:", err);
+  }
+  next();
+};
+
+app.use('/uploads', onTheFlyWebpMiddleware);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: '7d',
   immutable: true,
@@ -171,7 +217,7 @@ const upload = multer({ storage });
 // -------------------
 // Upload Route
 // -------------------
-app.post("/upload", upload.single("file"), async (req, res) => {
+app.post("/upload", upload.single("file"), convertImagesToWebpMiddleware, async (req, res) => {
   if (!req.file) return res.status(400).send("No file uploaded");
 
   // Generate relative path

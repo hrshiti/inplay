@@ -76,13 +76,12 @@ const createQuickByteHandler = async (req, res) => {
 
         if (!title) throw new Error('Title is required');
 
-        // Determine intended status, force draft if video needs processing
+        // Determine intended status - publish immediately
         const intendedStatus = status || 'published';
-        const forceDraft = (files.video || (files.videos && files.videos.length > 0)) ? 'draft' : intendedStatus;
 
         const quickByte = new QuickByte({
             title,
-            status: forceDraft,
+            status: intendedStatus,
             description: description || '',
             genre: genre || 'Entertainment',
             year: year || new Date().getFullYear(),
@@ -135,29 +134,29 @@ const createQuickByteHandler = async (req, res) => {
 
         await quickByte.save();
 
-        // Async HLS Processing
+        // Send notification immediately if status is published
+        if (quickByte.status === 'published') {
+            notifyAllUsers({
+                title: `New QuickByte Released!`,
+                body: quickByte.title,
+                imageUrl: quickByte.thumbnail?.url || quickByte.thumbnail?.secure_url,
+                data: {
+                    type: 'quickbyte',
+                    id: quickByte._id.toString(),
+                    link: `/reels`
+                }
+            });
+        }
+
+        // Async HLS Processing in the background
         if (files.video && files.video[0]) {
             mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(async (hlsUrl) => {
                 if (hlsUrl) {
-                    const updated = await QuickByte.findByIdAndUpdate(
+                    await QuickByte.findByIdAndUpdate(
                         quickByte._id, 
-                        { 'video.hls_url': hlsUrl, status: 'published' },
-                        { new: true }
+                        { 'video.hls_url': hlsUrl }
                     ).exec();
-
-                    // Send notification if now published
-                    if (updated && updated.status === 'published') {
-                        notifyAllUsers({
-                            title: `New QuickByte Released!`,
-                            body: updated.title,
-                            imageUrl: updated.thumbnail?.url || updated.thumbnail?.secure_url,
-                            data: {
-                                type: 'quickbyte',
-                                id: updated._id.toString(),
-                                link: `/reels`
-                            }
-                        });
-                    }
+                    console.log(`HLS master playlist generated and S3 synced for QuickByte: ${quickByte.title}`);
                 }
             });
         }

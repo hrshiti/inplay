@@ -231,32 +231,7 @@ function setupForegroundNotificationHandler(handler) {
     onMessage(messaging, (payload) => {
         console.log('📬 Foreground message received:', payload);
 
-        if (Notification.permission === 'granted') {
-            const notificationTitle = payload.notification?.title || payload.data?.title || 'InPlay';
-            const imageUrl = payload.notification?.image || payload.data?.image || payload.data?.imageUrl || payload.data?.picture;
-            
-            const notificationOptions = {
-                body: payload.notification?.body || payload.data?.body || '',
-                icon: imageUrl || '/favicon.png',
-                image: imageUrl,
-                data: payload.data,
-                tag: 'inplay-notification',
-                renotify: true
-            };
-
-            // Use Service Worker registration to show notification (more reliable on mobile)
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(notificationTitle, notificationOptions);
-                }).catch(err => {
-                    console.error('❌ Could not show foreground notification via SW:', err);
-                    new Notification(notificationTitle, notificationOptions);
-                });
-            } else {
-                new Notification(notificationTitle, notificationOptions);
-            }
-        }
-
+        // Rely only on the beautiful in-app Toast notification when the app is in the foreground
         if (handler) handler(payload);
     });
 }
