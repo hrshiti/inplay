@@ -95,34 +95,6 @@ function App() {
   const [toast, setToast] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
-  const [quickByteReelsList, setQuickByteReelsList] = useState([]);
-  const [playingQuickByteReels, setPlayingQuickByteReels] = useState(false);
-  const [quickByteReelsIndex, setQuickByteReelsIndex] = useState(0);
-  
-  useEffect(() => {
-    if (quickBites.length > 0) {
-      const publishedShows = quickBites.filter(qb => qb.status === 'published');
-      const flattened = [];
-      publishedShows.forEach(show => {
-        const episodes = show.episodes && show.episodes.length > 0 ? show.episodes : [show];
-        episodes.forEach((ep, epIdx) => {
-          flattened.push({
-            ...show,
-            _id: show._id,
-            reelKey: `${show._id}_ep_${epIdx}`,
-            episodeIndex: epIdx,
-            episodes: [ep],
-            video: ep.video || ep,
-            hls_url: ep.hls_url || ep.video?.hls_url,
-            title: `${show.title} - EP ${epIdx + 1}`,
-            description: ep.title || show.description
-          });
-        });
-      });
-      setQuickByteReelsList(flattened);
-    }
-  }, [quickBites]);
-
   const [promotions, setPromotions] = useState([]);
   const [contentSections, setContentSections] = useState({
     bhojpuri: [],
@@ -229,9 +201,28 @@ function App() {
   }, [quickBites]);
 
   const handleResumeQuickByte = (item) => {
-    const idx = quickByteReelsList.findIndex(reel => reel._id === item._id && reel.episodeIndex === (item.episodeIndex || 0));
-    setQuickByteReelsIndex(idx !== -1 ? idx : 0);
-    setPlayingQuickByteReels(true);
+    let episode = null;
+    // Try to find the specific episode object
+    if (item.episodes && item.episodes[item.episodeIndex]) {
+      episode = item.episodes[item.episodeIndex];
+    } else if (item.seasons) {
+      const allEps = item.seasons.flatMap(s => s.episodes || []);
+      episode = allEps[item.episodeIndex];
+    }
+
+    // Play with accumulated progress
+    // Ensure we pass the 'watchedSeconds' so the player resumes
+
+    // IMPORTANT: Explicitly set flags to forces Vertical Player Mode in VideoPlayer.jsx
+    const quickByteItem = {
+      ...item,
+      watchedSeconds: item.watchedSeconds,
+      isVertical: true,
+      type: 'quick_byte',
+      category: 'Quick Bites'
+    };
+
+    handlePlay(quickByteItem, episode);
   };
   const [allContent, setAllContent] = useState([]);
   const navigate = useNavigate();
@@ -1224,11 +1215,7 @@ function App() {
                                     key={verticalItem._id || verticalItem.id || index}
                                     whileHover={{ scale: 1.05, y: -5 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => {
-                                      const idx = quickByteReelsList.findIndex(reel => reel._id === verticalItem._id && reel.episodeIndex === 0);
-                                      setQuickByteReelsIndex(idx !== -1 ? idx : 0);
-                                      setPlayingQuickByteReels(true);
-                                    }}
+                                    onClick={() => handlePlay(verticalItem)}
                                     style={{
                                       flex: '0 0 calc((100% - 28px) / 3)',
                                       cursor: 'pointer',
@@ -1732,25 +1719,7 @@ function App() {
                   </motion.div>
                 )}
 
-                {playingQuickByteReels && (
-                  <motion.div
-                    key="quick_byte_reels"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', zIndex: 20000 }}
-                  >
-                    <ForYouPage
-                      mode="quick_byte"
-                      initialReels={quickByteReelsList}
-                      initialIndex={quickByteReelsIndex}
-                      onBack={() => setPlayingQuickByteReels(false)}
-                      likedVideos={likedVideos}
-                      onToggleLike={handleToggleLike}
-                    />
-                  </motion.div>
-                )}
+
 
                 {/* Premium Tab Removed */}
 
