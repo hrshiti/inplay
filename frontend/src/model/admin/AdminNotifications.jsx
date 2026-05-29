@@ -287,14 +287,8 @@ const AdminNotifications = () => {
                         </span>
                         {item.target !== 'user' && (
                           <>
-                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}>
-                              📡 Sent: {item.sentCount || 0}
-                            </span>
                             <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: '600' }}>
                               👁️ Seen: {item.seenCount || 0}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', background: '#f3f4f6', color: '#4b5563', fontWeight: '600' }}>
-                              👻 Unseen: {item.unseenCount || 0}
                             </span>
                             
                             <button

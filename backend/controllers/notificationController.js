@@ -216,8 +216,11 @@ const markNotificationAsSeen = async (req, res) => {
     const notificationId = req.params.id;
     const userId = req.user._id;
 
+    console.log(`🔔 [Backend] markNotificationAsSeen: NotificationID=${notificationId}, UserID=${userId}`);
+
     const notification = await Notification.findById(notificationId);
     if (!notification) {
+      console.warn(`🔔 [Backend] markNotificationAsSeen: Notification ${notificationId} not found`);
       return res.status(404).json({ success: false, message: 'Notification not found' });
     }
 
@@ -231,6 +234,9 @@ const markNotificationAsSeen = async (req, res) => {
         recipient.seen = true;
         recipient.seenAt = new Date();
         await notification.save();
+        console.log(`🔔 [Backend] markNotificationAsSeen: Updated existing recipient.seen to true for User ${userId}`);
+      } else {
+        console.log(`🔔 [Backend] markNotificationAsSeen: Recipient.seen was already true for User ${userId}`);
       }
     } else {
       // If user was not originally in the list, add them as seen to keep stats accurate
@@ -240,10 +246,12 @@ const markNotificationAsSeen = async (req, res) => {
         seenAt: new Date()
       });
       await notification.save();
+      console.log(`🔔 [Backend] markNotificationAsSeen: User ${userId} was not in recipients, pushed new seen recipient entry`);
     }
 
     res.status(200).json({ success: true, message: 'Notification marked as seen' });
   } catch (error) {
+    console.error('🔔 [Backend] markNotificationAsSeen error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

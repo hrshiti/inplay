@@ -239,27 +239,33 @@ function setupForegroundNotificationHandler(handler) {
 // Mark notification as seen
 async function markNotificationAsSeen(notificationId) {
     try {
+        console.log(`🔔 [FCM] markNotificationAsSeen called with ID: ${notificationId}`);
         const authToken = localStorage.getItem('inplay_token');
         if (!authToken) {
-            console.log('No auth token found, skipping markNotificationAsSeen');
+            console.log('🔔 [FCM] markNotificationAsSeen: No auth token found in localStorage, skipping seen API call');
             return;
         }
 
         const API_URL = getApiUrl();
+        console.log(`🔔 [FCM] markNotificationAsSeen: Sending POST to ${API_URL}/user/notifications/${notificationId}/seen`);
         const response = await fetch(`${API_URL}/user/notifications/${notificationId}/seen`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${authToken}`
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
             }
         });
 
+        const resData = await response.json();
+        console.log(`🔔 [FCM] markNotificationAsSeen: Received response status ${response.status}`, resData);
+
         if (!response.ok) {
-            console.warn(`Failed to mark notification ${notificationId} as seen (Status: ${response.status})`);
+            console.warn(`🔔 [FCM] Failed to mark notification ${notificationId} as seen: ${resData.message}`);
         } else {
-            console.log(`✅ Notification ${notificationId} marked as seen successfully`);
+            console.log(`🔔 [FCM] ✅ Notification ${notificationId} marked as seen successfully`);
         }
     } catch (error) {
-        console.error('Error marking notification as seen:', error);
+        console.error('🔔 [FCM] Error marking notification as seen:', error);
     }
 }
 
