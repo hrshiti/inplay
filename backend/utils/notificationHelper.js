@@ -24,20 +24,15 @@ const notifyAllUsers = async (payload) => {
         let mobileTokens = [];
 
         users.forEach(user => {
-            if (user.fcm_web && user.fcm_web.length > 0) {
-                webTokens = [...webTokens, ...user.fcm_web];
-            }
             if (user.fcm_mobile && user.fcm_mobile.length > 0) {
                 mobileTokens = [...mobileTokens, ...user.fcm_mobile];
+            } else if (user.fcm_web && user.fcm_web.length > 0) {
+                webTokens = [...webTokens, ...user.fcm_web];
             }
         });
 
         const uniqueWebTokens = [...new Set(webTokens)];
-        const rawUniqueMobileTokens = [...new Set(mobileTokens)];
-        
-        // Cross-deduplicate tokens to prevent double delivery over network
-        const webTokensSet = new Set(uniqueWebTokens);
-        const uniqueMobileTokens = rawUniqueMobileTokens.filter(token => !webTokensSet.has(token));
+        const uniqueMobileTokens = [...new Set(mobileTokens)];
 
         // Send to Web
         if (uniqueWebTokens.length > 0) {
@@ -80,13 +75,17 @@ const notifySubscribedUsers = async (payload) => {
 
         if (!users || users.length === 0) return;
 
-        let tokens = [];
+        let webTokens = [];
+        let mobileTokens = [];
         users.forEach(user => {
-            if (user.fcm_web) tokens = [...tokens, ...user.fcm_web];
-            if (user.fcm_mobile) tokens = [...tokens, ...user.fcm_mobile];
+            if (user.fcm_mobile && user.fcm_mobile.length > 0) {
+                mobileTokens = [...mobileTokens, ...user.fcm_mobile];
+            } else if (user.fcm_web && user.fcm_web.length > 0) {
+                webTokens = [...webTokens, ...user.fcm_web];
+            }
         });
 
-        const uniqueTokens = [...new Set(tokens)];
+        const uniqueTokens = [...new Set([...webTokens, ...mobileTokens])];
         if (uniqueTokens.length > 0) {
             const response = await sendPushNotification(uniqueTokens, payload);
             await cleanupTokens(uniqueTokens, response);
@@ -139,7 +138,12 @@ const notifySpecificUser = async (userId, payload) => {
         const user = await User.findById(userId).select('fcm_web fcm_mobile');
         if (!user) return;
 
-        let tokens = [...(user.fcm_web || []), ...(user.fcm_mobile || [])];
+        let tokens = [];
+        if (user.fcm_mobile && user.fcm_mobile.length > 0) {
+            tokens = user.fcm_mobile;
+        } else if (user.fcm_web && user.fcm_web.length > 0) {
+            tokens = user.fcm_web;
+        }
         const uniqueTokens = [...new Set(tokens)];
 
         if (uniqueTokens.length > 0) {
