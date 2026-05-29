@@ -226,7 +226,6 @@ function App() {
   };
   const [allContent, setAllContent] = useState([]);
   const navigate = useNavigate();
-  const location = useLocation();
   const categoryMatch = location.pathname.match(/^\/category\/(.+)/);
   const categorySlug = categoryMatch ? categoryMatch[1] : null;
 
