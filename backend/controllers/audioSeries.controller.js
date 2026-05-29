@@ -111,18 +111,13 @@ exports.updateAudioSeries = async (req, res, next) => {
     }
 };
 
-// @desc    Delete audio series
-// @route   DELETE /api/audio-series/:id
-// @access  Private/Admin
 exports.deleteAudioSeries = async (req, res, next) => {
     try {
-        const series = await AudioSeries.findById(req.params.id);
+        const series = await AudioSeries.findByIdAndDelete(req.params.id);
 
         if (!series) {
             return res.status(404).json({ success: false, message: 'Audio Series not found' });
         }
-
-        await series.remove();
 
         res.status(200).json({
             success: true,
