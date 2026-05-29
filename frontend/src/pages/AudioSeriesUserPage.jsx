@@ -31,6 +31,28 @@ export default function AudioSeriesUserPage({ onBack }) {
         fetchSeries();
     }, []);
 
+    useEffect(() => {
+        if (seriesList.length > 0) {
+            const params = new URLSearchParams(window.location.search);
+            const seriesId = params.get('seriesId');
+            if (seriesId) {
+                const found = seriesList.find(s => s._id === seriesId);
+                if (found) {
+                    console.log("🔔 [AudioSeries] Auto-selecting series from URL:", seriesId);
+                    setSelectedSeries(found);
+                    
+                    // Clean up URL query parameters to look sleek
+                    const newSearch = new URLSearchParams(window.location.search);
+                    newSearch.delete('seriesId');
+                    newSearch.delete('notificationId');
+                    const searchString = newSearch.toString();
+                    const newPath = window.location.pathname + (searchString ? `?${searchString}` : '');
+                    window.history.replaceState(null, '', newPath);
+                }
+            }
+        }
+    }, [seriesList]);
+
     const fetchSeries = async () => {
         try {
             console.log("Fetching audio series from:", API_URL);

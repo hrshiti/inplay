@@ -143,7 +143,7 @@ const createQuickByteHandler = async (req, res) => {
                 data: {
                     type: 'quickbyte',
                     id: quickByte._id.toString(),
-                    link: `/reels`
+                    link: `/for-you`
                 }
             });
         }

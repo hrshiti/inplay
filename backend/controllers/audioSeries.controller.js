@@ -75,7 +75,7 @@ exports.createAudioSeries = async (req, res, next) => {
                 data: {
                     type: 'audio',
                     id: series._id.toString(),
-                    link: `/audio-details/${series._id}`
+                    link: `/audio-series?seriesId=${series._id}`
                 }
             });
         }

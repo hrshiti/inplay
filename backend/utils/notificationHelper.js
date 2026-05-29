@@ -25,9 +25,9 @@ const notifyAllUsers = async (payload) => {
 
         users.forEach(user => {
             if (user.fcm_mobile && user.fcm_mobile.length > 0) {
-                mobileTokens = [...mobileTokens, ...user.fcm_mobile];
+                mobileTokens.push(user.fcm_mobile[user.fcm_mobile.length - 1]);
             } else if (user.fcm_web && user.fcm_web.length > 0) {
-                webTokens = [...webTokens, ...user.fcm_web];
+                webTokens.push(user.fcm_web[user.fcm_web.length - 1]);
             }
         });
 
@@ -81,9 +81,9 @@ const notifySubscribedUsers = async (payload) => {
         let mobileTokens = [];
         users.forEach(user => {
             if (user.fcm_mobile && user.fcm_mobile.length > 0) {
-                mobileTokens = [...mobileTokens, ...user.fcm_mobile];
+                mobileTokens.push(user.fcm_mobile[user.fcm_mobile.length - 1]);
             } else if (user.fcm_web && user.fcm_web.length > 0) {
-                webTokens = [...webTokens, ...user.fcm_web];
+                webTokens.push(user.fcm_web[user.fcm_web.length - 1]);
             }
         });
 
@@ -144,9 +144,9 @@ const notifySpecificUser = async (userId, payload) => {
 
         let tokens = [];
         if (user.fcm_mobile && user.fcm_mobile.length > 0) {
-            tokens = user.fcm_mobile;
+            tokens = [user.fcm_mobile[user.fcm_mobile.length - 1]];
         } else if (user.fcm_web && user.fcm_web.length > 0) {
-            tokens = user.fcm_web;
+            tokens = [user.fcm_web[user.fcm_web.length - 1]];
         }
         const uniqueTokens = [...new Set(tokens)];
 

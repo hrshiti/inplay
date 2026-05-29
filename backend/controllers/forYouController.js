@@ -109,7 +109,29 @@ const createForYouHandler = async (req, res) => {
                     await ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
                     console.log(`HLS Master synced and Published for Reel: ${forYou.title}`);
                     
-                    // Note: If you want notifications for Reels too, add them here
+                    const { notifyAllUsers } = require('../utils/notificationHelper');
+                    notifyAllUsers({
+                        title: `New Reel Added in For You!`,
+                        body: forYou.title,
+                        imageUrl: forYou.thumbnail?.url || forYou.thumbnail?.secure_url,
+                        data: {
+                            type: 'foryou',
+                            id: forYou._id.toString(),
+                            link: `/for-you`
+                        }
+                    });
+                }
+            });
+        } else if (forYou.status === 'published') {
+            const { notifyAllUsers } = require('../utils/notificationHelper');
+            notifyAllUsers({
+                title: `New Reel Added in For You!`,
+                body: forYou.title,
+                imageUrl: forYou.thumbnail?.url || forYou.thumbnail?.secure_url,
+                data: {
+                    type: 'foryou',
+                    id: forYou._id.toString(),
+                    link: `/for-you`
                 }
             });
         }

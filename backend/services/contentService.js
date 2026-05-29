@@ -158,7 +158,7 @@ const createContent = async (contentData, adminId, files = {}) => {
                         data: {
                             type: 'content',
                             id: updatedContent._id.toString(),
-                            link: `/movie-details/${updatedContent._id}`
+                            link: `/content/${updatedContent._id}`
                         }
                     });
                 }
