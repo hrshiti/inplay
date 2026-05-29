@@ -10,14 +10,26 @@ const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/a
 // Remove trailing slash if exists and ensure /api suffix
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
-export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, initialReels = [] }) {
+export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, initialReels = [], initialIndex = 0, mode = 'foryou' }) {
     const [reels, setReels] = useState(initialReels);
     const [muted, setMuted] = useState(true);
     const [activeReelId, setActiveReelId] = useState(null);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(initialIndex);
 
     const containerRef = useRef(null);
 
+    const apiPrefix = mode === 'quick_byte' ? 'quickbytes' : 'foryou';
+
+    useEffect(() => {
+        if (initialIndex > 0 && containerRef.current) {
+            containerRef.current.scrollTop = initialIndex * window.innerHeight;
+            requestAnimationFrame(() => {
+                if (containerRef.current) {
+                    containerRef.current.scrollTop = initialIndex * window.innerHeight;
+                }
+            });
+        }
+    }, [initialIndex]);
 
     useEffect(() => {
         const fetchReels = async () => {
@@ -26,7 +38,9 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, ini
                 // unless we want to refresh. For now, let's just use them.
                 return;
             }
-            const data = await contentService.getForYouReels();
+            const data = mode === 'quick_byte'
+                ? await contentService.getQuickBytes(50)
+                : await contentService.getForYouReels();
             console.log("ForYouPage Fetch Result:", data); // Debug Log
             setReels(data);
         };
@@ -97,7 +111,9 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, ini
                 <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: '8px' }}>
                     <ArrowLeft size={28} strokeWidth={2.5} />
                 </button>
-                <span style={{ fontWeight: '700', fontSize: '1.2rem', marginLeft: '12px', textShadow: '0 1px 2px black', color: 'white' }}>For You</span>
+                <span style={{ fontWeight: '700', fontSize: '1.2rem', marginLeft: '12px', textShadow: '0 1px 2px black', color: 'white' }}>
+                    {mode === 'quick_byte' ? 'Quick Bites' : 'For You'}
+                </span>
             </div>
 
             {reels.length > 0 ? (
@@ -114,6 +130,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, ini
                         shouldPreload={index > activeIndex && index <= activeIndex + 5}
                         isAlreadyLiked={likedVideos.some(v => (v._id || v.id) === reel._id)}
                         onToggleLike={onToggleLike}
+                        apiPrefix={apiPrefix}
                         onAutoNext={() => {
                             if (index < reels.length - 1) {
                                 containerRef.current?.scrollTo({
@@ -136,7 +153,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, ini
 function ReelItem({
     reel, muted, toggleMute, setActiveReelId,
     setActiveIndex, index, isActiveIndex, shouldPreload,
-    isAlreadyLiked, onToggleLike, onAutoNext
+    isAlreadyLiked, onToggleLike, onAutoNext, apiPrefix
 }) {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -250,7 +267,7 @@ function ReelItem({
                         if (video && video.currentTime >= 3 && !viewCounted.current) {
                             viewCounted.current = true;
                             try {
-                                await contentService.incrementContentView(reel._id, 'foryou');
+                                await contentService.incrementContentView(reel._id, apiPrefix);
                                 console.log('Reel view counted:', reel._id);
                             } catch (e) {
                                 console.error("Failed to track reel view", e);
@@ -312,13 +329,10 @@ function ReelItem({
                 // Fallback for isolated use
                 const token = localStorage.getItem('inplay_token');
                 if (token) {
-                    const token = localStorage.getItem('inplay_token');
-                    if (token) {
-                        await fetch(`${API_URL}/foryou/${reel._id}/like`, {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                    }
+                    await fetch(`${API_URL}/${apiPrefix}/${reel._id}/like`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
                 }
             }
         } catch (error) {
@@ -459,7 +473,7 @@ function ReelItem({
 
             {/* Comments Sheet */}
             {showComments && (
-                <CommentsSheet reelId={reel._id} onClose={() => setShowComments(false)} />
+                <CommentsSheet reelId={reel._id} apiPrefix={apiPrefix} onClose={() => setShowComments(false)} />
             )}
         </div>
     );
@@ -473,7 +487,7 @@ const MusicIcon = () => (
     </svg>
 );
 
-const CommentsSheet = ({ reelId, onClose }) => {
+const CommentsSheet = ({ reelId, apiPrefix, onClose }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState("");
     const [currentUser, setCurrentUser] = useState(null);
@@ -488,7 +502,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
         // Fetch existing comments
         const fetchComments = async () => {
             try {
-                const res = await fetch(`${API_URL}/foryou/${reelId}/comments`);
+                const res = await fetch(`${API_URL}/${apiPrefix}/${reelId}/comments`);
                 const data = await res.json();
                 if (data.success) setComments(data.data);
             } catch (e) { console.error(e); }
@@ -537,7 +551,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
                 body.parentComment = replyTo._id;
             }
 
-            await fetch(`${API_URL}/foryou/${reelId}/comments`, {
+            await fetch(`${API_URL}/${apiPrefix}/${reelId}/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -558,7 +572,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
 
         if (confirm('Are you sure you want to delete this comment?')) {
             try {
-                const res = await fetch(`${API_URL}/foryou/comments/${commentId}`, {
+                const res = await fetch(`${API_URL}/${apiPrefix}/comments/${commentId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -576,7 +590,7 @@ const CommentsSheet = ({ reelId, onClose }) => {
         if (!token) return alert('Please login to like comments');
 
         try {
-            const res = await fetch(`${API_URL}/foryou/comments/${commentId}/like`, {
+            const res = await fetch(`${API_URL}/${apiPrefix}/comments/${commentId}/like`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

@@ -95,6 +95,8 @@ function App() {
   const [toast, setToast] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
+  const [playingQuickByteReels, setPlayingQuickByteReels] = useState(false);
+  const [quickByteReelsIndex, setQuickByteReelsIndex] = useState(0);
   const [promotions, setPromotions] = useState([]);
   const [contentSections, setContentSections] = useState({
     bhojpuri: [],
@@ -201,28 +203,10 @@ function App() {
   }, [quickBites]);
 
   const handleResumeQuickByte = (item) => {
-    let episode = null;
-    // Try to find the specific episode object
-    if (item.episodes && item.episodes[item.episodeIndex]) {
-      episode = item.episodes[item.episodeIndex];
-    } else if (item.seasons) {
-      const allEps = item.seasons.flatMap(s => s.episodes || []);
-      episode = allEps[item.episodeIndex];
-    }
-
-    // Play with accumulated progress
-    // Ensure we pass the 'watchedSeconds' so the player resumes
-
-    // IMPORTANT: Explicitly set flags to forces Vertical Player Mode in VideoPlayer.jsx
-    const quickByteItem = {
-      ...item,
-      watchedSeconds: item.watchedSeconds,
-      isVertical: true,
-      type: 'quick_byte',
-      category: 'Quick Bites'
-    };
-
-    handlePlay(quickByteItem, episode);
+    const publishedBytes = quickBites.filter(qb => qb.status === 'published');
+    const idx = publishedBytes.findIndex(qb => (qb._id || qb.id) === (item._id || item.id));
+    setQuickByteReelsIndex(idx !== -1 ? idx : 0);
+    setPlayingQuickByteReels(true);
   };
   const [allContent, setAllContent] = useState([]);
   const navigate = useNavigate();
@@ -1215,7 +1199,12 @@ function App() {
                                     key={verticalItem._id || verticalItem.id || index}
                                     whileHover={{ scale: 1.05, y: -5 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => handlePlay(verticalItem)}
+                                    onClick={() => {
+                                      const publishedBytes = quickBites.filter(qb => qb.status === 'published');
+                                      const idx = publishedBytes.findIndex(qb => (qb._id || qb.id) === (verticalItem._id || verticalItem.id));
+                                      setQuickByteReelsIndex(idx !== -1 ? idx : 0);
+                                      setPlayingQuickByteReels(true);
+                                    }}
                                     style={{
                                       flex: '0 0 calc((100% - 28px) / 3)',
                                       cursor: 'pointer',
@@ -1715,6 +1704,26 @@ function App() {
                       likedVideos={likedVideos}
                       onToggleLike={handleToggleLike}
                       initialReels={forYouReels}
+                    />
+                  </motion.div>
+                )}
+
+                {playingQuickByteReels && (
+                  <motion.div
+                    key="quick_byte_reels"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', zIndex: 20000 }}
+                  >
+                    <ForYouPage
+                      mode="quick_byte"
+                      initialReels={quickBites.filter(item => item.status === 'published')}
+                      initialIndex={quickByteReelsIndex}
+                      onBack={() => setPlayingQuickByteReels(false)}
+                      likedVideos={likedVideos}
+                      onToggleLike={handleToggleLike}
                     />
                   </motion.div>
                 )}
