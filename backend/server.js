@@ -119,7 +119,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://inplays.in',
-  'https://www.inplays.in'
+  'https://www.inplays.in',
+  'https://ios.inplays.in'
 ];
 
 if (process.env.FRONTEND_URL) {
