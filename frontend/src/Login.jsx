@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import authService from './services/api/authService';
-
+import { trackLogin } from './utils/analytics';
 export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
   const [step, setStep] = useState(1); // 1 = Phone input, 2 = OTP input
   const [phone, setPhone] = useState('');
@@ -59,6 +59,7 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
 
     try {
       await authService.verifyOtp(phone, otp);
+      trackLogin('phone');
       onLoginSuccess();
       navigate('/');
     } catch (err) {

@@ -7,6 +7,7 @@ import authService from './services/api/authService';
 import appSettingsService from './services/api/appSettingsService';
 import { getImageUrl } from './utils/imageUtils';
 import subscriptionService from './services/api/subscriptionService';
+import { trackProfileUpdated, trackSubscriptionCancelled } from './utils/analytics';
 
 export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
     const navigate = useNavigate();
@@ -69,6 +70,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
         setIsSaving(true);
         try {
             await subscriptionService.cancelSubscription();
+            trackSubscriptionCancelled();
             setMessage({ text: 'Subscription cancelled! Access revoked.', type: 'success' });
             
             // Refresh detailed sub status for the modal
@@ -176,6 +178,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
         setMessage({ text: '', type: '' });
         try {
             const updatedUser = await authService.updateProfile(editData);
+            trackProfileUpdated();
             onUpdateUser(updatedUser);
             setMessage({ text: 'Profile updated successfully!', type: 'success' });
             setTimeout(() => {

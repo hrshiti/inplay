@@ -5,6 +5,7 @@ import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
 import { SpeedSheet, QualitySheet } from './PlayerSheets';
 import HlsPlayer from './components/HlsPlayer';
+import { trackVideoView, trackWatchTime, trackVideoCompleted, trackShareContent } from './utils/analytics';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
     // User request: Play all content (Movies, Series, Reels) in the immersive Reels-style player.
@@ -221,6 +222,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
             try {
                 await contentService.incrementContentView(contentId, contentType);
+                trackVideoView({ contentId, contentType, title: movie.title });
                 console.log('View count incremented for:', contentId);
             } catch (error) {
                 console.error('Failed to track view:', error);
@@ -284,6 +286,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 completed: progress > 95,
                 episodeIndex: currentIndex // Adding this for backend if supported
             });
+            trackWatchTime({ contentId, durationWatched: currentTime });
             lastSyncTime.current = currentTime;
         } catch (e) {
             console.error("Failed to sync progress", e);
@@ -305,6 +308,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     }, []);
 
     const handleVideoEnd = () => {
+        const contentId = movie._id || movie.id;
+        trackVideoCompleted({ contentId, title: movie.title });
         syncProgress(true);
         if (currentIndex < playlist.length - 1) {
             setCurrentIndex(prev => prev + 1);
@@ -448,6 +453,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const handleShare = async () => {
         if (navigator.share) {
             try {
+                const contentId = movie._id || movie.id;
+                trackShareContent({ contentId, title: movie.title });
                 await navigator.share({
                     title: movie.title,
                     text: `Watch ${movie.title} on InPlay!`,

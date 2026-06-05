@@ -1,7 +1,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Hls from 'hls.js';
 
-const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, style = {}, onTimeUpdate, onPause, onEnded, ...props }, ref) => {
+const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, style = {}, onTimeUpdate, onPause, onEnded, startTime, ...props }, ref) => {
     const videoRef = useRef(null);
     const hlsRef = useRef(null);
 
@@ -42,8 +42,8 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     console.log(`[HlsPlayer] Manifest parsed successfully for ${effectiveSrc}`);
-                    if (props.startTime) {
-                        video.currentTime = props.startTime;
+                    if (startTime) {
+                        video.currentTime = startTime;
                     }
                     if (props.autoPlay !== false) {
                         video.play().catch(() => {});
@@ -74,14 +74,14 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = effectiveSrc;
                 video.addEventListener('loadedmetadata', () => {
-                    if (props.startTime) video.currentTime = props.startTime;
+                    if (startTime) video.currentTime = startTime;
                     if (props.autoPlay !== false) video.play().catch(() => {});
                 }, { once: true });
             }
         } else if (src) {
             video.src = src;
             video.addEventListener('loadedmetadata', () => {
-                if (props.startTime) video.currentTime = props.startTime;
+                if (startTime) video.currentTime = startTime;
                 if (props.autoPlay !== false) video.play().catch(() => {});
             }, { once: true });
         }
@@ -93,7 +93,7 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                 hlsRef.current = null;
             }
         };
-    }, [src, hlsUrl, props.startTime]);
+    }, [src, hlsUrl, startTime]);
 
     return (
         <video

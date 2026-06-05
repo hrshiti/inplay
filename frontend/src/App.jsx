@@ -50,6 +50,7 @@ import Header from './Header';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import FloatingAudioPlayer from './components/FloatingAudioPlayer';
 import socketService from './services/socketService';
+import { trackLogout, trackAddToWatchlist, trackRemoveFromWatchlist, trackLikeVideo, trackUnlikeVideo } from './utils/analytics';
 
 const formatViews = (views) => {
   if (!views) return '0';
@@ -720,9 +721,11 @@ function App() {
       try {
         if (exists) {
           await authService.removeFromMyList(contentId);
+          trackRemoveFromWatchlist({ contentId, title: movie.title });
           showToast("Removed from My List");
         } else {
           await authService.addToMyList(contentId);
+          trackAddToWatchlist({ contentId, title: movie.title });
           showToast("Added to My List");
         }
         // Re-fetch profile to ensure we have the full object details (image, title, etc)
@@ -757,6 +760,11 @@ function App() {
         const res = await authService.toggleLike(contentId);
         // res.action is 'liked' or 'unliked'
         const action = res.action === 'liked' ? "Added to Liked Videos" : "Removed from Liked Videos";
+        if (res.action === 'liked') {
+          trackLikeVideo({ contentId, title: movie.title });
+        } else {
+          trackUnlikeVideo({ contentId, title: movie.title });
+        }
         if (showNotification) showToast(action);
 
         // Re-fetch profile to sync likedVideos
@@ -774,6 +782,7 @@ function App() {
 
 
   const handleLogout = () => {
+    trackLogout();
     authService.logout();
     socketService.disconnect();
     setCurrentUser(null);

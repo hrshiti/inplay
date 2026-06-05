@@ -7,6 +7,7 @@ import subscriptionService from './services/api/subscriptionService';
 import { initRazorpayPayment } from './lib/utils/razorpay';
 import HlsPlayer from './components/HlsPlayer';
 import { getImageUrl } from './utils/imageUtils';
+import { trackSubscriptionView, trackSubscriptionInitiated, trackSubscriptionPurchase, trackTrialInitiated, trackTrialPurchase } from './utils/analytics';
 
 const PlanPage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const PlanPage = () => {
 
   useEffect(() => {
     fetchData();
+    trackSubscriptionView();
   }, []);
 
   useEffect(() => {
@@ -65,6 +67,12 @@ const PlanPage = () => {
     try {
       setLoading(true);
 
+      if (isTrial) {
+        trackTrialInitiated({ planId });
+      } else {
+        trackSubscriptionInitiated({ planId });
+      }
+
       // 1. Create Subscription on Backend
       const subData = await subscriptionService.createSubscription(planId, isTrial);
 
@@ -88,6 +96,12 @@ const PlanPage = () => {
               razorpay_subscription_id: response.razorpay_subscription_id,
               razorpay_signature: response.razorpay_signature
             });
+
+            if (isTrial) {
+              trackTrialPurchase({ planId, price: subData.price });
+            } else {
+              trackSubscriptionPurchase({ planId, price: subData.price });
+            }
 
             const updatedProfile = await authService.getProfile();
             localStorage.setItem('inplay_current_user', JSON.stringify(updatedProfile));

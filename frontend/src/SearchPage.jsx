@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 import contentService from './services/api/contentService'; // Add import
 import { getImageUrl } from './utils/imageUtils';
+import { trackSearch } from './utils/analytics';
 
 const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch it
     const [query, setQuery] = useState('');
@@ -59,6 +60,7 @@ const SearchPage = ({ onMovieClick }) => { // Remove allContent prop as we fetch
 
             setSearching(true);
             try {
+                trackSearch(query.trim());
                 const searchResults = await contentService.getAllContent({ search: query });
                 setResults(searchResults);
             } catch (error) {
