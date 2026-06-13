@@ -1516,33 +1516,35 @@ function App() {
                         )}
 
                         {/* Bhojpuri Section */}
-                        <section className="section">
-                          <div className="section-header">
-                            <h2 className="section-title">Bhojpuri World</h2>
-                            <span className="section-link" onClick={() => navigate('/category/bhojpuri-world')}>Show all</span>
-                          </div>
-                          <div className="horizontal-list hide-scrollbar">
-                            {(contentSections?.bhojpuri || []).map(movie => (
-                              <motion.div
-                                key={movie.id}
-                                className="movie-card"
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleContentSelect(movie)}
-                                style={{ cursor: 'pointer' }}
-                              >
-                                <div className="poster-container">
-                                  <img
-                                    src={getImageUrl(movie.poster?.url || movie.image)}
-                                    onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
-                                    alt={movie.title}
-                                    className="poster-img"
-                                  />
-                                </div>
-                                <h3 className="movie-title">{movie.title}</h3>
-                              </motion.div>
-                            ))}
-                          </div>
-                        </section>
+                        {activeFilter === 'InPlay Bhojpuri' && (
+                          <section className="section">
+                            <div className="section-header">
+                              <h2 className="section-title">Bhojpuri World</h2>
+                              <span className="section-link" onClick={() => navigate('/category/bhojpuri-world')}>Show all</span>
+                            </div>
+                            <div className="horizontal-list hide-scrollbar">
+                              {(contentSections?.bhojpuri || []).map(movie => (
+                                <motion.div
+                                  key={movie.id}
+                                  className="movie-card"
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => handleContentSelect(movie)}
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <div className="poster-container">
+                                    <img
+                                      src={getImageUrl(movie.poster?.url || movie.image)}
+                                      onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
+                                      alt={movie.title}
+                                      className="poster-img"
+                                    />
+                                  </div>
+                                  <h3 className="movie-title">{movie.title}</h3>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </section>
+                        )}
 
                         <section className="section">
                           <div className="section-header">
