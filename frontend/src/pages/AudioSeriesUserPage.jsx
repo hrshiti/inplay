@@ -82,10 +82,10 @@ export default function AudioSeriesUserPage({ onBack }) {
             {!selectedSeries ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Audio Series</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
                         {seriesList.map(series => (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
-                                <div style={{ position: 'relative', aspectRatio: '9/16', borderRadius: '16px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
+                                <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
                                     <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />
                                     <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '50%' }}>
                                         <Play fill="white" size={16} />

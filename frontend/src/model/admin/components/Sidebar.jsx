@@ -21,6 +21,7 @@ const navigation = [
   { name: 'Promotions', href: '/admin/promotions', icon: Megaphone },
   { name: 'Quick Bites', href: '/admin/quick-bytes', icon: Zap },
   { name: 'For You', href: '/admin/for-you', icon: Smartphone },
+  { name: 'Darmaa Sections', href: '/admin/darmaa-sections', icon: Film },
   { name: 'Audio Series', href: '/admin/audio-series', icon: Film },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Plan', href: '/admin/monetization/plans', icon: CreditCard },

@@ -19,6 +19,7 @@ import LegalPages from './pages/LegalPages';
 import TabManagementPage from './pages/TabManagementPage';
 import adminTabService from '../../services/api/adminTabService';
 import AdminNotifications from './AdminNotifications';
+import DarmaaSectionsPage from './pages/DarmaaSectionsPage';
 const getImageUrl = (path) => {
   if (!path) return "https://placehold.co/300x450/111/FFF?text=No+Image";
   // Fallback to the utility if available, or just use the same logic
@@ -700,18 +701,18 @@ const ViewContent = () => {
                           <span style={{ fontWeight: '600', color: '#374151' }}>{episode.title}</span>
                           <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6b7280' }}>{episode.description?.substring(0, 100)}{episode.description?.length > 100 ? '...' : ''}</p>
                         </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                            {episode.video?.url && (
-                              <a href={episode.video.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none' }}>
-                                View MP4
-                              </a>
-                            )}
-                            {episode.hls_url && (
-                              <span style={{ fontSize: '0.7rem', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={episode.hls_url}>
-                                HLS: {episode.hls_url}
-                              </span>
-                            )}
-                          </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                          {episode.video?.url && (
+                            <a href={episode.video.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.85rem', fontWeight: '600', textDecoration: 'none' }}>
+                              View MP4
+                            </a>
+                          )}
+                          {episode.hls_url && (
+                            <span style={{ fontSize: '0.7rem', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={episode.hls_url}>
+                              HLS: {episode.hls_url}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1309,22 +1310,22 @@ const Monetization = () => {
     { key: 'name', label: 'Plan Name', sortable: true },
     { key: 'price', label: 'Price (₹)', sortable: true, render: (v) => `₹${v}` },
     { key: 'duration', label: 'Duration', sortable: true },
-    { 
-      key: 'isActive', 
-      label: 'Status', 
-      sortable: true, 
+    {
+      key: 'isActive',
+      label: 'Status',
+      sortable: true,
       render: (v) => (
-        <span style={{ 
-          padding: '4px 8px', 
-          borderRadius: '12px', 
-          fontSize: '0.75rem', 
-          fontWeight: '600', 
-          background: v ? '#dcfce7' : '#fee2e2', 
-          color: v ? '#166534' : '#991b1b' 
+        <span style={{
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '0.75rem',
+          fontWeight: '600',
+          background: v ? '#dcfce7' : '#fee2e2',
+          color: v ? '#166534' : '#991b1b'
         }}>
           {v ? 'Active' : 'Inactive'}
         </span>
-      ) 
+      )
     },
     { key: 'createdAt', label: 'Created', sortable: true, render: (d) => new Date(d).toLocaleDateString() }
   ];
@@ -1405,22 +1406,22 @@ const Subscriptions = () => {
     { key: 'subscription_plan', label: 'Plan', sortable: true, render: (_, row) => row.subscription?.plan?.name || 'Unknown' },
     { key: 'subscription_start', label: 'Starts', sortable: true, render: (_, row) => row.subscription?.startDate ? new Date(row.subscription.startDate).toLocaleDateString() : 'N/A' },
     { key: 'subscription_end', label: 'Expires', sortable: true, render: (_, row) => row.subscription?.endDate ? new Date(row.subscription.endDate).toLocaleDateString() : 'N/A' },
-    { 
-      key: 'subscription_status', 
-      label: 'Status', 
-      sortable: true, 
+    {
+      key: 'subscription_status',
+      label: 'Status',
+      sortable: true,
       render: (_, row) => (
-        <span style={{ 
-          padding: '4px 8px', 
-          borderRadius: '12px', 
-          fontSize: '0.75rem', 
-          fontWeight: '600', 
-          background: row.subscription?.isActive ? '#dcfce7' : '#fee2e2', 
-          color: row.subscription?.isActive ? '#166534' : '#991b1b' 
+        <span style={{
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '0.75rem',
+          fontWeight: '600',
+          background: row.subscription?.isActive ? '#dcfce7' : '#fee2e2',
+          color: row.subscription?.isActive ? '#166534' : '#991b1b'
         }}>
           {row.subscription?.isActive ? 'Active' : 'Expired'}
         </span>
-      ) 
+      )
     }
   ];
 
@@ -2313,6 +2314,7 @@ export default function AdminRoutes() {
         <Route path="legal" element={<LegalPages />} />
         <Route path="tabs" element={<TabManagementPage />} />
         <Route path="notifications" element={<AdminNotifications />} />
+        <Route path="darmaa-sections" element={<DarmaaSectionsPage />} />
         <Route path="settings/app" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

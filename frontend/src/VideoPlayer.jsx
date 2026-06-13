@@ -375,10 +375,19 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             }
         }
         
-        // Optional: Vertical swipe down to close?
-        if (deltaY < -threshold * 2 && Math.abs(deltaY) > Math.abs(deltaX)) {
-            syncProgress();
-            onClose();
+        // Vertical swipes (Y-axis) for Next/Prev Episode
+        if (Math.abs(deltaY) > threshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+            if (deltaY > 0) {
+                // Swipe Up -> Next
+                if (currentIndex < playlist.length - 1) {
+                    setCurrentIndex(prev => prev + 1);
+                }
+            } else {
+                // Swipe Down -> Prev
+                if (currentIndex > 0) {
+                    setCurrentIndex(prev => prev - 1);
+                }
+            }
         }
     };
 
@@ -565,16 +574,6 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                             >
                                 <ChevronLeft size={24} />
                             </button>
-                            <div>
-                                <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', letterSpacing: '-0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                                    {movie.title}
-                                </h2>
-                                {playlist.length > 1 && (
-                                    <span style={{ fontSize: '0.75rem', opacity: 0.9, fontWeight: '600', color: 'var(--accent)' }}>
-                                        EP {currentIndex + 1} OF {playlist.length}
-                                    </span>
-                                )}
-                            </div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -713,31 +712,49 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 {showControls && (
                     <div style={{
                         position: 'absolute', bottom: 'env(safe-area-inset-bottom, 20px)', left: 0, right: 0, padding: '20px',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 100,
                         background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)'
                     }}>
-                        {/* Left Side: Episode List Button (Only if Episodic) */}
-                        {isEpisodic ? (
+                        {/* Left Side: Title & Episode Info */}
+                        <div style={{ color: 'white', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, paddingRight: '20px' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', letterSpacing: '-0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                                {movie.title}
+                            </h2>
+                            {playlist.length > 1 && (
+                                <span style={{ fontSize: '0.85rem', opacity: 0.9, fontWeight: '600', color: 'var(--accent)' }}>
+                                    EP {currentIndex + 1} OF {playlist.length}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Right Side: Vertical Column of Buttons including ALL EPISODES */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                            {isEpisodic && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setShowEpisodeList(true); }}
+                                    style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                                        background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '12px',
+                                        padding: '10px', color: 'white', cursor: 'pointer', backdropFilter: 'blur(10px)',
+                                        fontWeight: '700', fontSize: '0.65rem'
+                                    }}
+                                >
+                                    <List size={20} />
+                                    <span>EPISODES</span>
+                                </button>
+                            )}
                             <button
-                                onClick={(e) => { e.stopPropagation(); setShowEpisodeList(true); }}
+                                onClick={(e) => { e.stopPropagation(); handleShare(); }}
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '10px',
-                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '12px',
-                                    padding: '10px 16px', color: 'white', cursor: 'pointer', backdropFilter: 'blur(10px)',
-                                    fontWeight: '700', fontSize: '0.85rem'
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)', cursor: 'pointer'
                                 }}
                             >
-                                <List size={18} />
-                                <span>ALL EPISODES</span>
+                                <Share2 size={20} />
                             </button>
-                        ) : <div></div>}
-
-                        {/* Right Side: Full Screen Button */}
-                        <div style={{ display: 'flex', gap: '12px' }}>
                              <button
                                 onClick={handleRotate}
                                 style={{
-                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)'
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)', cursor: 'pointer'
                                 }}
                             >
                                 <Smartphone size={20} style={{ transform: 'rotate(90deg)' }} />
@@ -745,7 +762,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                             <button
                                 onClick={toggleFullScreen}
                                 style={{
-                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)'
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: '10px', color: 'white', backdropFilter: 'blur(10px)', cursor: 'pointer'
                                 }}
                             >
                                 <Maximize2 size={20} />

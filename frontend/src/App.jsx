@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye } from 'lucide-react';
+import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye, Bookmark, VolumeX } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -73,7 +73,7 @@ function App() {
     if (notificationId) {
       console.log('🔔 [App] Found notificationId in URL:', notificationId);
       markNotificationAsSeen(notificationId);
-      
+
       // Clean up URL parameters dynamically
       const newSearch = new URLSearchParams(location.search);
       newSearch.delete('notificationId');
@@ -355,6 +355,8 @@ function App() {
   };
   // Use Trending Now content for Hero Slideshow
   const heroMovies = contentSections.trending_now.length > 0 ? contentSections.trending_now : [];
+  const darmaaHeroMovies = quickBites.filter(qb => qb.isDarmaaHero);
+  const [darmaaSections, setDarmaaSections] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -365,19 +367,22 @@ function App() {
           allContentData,
           promoData,
           newReleases,
-          foryou
+          foryou,
+          darmaaSecs
         ] = await Promise.all([
           contentService.getDynamicStructure().catch(e => { console.error(e); return []; }),
           contentService.getQuickBytes(20).catch(e => { console.error(e); return []; }),
           contentService.getAllContent().catch(e => { console.error(e); return []; }),
           promotionService.getActivePromotions().catch(e => { console.error(e); return []; }),
           contentService.getNewReleases().catch(e => { console.error(e); return []; }),
-          contentService.getForYouReels().catch(e => { console.error(e); return []; })
+          contentService.getForYouReels().catch(e => { console.error(e); return []; }),
+          contentService.getDarmaaSections().catch(e => { console.error(e); return []; })
         ]);
 
         setDynamicStructure(structure || []);
         setQuickBites(reels || []);
         setForYouReels(foryou || []);
+        setDarmaaSections(darmaaSecs || []);
 
         const sections = {
           bhojpuri: [],
@@ -463,7 +468,10 @@ function App() {
     'bhojpuri': 'Bhojpuri',
     'hindi-series': 'Hindi Series',
     'trending-sound': 'Trending Sound',
-    'action': 'Action'
+    'action': 'Action',
+    'inplay-shorts': 'InPlay Shorts',
+    'inplay-cinema': 'InPlay Cinema',
+    'inplay-bhojpuri': 'InPlay Bhojpuri'
   };
 
   const reverseFilterMap = {
@@ -482,7 +490,10 @@ function App() {
     'Bhojpuri': 'bhojpuri',
     'Hindi Series': 'hindi-series',
     'Trending Sound': 'trending-sound',
-    'Action': 'action'
+    'Action': 'action',
+    'InPlay Shorts': '', // Make InPlay Shorts the default
+    'InPlay Cinema': 'inplay-cinema',
+    'InPlay Bhojpuri': 'inplay-bhojpuri'
   };
 
   // Helper to slugify any string: "My Category Name" -> "my-category-name"
@@ -500,7 +511,7 @@ function App() {
   };
 
   const handleFilterChange = (cat) => {
-    if (!currentUser && cat !== 'Popular') {
+    if (!currentUser && cat !== 'Popular' && cat !== 'InPlay Cinema' && cat !== 'InPlay Shorts') {
       if (isIosOrSafariPlatform()) {
         // Allow browsing categories on iOS/Safari without login for guest review
       } else {
@@ -543,7 +554,7 @@ function App() {
       setActiveTab('Home');
     }
     else if (path === '' || path === 'home') {
-      setActiveFilter('Popular');
+      setActiveFilter('InPlay Shorts');
       setActiveTab('Home');
     }
     else if (path === 'for-you') {
@@ -957,33 +968,25 @@ function App() {
                   <Header currentUser={currentUser} onLoginClick={() => navigate('/login')} />
                   <div className="category-tabs-container hide-scrollbar">
                     {[
-                      'Popular', 'New & Hot', 'Originals', 'Rankings', 'Movies', 'TV', 'Crime Show', 'Broadcast', 'Mms', 'Audio Series', 'Short Film',
-                      ...dynamicStructure.map(t => t.name)
-                    ].map((filter) => (
-                      <div
-                        key={filter}
-                        className={`category-tab ${activeFilter === filter ? 'active' : ''}`}
-                        onClick={() => handleFilterChange(filter)}
-                      >
-                        {filter}
-                        {activeFilter === filter && (
-                          <motion.div
-                            layoutId="activeTabIndicator"
-                            style={{
-                              position: 'absolute',
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              height: '3px',
-                              background: '#ff0a16',
-                              borderRadius: '2px 2px 0 0',
-                              zIndex: 1
-                            }}
-                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          />
-                        )}
-                      </div>
-                    ))}
+                      'InPlay Shorts', 'InPlay Cinema', 'InPlay Bhojpuri'
+                    ].map((filter) => {
+                      let tabColorClass = '';
+                      if (filter === 'InPlay Cinema') tabColorClass = 'tab-cinema';
+                      if (filter === 'InPlay Shorts') tabColorClass = 'tab-shorts';
+                      if (filter === 'InPlay Bhojpuri') tabColorClass = 'tab-bhojpuri';
+
+                      return (
+                        <div
+                          key={filter}
+                          className={`category-tab ${tabColorClass} ${activeFilter === filter ? 'active' : ''}`}
+                          onClick={() => handleFilterChange(filter)}
+                        >
+                          <span style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {filter === 'InPlay Shorts' ? 'Inplay Dramaa' : filter.replace('InPlay', 'Inplay')}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -1001,17 +1004,20 @@ function App() {
 
                     {/* Content Switching based on Filter */}
                     {dynamicStructure.find(t => t.name === activeFilter) ? (
-                      <DynamicTabPage
-                        tab={dynamicStructure.find(t => t.name === activeFilter)}
-                        onMovieClick={handleContentSelect}
-                      />
+                      <>
+
+                        <DynamicTabPage
+                          tab={dynamicStructure.find(t => t.name === activeFilter)}
+                          onMovieClick={handleContentSelect}
+                        />
+                      </>
                     ) : activeFilter === 'Audio Series' ? (
                       <AudioSeriesUserPage onBack={() => setActiveFilter('Popular')} />
-                    ) : activeFilter === 'Popular' || activeFilter === 'All' ? (
+                    ) : activeFilter === 'InPlay Cinema' || activeFilter === 'Popular' || activeFilter === 'All' ? (
                       /* Standard Home View */
                       <>
                         {/* Hero Section Slider */}
-                        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', height: '160px', marginBottom: '0' }}>
                           <div
                             style={{
                               display: 'flex',
@@ -1026,100 +1032,74 @@ function App() {
                           >
                             {/* We render a track that shifts based on index - simplified approach for "center  peek" */}
                             {/* Actually, mapping absolute items is easier for this visual. */}
-                            {heroMovies.map((movie, index) => {
-                              // Calculate relative position
-                              let position = index - currentHeroIndex;
-                              // Handle wrap around if we wanted, but for now simple finite or infinite loop logic? 
-                              // Let's stick to simple finite for stability, or basic loop visual.
-
-                              // If we want infinite loop visual, we need modulo arithmetic.
-                              const total = heroMovies.length;
-                              // Adjust position to be within -Total/2 to +Total/2
-                              // But for valid indices 0 to 4...
-
-                              // Simplified: active is `currentHeroIndex`.
-                              // We want active to be at `left: 10%`, width `80%`.
-                              // Prev at `left: -80% + 10px`.
-                              // Next at `left: 90% + 10px`.
-
+                            {heroMovies.slice(0, 5).map((movie, index) => {
+                              const total = Math.min(heroMovies.length, 5);
                               const isActive = index === currentHeroIndex;
-                              const isPrev = index === (currentHeroIndex - 1 + total) % total; // wrap logic prev
-                              const isNext = index === (currentHeroIndex + 1) % total; // wrap logic next
 
-                              // We only render text/detail if Active.
-                              // Helper to get visual offset.
-                              // 0 is center. -1 is left. 1 is right.
-                              let visualOffset = 100; // far away
+                              let visualOffset = 100;
                               if (index === currentHeroIndex) visualOffset = 0;
                               else if (index === (currentHeroIndex - 1 + total) % total) visualOffset = -1;
                               else if (index === (currentHeroIndex + 1) % total) visualOffset = 1;
-
-                              // If it's not one of these 3, hide it or keep it far off
-                              // Actually we can just iterate -1, 0, 1 relative logic
 
                               return (
                                 <motion.div
                                   key={movie._id || movie.id}
                                   initial={false}
                                   animate={{
-                                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-100%" : "100%"),
-                                    scale: 1,
-                                    opacity: visualOffset === 0 ? 1 : 0,
+                                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-105%" : "105%"),
+                                    scale: visualOffset === 0 ? 1 : 0.85,
+                                    opacity: 1,
                                     zIndex: visualOffset === 0 ? 10 : 5
                                   }}
-                                  transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                   style={{
                                     position: 'absolute',
-                                    width: '100%',
+                                    width: '90%',
                                     height: '100%',
-                                    borderRadius: '14px',
+                                    borderRadius: '16px',
                                     overflow: 'hidden',
-                                    boxShadow: visualOffset === 0 ? '0 20px 40px rgba(0,0,0,0.6)' : 'none',
-                                    left: 0,
-                                    top: 0
+                                    boxShadow: visualOffset === 0 ? '0 15px 30px rgba(0,0,0,0.5)' : 'none',
+                                    filter: visualOffset === 0 ? 'brightness(1)' : 'brightness(0.4)',
+                                    left: '5%',
+                                    top: '0'
                                   }}
                                   drag="x"
                                   dragConstraints={{ left: 0, right: 0 }}
                                   onDragEnd={(e, { offset }) => {
-                                    if (offset.x > 50) {
-                                      setCurrentHeroIndex((prev) => (prev - 1 + heroMovies.length) % heroMovies.length);
-                                    } else if (offset.x < -50) {
-                                      setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length);
-                                    }
+                                    if (offset.x > 50) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                                    else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
                                   }}
                                   onClick={() => {
-                                    if (isActive) handleContentSelect(movie)
-                                    else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + heroMovies.length) % heroMovies.length)
-                                    else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length)
+                                    if (isActive) handleContentSelect(movie);
+                                    else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                                    else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
                                   }}
                                 >
-                                  <img src={getImageUrl(movie.backdrop?.url || movie.backdrop || movie.poster?.url || movie.image)} alt={movie.title} className="hero-image" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                                  {/* Using poster image for vertical banner */}
+                                  <img src={getImageUrl(movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
 
-                                  <div className="hero-overlay" style={{
-                                    background: 'linear-gradient(to top, #080808 0%, rgba(8,8,8,0.35) 35%, transparent 100%)',
-                                    padding: '20px 16px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'flex-start'
-                                  }}>
-                                    {isActive && (
-                                      <motion.div
-                                        className="hero-content"
-                                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                                        style={{ width: '100%' }}
-                                      >
+                                  {isActive && (
+                                    <>
+                                      <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                                        <Bookmark size={18} color="#fff" />
+                                      </div>
+                                      <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                                        <VolumeX size={18} color="#fff" />
+                                      </div>
 
 
-
-                                        {/* Action Buttons Row */}
-                                        {/* Removed as per user request */}
-                                      </motion.div>
-                                    )}
-                                  </div>
+                                    </>
+                                  )}
                                 </motion.div>
                               )
                             })}
+
+                            {/* Dots Indicator */}
+                            <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
+                              {heroMovies.slice(0, 5).map((_, i) => (
+                                <div key={i} style={{ width: i === currentHeroIndex ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+                              ))}
+                            </div>
                           </div>
                         </div>
 
@@ -1188,6 +1168,7 @@ function App() {
 
                         {/* Quick Bites (Vertical Content) Section */}
                         {/* This section contains ONLY vertical content as requested */}
+                        {activeFilter !== 'InPlay Cinema' && (
                         <section className="section" style={{ marginBottom: '0px' }}>
                           <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1203,7 +1184,7 @@ function App() {
                                 if (activeFilter === 'All') {
                                   return true;
                                 }
-                                if (activeFilter === 'Movies') {
+                                if (activeFilter === 'Movies' || activeFilter === 'InPlay Cinema') {
                                   return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'bhojpuri' || item.type === 'new_release';
                                 }
                                 if (activeFilter === 'TV') {
@@ -1281,6 +1262,7 @@ function App() {
                               })}
                           </div>
                         </section>
+                        )}
 
                         {/* Continue Watching (Quick Bites) Section */}
                         {qbContinueWatching.length > 0 && (
@@ -1315,6 +1297,10 @@ function App() {
                                   return `${secs}s`;
                                 };
 
+                                const isCinema = activeFilter === 'InPlay Cinema';
+                                const cardWidth = isCinema ? '180px' : '120px';
+                                const cardHeight = isCinema ? '120px' : '210px';
+
                                 return (
                                   <motion.div
                                     key={item._id || item.id || index}
@@ -1322,7 +1308,7 @@ function App() {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => handleResumeQuickByte(item)}
                                     style={{
-                                      flex: '0 0 120px',
+                                      flex: `0 0 ${cardWidth}`,
                                       cursor: 'pointer',
                                       display: 'flex',
                                       flexDirection: 'column',
@@ -1330,8 +1316,8 @@ function App() {
                                     }}
                                   >
                                     <div style={{
-                                      width: '120px',
-                                      height: '210px',
+                                      width: cardWidth,
+                                      height: cardHeight,
                                       borderRadius: '16px',
                                       overflow: 'hidden',
                                       position: 'relative',
@@ -1341,7 +1327,7 @@ function App() {
                                       <img
                                         src={getImageUrl(image)}
                                         alt={item.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                                        style={{ width: '100%', height: '100%', objectFit: isCinema ? 'cover' : 'contain', objectPosition: 'center top', background: '#000' }}
                                         onError={(e) => { e.target.src = 'https://placehold.co/150x267/333/FFF?text=' + (item.title || 'InPlay')?.substring(0, 5) }}
                                       />
 
@@ -1702,6 +1688,13 @@ function App() {
                           trendingData={contentSections.trending_now}
                           newReleaseData={contentSections.new_release}
                           promotions={promotions}
+                          darmaaHeroMovies={darmaaHeroMovies}
+                          darmaaSections={darmaaSections}
+                          heroRef={heroRef}
+                          currentHeroIndex={currentHeroIndex}
+                          setCurrentHeroIndex={setCurrentHeroIndex}
+                          qbContinueWatching={qbContinueWatching}
+                          handleResumeQuickByte={handleResumeQuickByte}
                         />
                       )
                     )}
@@ -1923,7 +1916,6 @@ function App() {
                   />
                   <NavItem icon={<Clapperboard size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
                   <NavItem icon={<Headphones size={24} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
-                  <NavItem icon={<Search size={24} />} label="Search" active={location.pathname === '/search'} onClick={() => handleTabChange('Search')} />
                   <NavItem icon={<User size={24} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
               )}
@@ -2227,7 +2219,7 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, darmaaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, qbContinueWatching, handleResumeQuickByte }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2310,6 +2302,10 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
     hotData = hotData.filter(item => item.isAudioSeries);
   } else if (activeFilter === 'Short Film') {
     hotData = hotData.filter(item => item.isShortFilm);
+  } else if (activeFilter === 'InPlay Shorts') {
+    hotData = hotData.filter(item => item.isShortFilm || item.type === 'quick_byte' || item.type === 'reel' || item.category === 'Quick Bites');
+  } else if (activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') {
+    hotData = hotData.filter(item => item.type === 'bhojpuri');
   } else {
     // Default 'Popular' shows popular items
     hotData = hotData.filter(item => item.isPopular);
@@ -2322,6 +2318,184 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Hero Section for InPlay Shorts (Darmaa) */}
+      {activeFilter === 'InPlay Shorts' && darmaaHeroMovies && darmaaHeroMovies.length > 0 && (
+        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {darmaaHeroMovies.slice(0, 5).map((movie, index) => {
+              const total = Math.min(darmaaHeroMovies.length, 5);
+              const isActive = index === currentHeroIndex % total;
+
+              let visualOffset = 100;
+              if (index === currentHeroIndex % total) visualOffset = 0;
+              else if (index === ((currentHeroIndex % total) - 1 + total) % total) visualOffset = -1;
+              else if (index === ((currentHeroIndex % total) + 1) % total) visualOffset = 1;
+
+              return (
+                <motion.div
+                  key={movie._id || movie.id}
+                  initial={false}
+                  animate={{
+                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-105%" : "105%"),
+                    scale: visualOffset === 0 ? 1 : 0.85,
+                    opacity: 1,
+                    zIndex: visualOffset === 0 ? 10 : 5
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  style={{
+                    position: 'absolute',
+                    width: '70%',
+                    height: '92%',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: visualOffset === 0 ? '0 15px 30px rgba(0,0,0,0.5)' : 'none',
+                    filter: visualOffset === 0 ? 'brightness(1)' : 'brightness(0.4)',
+                    left: '15%',
+                    top: '2%'
+                  }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  onDragEnd={(e, { offset }) => {
+                    if (offset.x > 50) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                    else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
+                  }}
+                  onClick={() => {
+                    if (isActive) setSelectedMovie(movie);
+                    else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                    else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
+                  }}
+                >
+                  <img src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                  {isActive && (
+                    <>
+                      <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                        <Bookmark size={18} color="#fff" />
+                      </div>
+                      <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                        <VolumeX size={18} color="#fff" />
+                      </div>
+
+                    </>
+                  )}
+                </motion.div>
+              )
+            })}
+            <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
+              {darmaaHeroMovies.slice(0, 5).map((_, i) => (
+                <div key={i} style={{ width: i === currentHeroIndex % Math.min(darmaaHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(darmaaHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Continue Watching (InPlay Dramaa) Section */}
+      {activeFilter === 'InPlay Shorts' && qbContinueWatching && qbContinueWatching.length > 0 && (
+        <div style={{ marginTop: '24px' }}>
+          <section className="section" style={{ marginBottom: '24px' }}>
+            <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
+                <h2 className="section-title" style={{ fontSize: '1.1rem' }}>Continue Watching</h2>
+              </div>
+            </div>
+            <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
+              {qbContinueWatching.map((item, index) => {
+                const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
+                let episodeDuration = item.duration || 0;
+                if (item.episodes && item.episodes[item.episodeIndex]) {
+                  episodeDuration = item.episodes[item.episodeIndex].duration || episodeDuration;
+                } else if (item.video?.duration) {
+                  episodeDuration = item.video.duration;
+                }
+                const formatDuration = (seconds) => {
+                  if (!seconds) return '0m';
+                  const mins = Math.floor(seconds / 60);
+                  const secs = Math.floor(seconds % 60);
+                  if (mins > 0) return `${mins}m ${secs}s`;
+                  return `${secs}s`;
+                };
+
+                return (
+                  <motion.div
+                    key={`darmaa-cw-${item._id || item.id || index}`}
+                    whileHover={{ scale: 1.05, y: -5 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleResumeQuickByte(item)}
+                    style={{ flex: '0 0 120px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '10px' }}
+                  >
+                    <div style={{ width: '120px', height: '210px', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 8px 25px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <img src={getImageUrl(image)} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} onError={(e) => { e.target.src = 'https://placehold.co/150x267/333/FFF?text=' + (item.title || 'InPlay')?.substring(0, 5) }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
+                            {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
+                          </span>
+                        </div>
+                        {episodeDuration && item.watchedSeconds !== undefined && (
+                          <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min((item.watchedSeconds / episodeDuration) * 100, 100)}%`, height: '100%', background: '#e50914' }}></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#fff', textAlign: 'left', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
+                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={10} /> {formatViews(item.views)} Views • {formatDuration(episodeDuration)}</span>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Dynamic Darmaa Sections */}
+      {activeFilter === 'InPlay Shorts' && darmaaSections && darmaaSections.length > 0 && (
+        <div style={{ marginTop: '24px' }}>
+          {darmaaSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
+            <section key={section._id} className="section" style={{ marginBottom: '24px' }}>
+              <div className="section-header">
+                <h2 className="section-title">{section.title}</h2>
+              </div>
+              <div className="horizontal-list hide-scrollbar">
+                {section.videos.map((movie, index) => (
+                  <motion.div
+                    key={`${movie._id || movie.id}-${index}`}
+                    className="movie-card"
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedMovie({ ...movie, isVertical: true, type: 'quick_byte', category: 'Quick Bites' })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="poster-container">
+                      <img
+                        src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image)}
+                        onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
+                        alt={movie.title}
+                        className="poster-img"
+                      />
+                    </div>
+                    <h3 className="movie-title">{movie.title}</h3>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
       {/* Section Title */}
       <div className="section-header" style={{ marginBottom: '16px', marginTop: '16px' }}>
         <h2 className="section-title">Hottest Shows</h2>

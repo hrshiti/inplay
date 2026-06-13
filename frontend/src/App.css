@@ -42,9 +42,11 @@ html, body {
 /* Category Tabs Header - Sticky */
 .category-tabs-container {
   display: flex;
-  gap: 24px;
-  overflow-x: auto;
-  padding: 0 24px;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  overflow-x: hidden;
+  padding: 10px 12px;
   margin-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: #0b1120;
@@ -53,9 +55,7 @@ html, body {
   top: 59px;
   /* Overlap by 1px to close any gap */
   z-index: 9999;
-  padding-top: 0;
-  margin-top: 0;
-  /* Removed gap */
+  box-sizing: border-box;
 }
 
 /* ... (skipped category tab styles) ... */
@@ -65,7 +65,7 @@ html, body {
   position: relative;
   width: 100%;
   margin: 0 0 24px 0;
-  height: 220px;
+  height: 380px;
   overflow: hidden;
 }
 
@@ -82,22 +82,55 @@ html, body {
 
 /* Category Tabs Header */
 
-
 .category-tab {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #aaa;
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
-  padding-bottom: 10px;
   position: relative;
   cursor: pointer;
   user-select: none;
-  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.category-tab.active {
-  color: white;
-  font-weight: 700;
+.category-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Custom Gradient Button Styles for All Tabs */
+.category-tab.tab-cinema {
+  background: linear-gradient(135deg, #1e3a8a 0%, #6b21a8 100%);
+  color: #fff;
+}
+.category-tab.tab-cinema.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
+
+.category-tab.tab-shorts {
+  background: linear-gradient(135deg, #e11d48 0%, #f97316 100%);
+  color: #fff;
+}
+.category-tab.tab-shorts.active {
+  border-color: #fb923c;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);
+}
+
+.category-tab.tab-bhojpuri {
+  background: linear-gradient(135deg, #047857 0%, #10b981 100%);
+  color: #fff;
+}
+.category-tab.tab-bhojpuri.active {
+  border-color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
 

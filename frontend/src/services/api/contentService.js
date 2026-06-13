@@ -141,6 +141,18 @@ const contentService = {
         } catch (error) {
             console.error('Failed to increment view count:', error);
         }
+    },
+
+    async getDarmaaSections() {
+        try {
+            const response = await fetch(`${API_URL}/public/darmaa-sections`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            return data.data || [];
+        } catch (error) {
+            console.error('Failed to fetch Darmaa sections:', error);
+            return [];
+        }
     }
 };
 

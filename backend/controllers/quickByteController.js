@@ -70,7 +70,7 @@ const createQuickByteHandler = async (req, res) => {
         const {
             title, status, audioTitle, description,
             genre, year, rating, views,
-            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular
+            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero
         } = req.body;
         const files = req.files || {};
 
@@ -92,7 +92,8 @@ const createQuickByteHandler = async (req, res) => {
             isRanking: isRanking === 'true' || isRanking === true,
             isMovie: isMovie === 'true' || isMovie === true,
             isTV: isTV === 'true' || isTV === true,
-            isPopular: isPopular === 'true' || isPopular === true
+            isPopular: isPopular === 'true' || isPopular === true,
+            isDarmaaHero: isDarmaaHero === 'true' || isDarmaaHero === true
         });
 
         // Transform uploaded video (already saved by multer)
@@ -236,7 +237,7 @@ const updateQuickByteHandler = async (req, res) => {
         const {
             title, status, audioTitle, description,
             genre, year, rating, views,
-            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular
+            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero
         } = req.body;
         const files = req.files || {};
 
@@ -257,6 +258,7 @@ const updateQuickByteHandler = async (req, res) => {
         if (isMovie !== undefined) quickByte.isMovie = isMovie === 'true' || isMovie === true;
         if (isTV !== undefined) quickByte.isTV = isTV === 'true' || isTV === true;
         if (isPopular !== undefined) quickByte.isPopular = isPopular === 'true' || isPopular === true;
+        if (isDarmaaHero !== undefined) quickByte.isDarmaaHero = isDarmaaHero === 'true' || isDarmaaHero === true;
 
         // Handle File Updates - Transform uploaded video
         if (files.video && files.video[0]) {

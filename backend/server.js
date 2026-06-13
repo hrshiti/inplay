@@ -64,32 +64,32 @@ const sharp = require('sharp');
 const onTheFlyWebpMiddleware = async (req, res, next) => {
   try {
     const urlPath = req.path; // e.g. "/images/avatars/img_123.jpg"
-    
+
     // Check if request is for an image and not already webp
     const ext = path.extname(urlPath).toLowerCase();
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'];
-    
+
     if (imageExtensions.includes(ext)) {
       const uploadsDir = path.join(__dirname, 'uploads');
       const requestedLocalPath = path.join(uploadsDir, urlPath);
-      
+
       // Corresponding webp local path
       const webpLocalPath = requestedLocalPath.replace(/\.[^/.]+$/, "") + ".webp";
-      
+
       // Case A: The original requested file (e.g. .jpg) exists on disk
       if (fs.existsSync(requestedLocalPath)) {
         try {
           await sharp(requestedLocalPath)
             .webp({ quality: 80 })
             .toFile(webpLocalPath);
-          
+
           // Delete original non-webp file to save disk space
           fs.unlinkSync(requestedLocalPath);
         } catch (err) {
           console.error("On-the-fly WebP conversion failed:", err);
         }
       }
-      
+
       // Case B: The webp file exists (either just created or previously created), but original doesn't
       if (fs.existsSync(webpLocalPath)) {
         // Rewrite request URL so express.static serves the webp file
@@ -153,7 +153,7 @@ app.use(cors({
 
 
 // Body parsing middleware
-app.use(express.json({ 
+app.use(express.json({
   limit: '10gb',
   verify: (req, res, buf) => {
     if (req.originalUrl.includes('/webhook')) {
@@ -179,6 +179,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/admin/dynamic', require('./routes/adminTabRoutes'));
+app.use('/api/admin/darmaa-sections', require('./routes/darmaaSectionRoutes'));
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/content', contentRoutes);
@@ -264,7 +265,7 @@ app.post("/upload", upload.single("file"), convertImagesToWebpMiddleware, async 
 // Video Streaming Route (Range Requests)
 app.get('/api/stream/:filename', (req, res) => {
   const filePath = path.join(__dirname, 'uploads', 'videos', req.params.filename);
-  
+
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: 'File not found' });
   }
@@ -398,7 +399,7 @@ const startScheduledTasks = () => {
 const startServer = async () => {
   // Start scheduled tasks
   startScheduledTasks();
-  
+
   // Start Subscription Transition Cron
   const { startSubscriptionCron } = require('./services/subscriptionCron');
   startSubscriptionCron();

@@ -59,6 +59,7 @@ const quickByteSchema = new mongoose.Schema({
     isMovie: { type: Boolean, default: false },
     isTV: { type: Boolean, default: false },
     isPopular: { type: Boolean, default: false },
+    isDarmaaHero: { type: Boolean, default: false },
     // Audio Track (New)
     audio: {
         public_id: String,

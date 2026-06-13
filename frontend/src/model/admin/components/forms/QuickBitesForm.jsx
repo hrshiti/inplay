@@ -14,6 +14,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         isMovie: content?.isMovie || false,
         isTV: content?.isTV || false,
         isPopular: content?.isPopular || false,
+        isDarmaaHero: content?.isDarmaaHero || false,
         status: content?.status || 'published',
         views: content?.views || 0,
         type: 'reel'
@@ -87,6 +88,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 submissionData.append('isMovie', formData.isMovie);
                 submissionData.append('isTV', formData.isTV);
                 submissionData.append('isPopular', formData.isPopular);
+                submissionData.append('isDarmaaHero', formData.isDarmaaHero);
                 submissionData.append('type', 'reel');
                 submissionData.append('status', formData.status);
                 submissionData.append('views', formData.views);
@@ -238,6 +240,22 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                             <option value="published">Published (Visible)</option>
                         </select>
                     </div>
+                </div>
+
+                {/* Darmaa Banner Flag */}
+                <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            name="isDarmaaHero"
+                            checked={formData.isDarmaaHero}
+                            onChange={handleInputChange}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                            Show in InPlay Darmaa Banner
+                        </span>
+                    </label>
                 </div>
 
                 {/* Description */}
