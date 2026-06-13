@@ -2500,44 +2500,48 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
         </div>
       )}
 
-      {/* Section Title */}
-      <div className="section-header" style={{ marginBottom: '16px', marginTop: '16px' }}>
-        <h2 className="section-title">Hottest Shows</h2>
-      </div>
+      {activeFilter !== 'InPlay Shorts' && (
+        <>
+          {/* Section Title */}
+          <div className="section-header" style={{ marginBottom: '16px', marginTop: '16px' }}>
+            <h2 className="section-title">Hottest Shows</h2>
+          </div>
 
-      {/* Grid Layout */}
-      <div className="category-grid-container">
-        {/* We just map the data directly now, grid handles columns */}
-        {hotData.slice(0, 6).map((item, index) => (
-          <div key={item.id} className="hottest-card" onClick={() => setSelectedMovie(item)}>
-            <div className="hottest-poster">
-              <img
-                src={getImageUrl(item.poster?.url || item.image)}
-                alt={item.title}
-                onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${item.title}` }}
-              />
-              <div className="rank-number">{index + 1}</div>
+          {/* Grid Layout */}
+          <div className="category-grid-container">
+            {/* We just map the data directly now, grid handles columns */}
+            {hotData.slice(0, 6).map((item, index) => (
+              <div key={item.id} className="hottest-card" onClick={() => setSelectedMovie(item)}>
+                <div className="hottest-poster">
+                  <img
+                    src={getImageUrl(item.poster?.url || item.image)}
+                    alt={item.title}
+                    onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${item.title}` }}
+                  />
+                  <div className="rank-number">{index + 1}</div>
 
-            </div>
-            <div className="hottest-info">
-              {/* Bookmark & Flame row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div className="flame-text">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a5.5 5.5 0 1 1-11 0c0-.536.058-1.055.166-1.555a6.66 6.66 0 0 0 1.334 1.555z"></path></svg>
-                  {(Math.random() * 5 + 1).toFixed(1)}Cr
                 </div>
+                <div className="hottest-info">
+                  {/* Bookmark & Flame row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div className="flame-text">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a5.5 5.5 0 1 1-11 0c0-.536.058-1.055.166-1.555a6.66 6.66 0 0 0 1.334 1.555z"></path></svg>
+                      {(Math.random() * 5 + 1).toFixed(1)}Cr
+                    </div>
 
-                <div style={{ border: '1px solid #555', borderRadius: '4px', padding: '2px', lineHeight: 0 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    <div style={{ border: '1px solid #555', borderRadius: '4px', padding: '2px', lineHeight: 0 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
+                  </div>
+
+                  <h3 className="hottest-title">{item.title}</h3>
+                  <div className="tag-pill">{item.genre || 'Drama'}</div>
                 </div>
               </div>
-
-              <h3 className="hottest-title">{item.title}</h3>
-              <div className="tag-pill">{item.genre || 'Drama'}</div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {/* New Release Section */}
       <section className="section" style={{ paddingBottom: '40px' }}>
