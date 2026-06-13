@@ -1382,34 +1382,36 @@ function App() {
                         {/* Promotion & Ads Section */}
                         {/* Promotion & Ads Section */}
                         {/* Promotion & Ads Section */}
-                        <section className="section">
-                          <div className="section-header">
-                            <h2 className="section-title">Promotion & Ads</h2>
-                          </div>
+                        {activeFilter !== 'InPlay Cinema' && (
+                          <section className="section">
+                            <div className="section-header">
+                              <h2 className="section-title">Promotion & Ads</h2>
+                            </div>
 
-                          {promotions.length === 0 ? (
-                            <div style={{ padding: '0 20px', color: '#666', fontSize: '13px' }}>
-                              No active promotions
-                            </div>
-                          ) : (
-                            <div style={{ padding: '0', position: 'relative' }}>
-                              {(() => {
-                                // Local variable or we need state? 
-                                // We can't use hooks inside this callback easily if not already defined.
-                                // I will define the Carousel logic inline using a wrapper component or just assume I can add state to App.
-                                // I will use a simple implementation that relies on CSS scrolling or just map.
-                                // User asked for "slide hone chahiye". 
-                                // I better implement a proper carousel. 
-                                // But I cannot add state easily without finding the top of the file again.
-                                // I'll use a new component defined at the end of App.jsx or imported.
-                                // Actually, I can use a key-based re-render trick or just use the index if I could.
-                                // Let's create a specialized component `AdCarousel` in a new file and use it here?
-                                // That is safer and cleaner. 
-                              })()}
-                              <AdCarousel promotions={promotions} />
-                            </div>
-                          )}
-                        </section>
+                            {promotions.length === 0 ? (
+                              <div style={{ padding: '0 20px', color: '#666', fontSize: '13px' }}>
+                                No active promotions
+                              </div>
+                            ) : (
+                              <div style={{ padding: '0', position: 'relative' }}>
+                                {(() => {
+                                  // Local variable or we need state? 
+                                  // We can't use hooks inside this callback easily if not already defined.
+                                  // I will define the Carousel logic inline using a wrapper component or just assume I can add state to App.
+                                  // I will use a simple implementation that relies on CSS scrolling or just map.
+                                  // User asked for "slide hone chahiye". 
+                                  // I better implement a proper carousel. 
+                                  // But I cannot add state easily without finding the top of the file again.
+                                  // I'll use a new component defined at the end of App.jsx or imported.
+                                  // Actually, I can use a key-based re-render trick or just use the index if I could.
+                                  // Let's create a specialized component `AdCarousel` in a new file and use it here?
+                                  // That is safer and cleaner. 
+                                })()}
+                                <AdCarousel promotions={promotions} />
+                              </div>
+                            )}
+                          </section>
+                        )}
 
 
                         {/* Hindi Series Section */}
