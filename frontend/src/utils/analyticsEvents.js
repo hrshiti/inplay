@@ -31,3 +31,20 @@ export const buildSubscriptionPayload = (planId, price = null, currency = 'INR')
   }
   return payload;
 };
+
+export const buildStandardPurchasePayload = (planId, price, currency = 'INR', isTrial = false) => {
+  return {
+    transaction_id: `txn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    value: price,
+    currency: currency,
+    items: [
+      {
+        item_id: planId,
+        item_name: isTrial ? `Trial - ${planId}` : `Subscription - ${planId}`,
+        item_category: "Subscription",
+        price: price,
+        quantity: 1
+      }
+    ]
+  };
+};

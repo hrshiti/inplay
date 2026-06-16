@@ -12,7 +12,8 @@ import {
   buildVideoPayload, 
   buildWatchTimePayload, 
   buildSearchPayload, 
-  buildSubscriptionPayload 
+  buildSubscriptionPayload,
+  buildStandardPurchasePayload
 } from "./analyticsEvents";
 
 /**
@@ -105,10 +106,12 @@ export const trackSubscriptionInitiated = ({ planId }) => {
 
 export const trackSubscriptionPurchase = ({ planId, price, currency = 'INR' }) => {
   safeLogEvent(ANALYTICS_EVENTS.SUBSCRIPTION_PURCHASE, buildSubscriptionPayload(planId, price, currency));
+  if (price) safeLogEvent('purchase', buildStandardPurchasePayload(planId, price, currency, false));
 };
 
 export const trackSubscriptionRenewed = ({ planId, price, currency = 'INR' }) => {
   safeLogEvent(ANALYTICS_EVENTS.SUBSCRIPTION_RENEWED, buildSubscriptionPayload(planId, price, currency));
+  if (price) safeLogEvent('purchase', buildStandardPurchasePayload(planId, price, currency, false));
 };
 
 export const trackSubscriptionCancelled = () => {
@@ -122,8 +125,10 @@ export const trackTrialInitiated = ({ planId }) => {
 
 export const trackTrialPurchase = ({ planId, price, currency = 'INR' }) => {
   safeLogEvent(ANALYTICS_EVENTS.TRIAL_PURCHASE, buildSubscriptionPayload(planId, price, currency));
+  if (price) safeLogEvent('purchase', buildStandardPurchasePayload(planId, price, currency, true));
 };
 
 export const trackTrialRenewed = ({ planId, price, currency = 'INR' }) => {
   safeLogEvent(ANALYTICS_EVENTS.TRIAL_RENEWED, buildSubscriptionPayload(planId, price, currency));
+  if (price) safeLogEvent('purchase', buildStandardPurchasePayload(planId, price, currency, true));
 };

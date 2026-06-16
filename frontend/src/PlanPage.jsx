@@ -98,9 +98,9 @@ const PlanPage = () => {
             });
 
             if (isTrial) {
-              trackTrialPurchase({ planId, price: subData.price });
+              trackTrialPurchase({ planId, price: subData.amount });
             } else {
-              trackSubscriptionPurchase({ planId, price: subData.price });
+              trackSubscriptionPurchase({ planId, price: subData.amount });
             }
 
             const updatedProfile = await authService.getProfile();
