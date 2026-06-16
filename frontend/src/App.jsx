@@ -2459,27 +2459,45 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 <h2 className="section-title">{section.title}</h2>
               </div>
               <div className="horizontal-list hide-scrollbar">
-                {section.videos.map((movie, index) => (
+                {section.videos.map((movie, index) => {
+                  const isUpcoming = section.title?.toLowerCase().includes('upcoming') || section.title?.toLowerCase().includes('coming soon');
+                  return (
                   <motion.div
                     key={`${movie._id || movie.id}-${index}`}
                     className="movie-card"
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedMovie({ ...movie, isVertical: true, type: 'quick_byte', category: 'Quick Bites' })}
-                    style={{ cursor: 'pointer' }}
+                    whileTap={!isUpcoming ? { scale: 0.95 } : {}}
+                    onClick={() => {
+                        if (!isUpcoming) {
+                            setSelectedMovie({ ...movie, isVertical: true, type: 'quick_byte', category: 'Quick Bites' })
+                        } else {
+                            alert("Releasing Soon! Stay Tuned.");
+                        }
+                    }}
+                    style={{ cursor: isUpcoming ? 'default' : 'pointer', position: 'relative' }}
                   >
-                    <div className="poster-container">
+                    <div className="poster-container" style={{ position: 'relative', opacity: isUpcoming ? 0.8 : 1 }}>
                       <img
                         src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image)}
                         onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
                         alt={movie.title}
                         className="poster-img"
                       />
+                      {isUpcoming && (
+                          <div style={{
+                              position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
+                              background: 'rgba(255, 10, 22, 0.9)', color: 'white', fontSize: '11px',
+                              padding: '4px 10px', fontWeight: 'bold', borderRadius: '20px', whiteSpace: 'nowrap',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                          }}>
+                              Coming Soon
+                          </div>
+                      )}
                     </div>
                     <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                      <Eye size={12} /> {formatViews(movie.views)} Views
+                      {!isUpcoming && <Eye size={12} />} {!isUpcoming ? `${formatViews(movie.views)} Views` : 'Upcoming'}
                     </span>
                   </motion.div>
-                ))}
+                )})}
               </div>
             </section>
           ))}
