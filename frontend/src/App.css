@@ -16,7 +16,7 @@ html, body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
   position: relative;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
   /* bottom nav + safe area */
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
   /* overflow removed to allow sticky positioning to work relative to viewport */
@@ -567,14 +567,14 @@ html, body {
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  height: calc(80px + env(safe-area-inset-bottom, 0px));
+  height: calc(65px + env(safe-area-inset-bottom, 0px));
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
-  padding-bottom: env(safe-area-inset-bottom, 10px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   /* Safe area */
   border-radius: 0;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
@@ -584,8 +584,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   color: var(--text-secondary);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);

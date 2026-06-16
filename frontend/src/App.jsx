@@ -356,6 +356,7 @@ function App() {
   // Use Trending Now content for Hero Slideshow
   const heroMovies = contentSections.trending_now.length > 0 ? contentSections.trending_now : [];
   const darmaaHeroMovies = quickBites.filter(qb => qb.isDarmaaHero);
+  const bhojpuriHeroMovies = contentSections.bhojpuri.filter(item => item.isBhojpuriHero);
   const [darmaaSections, setDarmaaSections] = useState([]);
 
   useEffect(() => {
@@ -1685,6 +1686,7 @@ function App() {
                           newReleaseData={contentSections.new_release}
                           promotions={promotions}
                           darmaaHeroMovies={darmaaHeroMovies}
+                          bhojpuriHeroMovies={bhojpuriHeroMovies}
                           darmaaSections={darmaaSections}
                           heroRef={heroRef}
                           currentHeroIndex={currentHeroIndex}
@@ -2215,7 +2217,7 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, darmaaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, qbContinueWatching, handleResumeQuickByte }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, darmaaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, qbContinueWatching, handleResumeQuickByte }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2314,9 +2316,98 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Hero Section for InPlay Bhojpuri */}
+      {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && bhojpuriHeroMovies && bhojpuriHeroMovies.length > 0 && (
+        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', height: '160px', marginBottom: '0' }}>
+          <div
+            style={{
+              display: 'flex',
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {bhojpuriHeroMovies.slice(0, 5).map((movie, index) => {
+              const total = Math.min(bhojpuriHeroMovies.length, 5);
+              const isActive = index === currentHeroIndex % total;
+
+              let visualOffset = 100;
+              if (index === currentHeroIndex % total) visualOffset = 0;
+              else if (index === ((currentHeroIndex % total) - 1 + total) % total) visualOffset = -1;
+              else if (index === ((currentHeroIndex % total) + 1) % total) visualOffset = 1;
+
+              return (
+                <motion.div
+                  key={movie._id || movie.id}
+                  initial={false}
+                  animate={{
+                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-105%" : "105%"),
+                    scale: visualOffset === 0 ? 1 : 0.85,
+                    opacity: 1,
+                    zIndex: visualOffset === 0 ? 10 : 5
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  style={{
+                    position: 'absolute',
+                    width: '85%',
+                    height: '160px',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    boxShadow: visualOffset === 0 ? '0 10px 30px rgba(0,0,0,0.5)' : 'none',
+                  }}
+                  onClick={() => {
+                    if (visualOffset === 0) setSelectedMovie(movie);
+                  }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.2}
+                  onDragEnd={(e, { offset, velocity }) => {
+                    if (offset.x > 50) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                    else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
+                  }}
+                >
+                  {visualOffset !== 0 && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 2 }} onClick={() => {
+                      if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                      else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
+                    }} />
+                  )}
+                  {movie.backdrop?.url || movie.poster?.url || movie.video?.url ? (
+                    <img
+                      src={movie.backdrop?.url || movie.poster?.url || movie.video?.url}
+                      alt={movie.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      draggable="false"
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: '#333' }} />
+                  )}
+                  <div className="hero-overlay" style={{ zIndex: 2 }}>
+                    <div className="hero-content">
+                      <motion.h2 className="hero-title">{movie.title}</motion.h2>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <div style={{ position: 'absolute', bottom: '15px', left: '0', right: '0', display: 'flex', justifyContent: 'center', gap: '6px', zIndex: 10 }}>
+            {bhojpuriHeroMovies.slice(0, 5).map((_, i) => (
+              <div key={i} style={{ width: i === currentHeroIndex % Math.min(bhojpuriHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(bhojpuriHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Hero Section for InPlay Shorts (Darmaa) */}
       {activeFilter === 'InPlay Shorts' && darmaaHeroMovies && darmaaHeroMovies.length > 0 && (
-        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', height: '160px', marginBottom: '0' }}>
           <div
             style={{
               display: 'flex',

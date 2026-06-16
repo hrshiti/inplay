@@ -22,6 +22,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     isRanking: content?.isRanking || false,
     isMovie: content?.isMovie || false,
     isTV: content?.isTV || false,
+    isBhojpuriHero: content?.isBhojpuriHero || false,
 
     isPopular: content?.isPopular || false,
     isBroadcast: content?.isBroadcast || false,
@@ -135,6 +136,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         isRanking: content.isRanking || false,
         isMovie: content.isMovie || false,
         isTV: content.isTV || false,
+        isBhojpuriHero: content.isBhojpuriHero || false,
         isPopular: content.isPopular || false,
         isBroadcast: content.isBroadcast || false,
         isAudioSeries: content.isAudioSeries || false,
@@ -806,6 +808,19 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                 {key.replace('is', '').replace(/([A-Z])/g, ' $1').trim()}
               </label>
             ))}
+
+            {formData.type === 'bhojpuri' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer', background: '#ffe4e6', padding: '4px 8px', borderRadius: '4px' }}>
+                <input
+                  type="checkbox"
+                  name="isBhojpuriHero"
+                  checked={formData.isBhojpuriHero}
+                  onChange={handleInputChange}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#e11d48' }}
+                />
+                <span style={{ color: '#e11d48', fontWeight: 'bold' }}>Set as Bhojpuri Banner</span>
+              </label>
+            )}
 
             {/* Dynamic Tabs Checkboxes */}
             {dynamicTabs.map(tab => (

@@ -100,6 +100,18 @@ const deleteCategory = async (req, res) => {
     }
 };
 
+// @desc    Update a category
+// @route   PUT /api/admin/tabs/categories/:id
+const updateCategory = async (req, res) => {
+    try {
+        const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
+        res.status(200).json({ success: true, data: category });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getAllTabs,
     createTab,
@@ -107,5 +119,6 @@ module.exports = {
     deleteTab,
     getCategoriesByTab,
     createCategory,
+    updateCategory,
     deleteCategory
 };

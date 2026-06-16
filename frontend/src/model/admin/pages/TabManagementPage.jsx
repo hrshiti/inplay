@@ -71,6 +71,15 @@ export default function TabManagementPage() {
         }
     };
 
+    const handleUpdateCategoryOrder = async (catId, newOrder) => {
+        try {
+            await adminTabService.updateCategory(catId, { order: newOrder });
+            // We can fetch tabs on blur to refresh the list locally
+        } catch (error) {
+            console.error("Failed to update category order", error);
+        }
+    };
+
     if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
 
     return (
@@ -175,9 +184,20 @@ export default function TabManagementPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {tab.categories && tab.categories.map((cat) => (
                                         <div key={cat._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f1f5f9', borderRadius: '8px' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#1e293b' }}>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input 
+                                                    type="number" 
+                                                    defaultValue={cat.order || 0} 
+                                                    onBlur={(e) => {
+                                                        const newOrder = Number(e.target.value);
+                                                        if (newOrder !== (cat.order || 0)) {
+                                                            handleUpdateCategoryOrder(cat._id, newOrder).then(() => fetchTabs());
+                                                        }
+                                                    }}
+                                                    style={{ width: '50px', padding: '4px', border: '1px solid #d1d5db', borderRadius: '4px', textAlign: 'center', fontSize: '0.85rem' }} 
+                                                    title="Edit Order"
+                                                />
                                                 {cat.name} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>({cat.slug})</span>
-                                                <span style={{ marginLeft: '8px', fontSize: '0.75rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#475569' }}>Order: {cat.order || 0}</span>
                                             </span>
                                             <button onClick={() => handleDeleteCategory(cat._id)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}><Trash size={16} /></button>
                                         </div>

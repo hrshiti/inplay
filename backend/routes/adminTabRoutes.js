@@ -7,6 +7,7 @@ const {
     deleteTab,
     getCategoriesByTab,
     createCategory,
+    updateCategory,
     deleteCategory
 } = require('../controllers/dynamicTabController');
 const { protect, authorize } = require('../middlewares/auth');
@@ -28,6 +29,7 @@ router.route('/tabs/:tabId/categories')
     .post(createCategory);
 
 router.route('/tabs/categories/:id')
+    .put(updateCategory)
     .delete(deleteCategory);
 
 module.exports = router;

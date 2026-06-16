@@ -43,6 +43,13 @@ const adminTabService = {
             headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
         });
         return response.data;
+    },
+
+    updateCategory: async (categoryId, categoryData) => {
+        const response = await axios.put(`${API_BASE_URL}/admin/dynamic/tabs/categories/${categoryId}`, categoryData, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+        return response.data.data;
     }
 };
 

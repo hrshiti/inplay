@@ -178,6 +178,10 @@ const contentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isBhojpuriHero: {
+    type: Boolean,
+    default: false
+  },
   isMms: {
     type: Boolean,
     default: false
