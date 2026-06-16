@@ -5,10 +5,10 @@ import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
 
 const formatViews = (views) => {
-  if (!views) return '0';
-  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
-  if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
-  return views.toString();
+    if (!views) return '0';
+    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+    if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+    return views.toString();
 };
 
 export default function DynamicTabPage({ tab, onMovieClick }) {

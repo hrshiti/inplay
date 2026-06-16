@@ -1161,99 +1161,99 @@ function App() {
                         {/* Quick Bites (Vertical Content) Section */}
                         {/* This section contains ONLY vertical content as requested */}
                         {activeFilter !== 'InPlay Cinema' && (
-                        <section className="section" style={{ marginBottom: '0px' }}>
-                          <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
-                              <h2 className="section-title">Quick Bites</h2>
-                              <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Shorts</span>
+                          <section className="section" style={{ marginBottom: '0px' }}>
+                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
+                                <h2 className="section-title">Quick Bites</h2>
+                                <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px', color: '#aaa', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Shorts</span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
-                            {quickBites
-                              .filter(item => item.status === 'published')
-                              .filter(item => {
-                                if (activeFilter === 'All') {
+                            <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
+                              {quickBites
+                                .filter(item => item.status === 'published')
+                                .filter(item => {
+                                  if (activeFilter === 'All') {
+                                    return true;
+                                  }
+                                  if (activeFilter === 'Movies' || activeFilter === 'InPlay Cinema') {
+                                    return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'bhojpuri' || item.type === 'new_release';
+                                  }
+                                  if (activeFilter === 'TV') {
+                                    return item.isTV || item.type === 'series' || item.type === 'hindi_series';
+                                  }
                                   return true;
-                                }
-                                if (activeFilter === 'Movies' || activeFilter === 'InPlay Cinema') {
-                                  return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'bhojpuri' || item.type === 'new_release';
-                                }
-                                if (activeFilter === 'TV') {
-                                  return item.isTV || item.type === 'series' || item.type === 'hindi_series';
-                                }
-                                return true;
-                              })
-                              .map((item, index) => {
-                                const verticalItem = {
-                                  ...item,
-                                  isVertical: true,
-                                  image: item.thumbnail?.url || item.poster?.url || "https://placehold.co/150x267/333/FFF?text=No+Image",
-                                  video: item.video?.secure_url || item.video?.url,
-                                  type: 'reel'
-                                };
-                                return (
-                                  <motion.div
-                                    key={verticalItem._id || verticalItem.id || index}
-                                    whileHover={{ scale: 1.05, y: -5 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handlePlay(verticalItem)}
-                                    style={{
-                                      flex: '0 0 calc((100% - 28px) / 3)',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '10px'
-                                    }}
-                                  >
-                                    <div style={{
-                                      width: '100%',
-                                      height: '210px',
-                                      borderRadius: '16px',
-                                      overflow: 'hidden',
-                                      position: 'relative',
-                                      boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
-                                      border: '1px solid rgba(255,255,255,0.1)'
-                                    }}>
-                                      <img
-                                        src={getImageUrl(verticalItem.image)}
-                                        alt={verticalItem.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
-                                      />
-                                      <div style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)',
+                                })
+                                .map((item, index) => {
+                                  const verticalItem = {
+                                    ...item,
+                                    isVertical: true,
+                                    image: item.thumbnail?.url || item.poster?.url || "https://placehold.co/150x267/333/FFF?text=No+Image",
+                                    video: item.video?.secure_url || item.video?.url,
+                                    type: 'reel'
+                                  };
+                                  return (
+                                    <motion.div
+                                      key={verticalItem._id || verticalItem.id || index}
+                                      whileHover={{ scale: 1.05, y: -5 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handlePlay(verticalItem)}
+                                      style={{
+                                        flex: '0 0 calc((100% - 28px) / 3)',
+                                        cursor: 'pointer',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        justifyContent: 'flex-end',
-                                        padding: '10px'
-                                      }}>
-
-                                      </div>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                      <span style={{
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        color: '#fff',
-                                        textAlign: 'left',
-                                        maxWidth: '100%',
-                                        whiteSpace: 'nowrap',
+                                        gap: '10px'
+                                      }}
+                                    >
+                                      <div style={{
+                                        width: '100%',
+                                        height: '210px',
+                                        borderRadius: '16px',
                                         overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
+                                        position: 'relative',
+                                        boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
                                       }}>
-                                        {verticalItem.title}
-                                      </span>
-                                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Eye size={10} /> {formatViews(verticalItem.views)} Views
-                                      </span>
-                                    </div>
-                                  </motion.div>
-                                )
-                              })}
-                          </div>
-                        </section>
+                                        <img
+                                          src={getImageUrl(verticalItem.image)}
+                                          alt={verticalItem.title}
+                                          style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                                        />
+                                        <div style={{
+                                          position: 'absolute',
+                                          inset: 0,
+                                          background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          justifyContent: 'flex-end',
+                                          padding: '10px'
+                                        }}>
+
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <span style={{
+                                          fontSize: '12px',
+                                          fontWeight: '700',
+                                          color: '#fff',
+                                          textAlign: 'left',
+                                          maxWidth: '100%',
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis'
+                                        }}>
+                                          {verticalItem.title}
+                                        </span>
+                                        <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <Eye size={10} /> {formatViews(verticalItem.views)} Views
+                                        </span>
+                                      </div>
+                                    </motion.div>
+                                  )
+                                })}
+                            </div>
+                          </section>
                         )}
 
                         {/* Continue Watching (Quick Bites) Section */}
@@ -2462,36 +2462,37 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 {section.videos.map((movie, index) => {
                   const isUpcoming = section.title?.toLowerCase().includes('upcoming') || section.title?.toLowerCase().includes('coming soon');
                   return (
-                  <motion.div
-                    key={`${movie._id || movie.id}-${index}`}
-                    className="movie-card"
-                    whileTap={!isUpcoming ? { scale: 0.95 } : {}}
-                    onClick={() => {
+                    <motion.div
+                      key={`${movie._id || movie.id}-${index}`}
+                      className="movie-card"
+                      whileTap={!isUpcoming ? { scale: 0.95 } : {}}
+                      onClick={() => {
                         if (!isUpcoming) {
-                            setSelectedMovie({ ...movie, isVertical: true, type: 'quick_byte', category: 'Quick Bites' })
+                          setSelectedMovie({ ...movie, isVertical: true, type: 'quick_byte', category: 'Quick Bites' })
                         } else {
-                            alert("Releasing Soon! Stay Tuned.");
+                          alert("Releasing Soon! Stay Tuned.");
                         }
-                    }}
-                    style={{ cursor: isUpcoming ? 'default' : 'pointer', position: 'relative' }}
-                  >
-                    <div className="poster-container" style={{ position: 'relative', opacity: isUpcoming ? 0.8 : 1 }}>
-                      <img
-                        src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image)}
-                        onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
-                        alt={movie.title}
-                        className="poster-img"
-                      />
-                    </div>
-                    <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                      {!isUpcoming ? (
+                      }}
+                      style={{ cursor: isUpcoming ? 'default' : 'pointer', position: 'relative' }}
+                    >
+                      <div className="poster-container" style={{ position: 'relative', opacity: isUpcoming ? 0.8 : 1 }}>
+                        <img
+                          src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image)}
+                          onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
+                          alt={movie.title}
+                          className="poster-img"
+                        />
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                        {!isUpcoming ? (
                           <><Eye size={12} /> {formatViews(movie.views)} Views</>
-                      ) : (
+                        ) : (
                           <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
-                      )}
-                    </span>
-                  </motion.div>
-                )})}
+                        )}
+                      </span>
+                    </motion.div>
+                  )
+                })}
               </div>
             </section>
           ))}

@@ -72,6 +72,16 @@ export default function DarmaaSectionsPage() {
         }
     };
 
+    const handleUpdateOrder = async (id, newOrder) => {
+        try {
+            await darmaaSectionService.updateSection(id, { order: newOrder });
+            // We do not fetchSections here directly to avoid input losing focus
+            // We can fetchSections on blur if needed, or rely on local state update
+        } catch (error) {
+            console.error("Failed to update order:", error);
+        }
+    };
+
     const handleAddVideoToSection = async (section, video) => {
         if (section.videos.find(v => v._id === video._id)) return; // Already exists
         const updatedVideos = [...section.videos.map(v => v._id), video._id];
@@ -134,7 +144,7 @@ export default function DarmaaSectionsPage() {
             {showAddSection && (
                 <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
                     <h3 style={{ marginBottom: '16px', fontWeight: 'bold' }}>New Section</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '16px', alignItems: 'end' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px auto auto', gap: '16px', alignItems: 'end' }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Title</label>
                             <input
@@ -143,6 +153,15 @@ export default function DarmaaSectionsPage() {
                                 onChange={(e) => setNewSection({ ...newSection, title: e.target.value })}
                                 style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }}
                                 placeholder="e.g. Trending Darmaa"
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Order</label>
+                            <input
+                                type="number"
+                                value={newSection.order}
+                                onChange={(e) => setNewSection({ ...newSection, order: Number(e.target.value) })}
+                                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }}
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '8px' }}>
@@ -168,6 +187,18 @@ export default function DarmaaSectionsPage() {
                         <div style={{ padding: '16px', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <GripVertical size={18} color="#94a3b8" />
+                                <input 
+                                    type="number" 
+                                    defaultValue={section.order || 0} 
+                                    onBlur={(e) => {
+                                        const newOrder = Number(e.target.value);
+                                        if (newOrder !== (section.order || 0)) {
+                                            handleUpdateOrder(section._id, newOrder).then(() => fetchSections());
+                                        }
+                                    }}
+                                    style={{ width: '60px', padding: '4px', border: '1px solid #e2e8f0', borderRadius: '4px', textAlign: 'center' }} 
+                                    title="Display Order"
+                                />
                                 <h3 style={{ fontWeight: 'bold', color: '#1e293b' }}>{section.title}</h3>
                                 <span style={{ 
                                     padding: '2px 8px', 

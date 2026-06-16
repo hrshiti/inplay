@@ -156,6 +156,14 @@ export default function TabManagementPage() {
                                         onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })}
                                         style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem' }}
                                     />
+                                    <input
+                                        type="number"
+                                        placeholder="Order"
+                                        value={newCategory.order}
+                                        onChange={(e) => setNewCategory({ ...newCategory, order: Number(e.target.value) })}
+                                        style={{ width: '80px', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem' }}
+                                        title="Display Order"
+                                    />
                                     <button
                                         onClick={() => handleCreateCategory(tab._id)}
                                         style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
@@ -167,7 +175,10 @@ export default function TabManagementPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {tab.categories && tab.categories.map((cat) => (
                                         <div key={cat._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f1f5f9', borderRadius: '8px' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#1e293b' }}>{cat.name} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>({cat.slug})</span></span>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#1e293b' }}>
+                                                {cat.name} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>({cat.slug})</span>
+                                                <span style={{ marginLeft: '8px', fontSize: '0.75rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#475569' }}>Order: {cat.order || 0}</span>
+                                            </span>
                                             <button onClick={() => handleDeleteCategory(cat._id)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}><Trash size={16} /></button>
                                         </div>
                                     ))}
