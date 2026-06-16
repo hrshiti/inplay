@@ -1080,14 +1080,6 @@ function App() {
 
                                   {isActive && (
                                     <>
-                                      <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                                        <Bookmark size={18} color="#fff" />
-                                      </div>
-                                      <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                                        <VolumeX size={18} color="#fff" />
-                                      </div>
-
-
                                     </>
                                   )}
                                 </motion.div>
@@ -2383,13 +2375,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   <img src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
                   {isActive && (
                     <>
-                      <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                        <Bookmark size={18} color="#fff" />
-                      </div>
-                      <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '50%', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                        <VolumeX size={18} color="#fff" />
-                      </div>
-
                     </>
                   )}
                 </motion.div>
@@ -2455,7 +2440,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#fff', textAlign: 'left', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
                       <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={10} /> {formatViews(item.views)} Views • {formatDuration(episodeDuration)}</span>
                     </div>
                   </motion.div>
@@ -2491,7 +2475,9 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                         className="poster-img"
                       />
                     </div>
-                    <h3 className="movie-title">{movie.title}</h3>
+                    <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                      <Eye size={12} /> {formatViews(movie.views)} Views
+                    </span>
                   </motion.div>
                 ))}
               </div>
