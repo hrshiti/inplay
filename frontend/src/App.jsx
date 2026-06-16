@@ -2482,19 +2482,13 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                         alt={movie.title}
                         className="poster-img"
                       />
-                      {isUpcoming && (
-                          <div style={{
-                              position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
-                              background: 'rgba(255, 10, 22, 0.9)', color: 'white', fontSize: '11px',
-                              padding: '4px 10px', fontWeight: 'bold', borderRadius: '20px', whiteSpace: 'nowrap',
-                              boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                          }}>
-                              Coming Soon
-                          </div>
-                      )}
                     </div>
                     <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                      {!isUpcoming && <Eye size={12} />} {!isUpcoming ? `${formatViews(movie.views)} Views` : 'Upcoming'}
+                      {!isUpcoming ? (
+                          <><Eye size={12} /> {formatViews(movie.views)} Views</>
+                      ) : (
+                          <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
+                      )}
                     </span>
                   </motion.div>
                 )})}
