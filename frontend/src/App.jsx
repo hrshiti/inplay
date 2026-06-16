@@ -2407,7 +2407,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
 
       {/* Hero Section for InPlay Shorts (Darmaa) */}
       {activeFilter === 'InPlay Shorts' && darmaaHeroMovies && darmaaHeroMovies.length > 0 && (
-        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', height: '160px', marginBottom: '0' }}>
+        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
           <div
             style={{
               display: 'flex',
