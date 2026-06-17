@@ -180,6 +180,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/admin/dynamic', require('./routes/adminTabRoutes'));
 app.use('/api/admin/darmaa-sections', require('./routes/darmaaSectionRoutes'));
+app.use('/api/admin/bhojpuri-sections', require('./routes/bhojpuriSectionRoutes'));
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/content', contentRoutes);
