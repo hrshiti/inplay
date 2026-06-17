@@ -1110,7 +1110,13 @@ function App() {
 
 
                         {/* Continue Watching Section */}
-                        {continueWatching.length > 0 && (
+                        {continueWatching.filter(show => {
+                          if (activeFilter === 'Home' || activeFilter === 'All') return true;
+                          if (activeFilter === 'InPlay Cinema') return show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.isMovie;
+                          if (activeFilter === 'InPlay Bhojpuri') return show.type === 'bhojpuri' || show.category === 'Bhojpuri';
+                          if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
+                          return true;
+                        }).length > 0 && (
                           <section className="section" style={{
                             marginTop: '10px',
                             background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
@@ -1125,7 +1131,13 @@ function App() {
                               <span style={{ fontSize: '18px', color: '#888' }}>›</span>
                             </div>
                             <div className="horizontal-list hide-scrollbar">
-                              {continueWatching.map(show => (
+                              {continueWatching.filter(show => {
+                                if (activeFilter === 'Home' || activeFilter === 'All') return true;
+                                if (activeFilter === 'InPlay Cinema') return show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.isMovie;
+                                if (activeFilter === 'InPlay Bhojpuri') return show.type === 'bhojpuri' || show.category === 'Bhojpuri';
+                                if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
+                                return true;
+                              }).map(show => (
                                 <motion.div
                                   key={show.id}
                                   className="continue-card"
@@ -1268,7 +1280,13 @@ function App() {
                         )}
 
                         {/* Continue Watching (Quick Bites) Section */}
-                        {qbContinueWatching.length > 0 && (
+                        {qbContinueWatching.filter(item => {
+                          if (activeFilter === 'Home' || activeFilter === 'All') return true;
+                          if (activeFilter === 'InPlay Cinema') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'new_release';
+                          if (activeFilter === 'InPlay Bhojpuri') return item.type === 'bhojpuri' || item.category === 'Bhojpuri';
+                          if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
+                          return true;
+                        }).length > 0 && (
                           <section className="section" style={{ marginBottom: '32px', marginTop: '20px' }}>
                             <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1277,7 +1295,13 @@ function App() {
                               </div>
                             </div>
                             <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
-                              {qbContinueWatching.map((item, index) => {
+                              {qbContinueWatching.filter(item => {
+                                if (activeFilter === 'Home' || activeFilter === 'All') return true;
+                                if (activeFilter === 'InPlay Cinema') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'new_release';
+                                if (activeFilter === 'InPlay Bhojpuri') return item.type === 'bhojpuri' || item.category === 'Bhojpuri';
+                                if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
+                                return true;
+                              }).map((item, index) => {
                                 // Get the proper image from the QuickByte data
                                 const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
 
@@ -1706,6 +1730,7 @@ function App() {
                           heroRef={heroRef}
                           currentHeroIndex={currentHeroIndex}
                           setCurrentHeroIndex={setCurrentHeroIndex}
+                          continueWatching={continueWatching}
                           qbContinueWatching={qbContinueWatching}
                           bhojpuriQuickBites={bhojpuriQuickBites}
                           handleResumeQuickByte={handleResumeQuickByte}
@@ -2233,7 +2258,7 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, darmaaSections, bhojpuriSections, heroRef, currentHeroIndex, setCurrentHeroIndex, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, darmaaSections, bhojpuriSections, heroRef, currentHeroIndex, setCurrentHeroIndex, continueWatching, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2603,6 +2628,53 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && (
         <div style={{ marginTop: '24px' }}>
           
+          {/* Continue Watching (Bhojpuri) Section */}
+          {continueWatching && continueWatching.filter(show => show.type === 'bhojpuri' || show.category === 'Bhojpuri').length > 0 && (
+            <section className="section" style={{
+              marginBottom: '24px',
+              background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
+              paddingTop: '20px',
+              paddingBottom: '20px',
+              margin: '0 -16px',
+              paddingLeft: '16px',
+              paddingRight: '16px'
+            }}>
+              <div className="section-header" style={{ marginBottom: '10px' }}>
+                <h2 className="section-title">Continue Watching</h2>
+                <span style={{ fontSize: '18px', color: '#888' }}>›</span>
+              </div>
+              <div className="horizontal-list hide-scrollbar">
+                {continueWatching.filter(show => show.type === 'bhojpuri' || show.category === 'Bhojpuri').map(show => (
+                  <motion.div
+                    key={`bhojpuri-cw-${show.id}`}
+                    className="continue-card"
+                    whileTap={{ scale: 0.95 }}
+                    style={{ minWidth: '140px', marginRight: '16px', position: 'relative', cursor: 'pointer' }}
+                    onClick={() => setSelectedMovie(show)}
+                  >
+                    <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
+                      <img
+                        src={getImageUrl(show.image)}
+                        alt={show.title}
+                        className="poster-img"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                        onError={(e) => { e.target.src = 'https://placehold.co/200x300/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
+                      />
+                      <div className="progress-bar-container">
+                        <div className="progress-bar" style={{ width: `${show.progress}%` }}></div>
+                      </div>
+                      <div className="play-icon-overlay">
+                        <div className="play-circle">
+                          <Play size={20} fill="white" stroke="none" />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Bhojpuri Quick Bites Row */}
           {bhojpuriQuickBites && bhojpuriQuickBites.length > 0 && (
             <section className="section" style={{ marginBottom: '24px' }}>

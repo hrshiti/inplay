@@ -199,7 +199,7 @@ const getUserProfile = async (userId) => {
       if (!list || !Array.isArray(list) || list.length === 0) return [];
 
       const [contentItems, quickByteItems, forYouItems] = await Promise.all([
-        Content.find({ _id: { $in: list } }).select('title poster thumbnail type backdrop image video seasons').lean(),
+        Content.find({ _id: { $in: list } }).select('title poster thumbnail type category isMovie isTV isBhojpuriHero isShortFilm backdrop image video seasons').lean(),
         QuickByte.find({ _id: { $in: list } }).select('title video thumbnail type likes views').lean(),
         ForYou.find({ _id: { $in: list } }).select('title video thumbnail type likes views').lean()
       ]);
@@ -228,7 +228,7 @@ const getUserProfile = async (userId) => {
     const watchedContentMap = new Map();
     // Fetch all content details (including QuickBytes and ForYou if possible)
     const [contentMeta, quickByteMeta, forYouMeta] = await Promise.all([
-      Content.find({ _id: { $in: watchHistoryIds } }).select('title poster thumbnail type backdrop image video seasons').lean(),
+      Content.find({ _id: { $in: watchHistoryIds } }).select('title poster thumbnail type category isMovie isTV isBhojpuriHero isShortFilm backdrop image video seasons').lean(),
       QuickByte.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type likes views').lean(),
       ForYou.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type likes views').lean()
     ]);
