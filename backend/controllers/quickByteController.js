@@ -70,7 +70,8 @@ const createQuickByteHandler = async (req, res) => {
         const {
             title, status, audioTitle, description,
             genre, year, rating, views,
-            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero
+            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero,
+            isBhojpuriHero, targetCategory
         } = req.body;
         const files = req.files || {};
 
@@ -93,7 +94,9 @@ const createQuickByteHandler = async (req, res) => {
             isMovie: isMovie === 'true' || isMovie === true,
             isTV: isTV === 'true' || isTV === true,
             isPopular: isPopular === 'true' || isPopular === true,
-            isDarmaaHero: isDarmaaHero === 'true' || isDarmaaHero === true
+            isDarmaaHero: isDarmaaHero === 'true' || isDarmaaHero === true,
+            isBhojpuriHero: isBhojpuriHero === 'true' || isBhojpuriHero === true,
+            targetCategory: targetCategory || 'Darmaa'
         });
 
         // Transform uploaded video (already saved by multer)
@@ -237,7 +240,8 @@ const updateQuickByteHandler = async (req, res) => {
         const {
             title, status, audioTitle, description,
             genre, year, rating, views,
-            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero
+            isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero,
+            isBhojpuriHero, targetCategory
         } = req.body;
         const files = req.files || {};
 
@@ -259,6 +263,8 @@ const updateQuickByteHandler = async (req, res) => {
         if (isTV !== undefined) quickByte.isTV = isTV === 'true' || isTV === true;
         if (isPopular !== undefined) quickByte.isPopular = isPopular === 'true' || isPopular === true;
         if (isDarmaaHero !== undefined) quickByte.isDarmaaHero = isDarmaaHero === 'true' || isDarmaaHero === true;
+        if (isBhojpuriHero !== undefined) quickByte.isBhojpuriHero = isBhojpuriHero === 'true' || isBhojpuriHero === true;
+        if (targetCategory !== undefined) quickByte.targetCategory = targetCategory;
 
         // Handle File Updates - Transform uploaded video
         if (files.video && files.video[0]) {

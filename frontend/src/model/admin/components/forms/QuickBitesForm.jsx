@@ -15,6 +15,8 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         isTV: content?.isTV || false,
         isPopular: content?.isPopular || false,
         isDarmaaHero: content?.isDarmaaHero || false,
+        isBhojpuriHero: content?.isBhojpuriHero || false,
+        targetCategory: content?.targetCategory || 'Darmaa',
         status: content?.status || 'published',
         views: content?.views || 0,
         type: 'reel'
@@ -89,6 +91,8 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 submissionData.append('isTV', formData.isTV);
                 submissionData.append('isPopular', formData.isPopular);
                 submissionData.append('isDarmaaHero', formData.isDarmaaHero);
+                submissionData.append('isBhojpuriHero', formData.isBhojpuriHero);
+                submissionData.append('targetCategory', formData.targetCategory);
                 submissionData.append('type', 'reel');
                 submissionData.append('status', formData.status);
                 submissionData.append('views', formData.views);
@@ -242,8 +246,32 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                     </div>
                 </div>
 
-                {/* Darmaa Banner Flag */}
-                <div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                            Target Category
+                        </label>
+                        <select
+                            name="targetCategory"
+                            value={formData.targetCategory}
+                            onChange={handleInputChange}
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                background: 'white',
+                                boxSizing: 'border-box'
+                            }}
+                        >
+                            <option value="Darmaa">Darmaa Only</option>
+                            <option value="Bhojpuri">Bhojpuri Only</option>
+                            <option value="Both">Both Darmaa & Bhojpuri</option>
+                        </select>
+                    </div>
+
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <input
                             type="checkbox"
@@ -253,7 +281,20 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                            Show in InPlay Darmaa Banner
+                            Show in Darmaa Banner
+                        </span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            name="isBhojpuriHero"
+                            checked={formData.isBhojpuriHero}
+                            onChange={handleInputChange}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                            Show in Bhojpuri Banner
                         </span>
                     </label>
                 </div>

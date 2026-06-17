@@ -355,8 +355,12 @@ function App() {
   };
   // Use Trending Now content for Hero Slideshow
   const heroMovies = contentSections.trending_now.length > 0 ? contentSections.trending_now : [];
-  const darmaaHeroMovies = quickBites.filter(qb => qb.isDarmaaHero);
-  const bhojpuriHeroMovies = contentSections.bhojpuri.filter(item => item.isBhojpuriHero);
+  const darmaaHeroMovies = quickBites.filter(qb => qb.isDarmaaHero && (!qb.targetCategory || qb.targetCategory === 'Darmaa' || qb.targetCategory === 'Both'));
+  const bhojpuriHeroMovies = [
+    ...contentSections.bhojpuri.filter(item => item.isBhojpuriHero),
+    ...quickBites.filter(qb => qb.isBhojpuriHero && (qb.targetCategory === 'Bhojpuri' || qb.targetCategory === 'Both'))
+  ];
+  const bhojpuriQuickBites = quickBites.filter(qb => qb.targetCategory === 'Bhojpuri' || qb.targetCategory === 'Both');
   const [darmaaSections, setDarmaaSections] = useState([]);
   const [bhojpuriSections, setBhojpuriSections] = useState([]);
 
@@ -1703,6 +1707,7 @@ function App() {
                           currentHeroIndex={currentHeroIndex}
                           setCurrentHeroIndex={setCurrentHeroIndex}
                           qbContinueWatching={qbContinueWatching}
+                          bhojpuriQuickBites={bhojpuriQuickBites}
                           handleResumeQuickByte={handleResumeQuickByte}
                         />
                       )
@@ -2228,7 +2233,7 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, darmaaSections, bhojpuriSections, heroRef, currentHeroIndex, setCurrentHeroIndex, qbContinueWatching, handleResumeQuickByte }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, darmaaSections, bhojpuriSections, heroRef, currentHeroIndex, setCurrentHeroIndex, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2595,9 +2600,44 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       )}
 
       {/* Dynamic Bhojpuri Sections */}
-      {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && bhojpuriSections && bhojpuriSections.length > 0 && (
+      {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && (
         <div style={{ marginTop: '24px' }}>
-          {bhojpuriSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
+          
+          {/* Bhojpuri Quick Bites Row */}
+          {bhojpuriQuickBites && bhojpuriQuickBites.length > 0 && (
+            <section className="section" style={{ marginBottom: '24px' }}>
+              <div className="section-header">
+                <h2 className="section-title">Bhojpuri Quick Bites</h2>
+              </div>
+              <div className="horizontal-list hide-scrollbar">
+                {bhojpuriQuickBites.map((movie, index) => (
+                  <motion.div
+                    key={`bhojpuri-qb-${movie._id || movie.id}-${index}`}
+                    className="movie-card"
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedMovie({ ...movie, isVertical: true, type: 'quick_byte', category: 'Quick Bites' });
+                    }}
+                    style={{ cursor: 'pointer', position: 'relative' }}
+                  >
+                    <div className="poster-container" style={{ position: 'relative' }}>
+                      <img
+                        src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image)}
+                        onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
+                        alt={movie.title}
+                        className="poster-img"
+                      />
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                      {movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {bhojpuriSections && bhojpuriSections.length > 0 && bhojpuriSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
             <section key={section._id} className="section" style={{ marginBottom: '24px' }}>
               <div className="section-header">
                 <h2 className="section-title">{section.title}</h2>

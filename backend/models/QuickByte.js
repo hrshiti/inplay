@@ -60,6 +60,12 @@ const quickByteSchema = new mongoose.Schema({
     isTV: { type: Boolean, default: false },
     isPopular: { type: Boolean, default: false },
     isDarmaaHero: { type: Boolean, default: false },
+    isBhojpuriHero: { type: Boolean, default: false },
+    targetCategory: { 
+        type: String, 
+        enum: ['Darmaa', 'Bhojpuri', 'Both'], 
+        default: 'Darmaa' 
+    },
     // Audio Track (New)
     audio: {
         public_id: String,
