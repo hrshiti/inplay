@@ -324,7 +324,9 @@ const ContentLibrary = () => {
     { key: 'genre', label: 'Genre', sortable: true },
     { key: 'rating', label: 'Rating', sortable: true },
     { key: 'year', label: 'Year', sortable: true },
-    { key: 'views', label: 'Views', sortable: true, render: (v) => v?.toLocaleString() || 0 },
+    { key: 'views', label: 'Total Views', sortable: true, render: (v) => v?.toLocaleString() || 0 },
+    { key: 'realViews', label: 'Real Views', sortable: true, render: (v, row) => row.realViews?.toLocaleString() || 0 },
+    { key: 'fakeViews', label: 'Fake Views', sortable: true, render: (v, row) => row.fakeViews?.toLocaleString() || 0 },
     {
       key: 'status', label: 'Status', sortable: true, render: (s) => (
         <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', background: s === 'published' ? '#dcfce7' : '#f3f4f6', color: s === 'published' ? '#166534' : '#374151' }}>

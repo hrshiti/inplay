@@ -137,6 +137,14 @@ const contentSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  fakeViews: {
+    type: Number,
+    default: 0
+  },
+  realViews: {
+    type: Number,
+    default: 0
+  },
   likes: {
     type: Number,
     default: 0
@@ -264,6 +272,11 @@ contentSchema.pre('save', function () {
     this.totalEpisodes = this.seasons.reduce((total, season) => {
       return total + (season.episodes ? season.episodes.length : 0);
     }, 0);
+  }
+
+  // Calculate total views if fake or real views are modified
+  if (this.isModified('fakeViews') || this.isModified('realViews')) {
+    this.views = (this.fakeViews || 0) + (this.realViews || 0);
   }
 });
 

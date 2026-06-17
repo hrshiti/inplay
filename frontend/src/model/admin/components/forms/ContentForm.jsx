@@ -10,7 +10,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     genre: content?.genre ? (Array.isArray(content.genre) ? content.genre.join(', ') : content.genre) : '',
     year: content?.year || new Date().getFullYear(),
     rating: content?.rating || '',
-    views: content?.views || '',
+    fakeViews: content?.fakeViews || '',
     status: content?.status || 'draft',
     type: content?.type || 'bhojpuri',
     image: content ? (content.image || content.poster?.url || content.poster?.secure_url || content.thumbnail || content.poster || '') : '',
@@ -79,10 +79,10 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     // Helper to safely get url from possible object structure
     const getUrl = (field) => {
       if (!content) return '';
-      
+
       // Try to find the value in various possible field names
       let val = content[field];
-      
+
       // Fallbacks for specific field types if not found directly
       if (!val) {
         if (field === 'video') {
@@ -95,10 +95,10 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
       }
 
       if (!val) return '';
-      
+
       // If it's a string, return it directly
       if (typeof val === 'string') return val;
-      
+
       // If it's an array, take the first element
       if (Array.isArray(val)) {
         if (val.length === 0) return '';
@@ -107,12 +107,12 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         if (typeof first === 'object') return first.hls_url || first.secure_url || first.url || first.link || '';
         return '';
       }
-      
+
       // If it's an object, try to find a URL property
       if (typeof val === 'object') {
         return val.hls_url || val.secure_url || val.url || val.link || val.path || '';
       }
-      
+
       return '';
     };
 
@@ -124,7 +124,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         genre: Array.isArray(content.genre) ? content.genre.join(', ') : (content.genre || ''),
         year: content.year || new Date().getFullYear(),
         rating: content.rating || '',
-        views: content.views || '',
+        fakeViews: content.fakeViews || '',
         status: content.status || 'draft',
         type: content.type || 'bhojpuri',
         image: getUrl('image') || getUrl('poster') || getUrl('thumbnail') || '',
@@ -359,7 +359,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         const newSeasons = [...prev.seasons];
         const oldPreview = newSeasons[seasonIndex].episodes[episodeIndex].video?.url;
         if (oldPreview && typeof oldPreview === 'string' && oldPreview.startsWith('blob:')) {
-            URL.revokeObjectURL(oldPreview);
+          URL.revokeObjectURL(oldPreview);
         }
 
         newSeasons[seasonIndex].episodes[episodeIndex].video = {
@@ -660,12 +660,12 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
 
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Views
+              Fake Views
             </label>
             <input
               type="number"
-              name="views"
-              value={formData.views}
+              name="fakeViews"
+              value={formData.fakeViews}
               onChange={handleInputChange}
               min="0"
               placeholder="0"
@@ -676,6 +676,26 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                 borderRadius: '6px',
                 fontSize: '0.9rem',
                 outline: 'none'
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Real Views
+            </label>
+            <input
+              type="number"
+              value={content?.realViews || 0}
+              readOnly
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none',
+                background: '#f3f4f6',
+                color: '#6b7280'
               }}
             />
           </div>

@@ -138,75 +138,75 @@ const createContent = async (contentData, adminId, files = {}) => {
     // START ASYNC HLS PROCESSING
     // 1. Process main video
     if (files.video) {
-        mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
-            if (hlsUrl) {
-                const updatedContent = await Content.findByIdAndUpdate(
-                    content._id, 
-                    { 'video.hls_url': hlsUrl, status: 'published' },
-                    { new: true }
-                ).exec();
-                
-                console.log(`HLS Master synced and Published for: ${content.title}`);
+      mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
+        if (hlsUrl) {
+          const updatedContent = await Content.findByIdAndUpdate(
+            content._id,
+            { 'video.hls_url': hlsUrl, status: 'published' },
+            { new: true }
+          ).exec();
 
-                // Send push notification only NOW when it's actually ready
-                const { notifyAllUsers } = require('../utils/notificationHelper');
-                if (updatedContent && updatedContent.status === 'published') {
-                    notifyAllUsers({
-                        title: `New ${updatedContent.type || 'Movie'} Released!`,
-                        body: updatedContent.title,
-                        imageUrl: updatedContent.poster?.url || updatedContent.poster?.secure_url,
-                        data: {
-                            type: 'content',
-                            id: updatedContent._id.toString(),
-                            link: `/content/${updatedContent._id}`
-                        }
-                    });
-                }
-            }
-        });
+          console.log(`HLS Master synced and Published for: ${content.title}`);
+
+          // Send push notification only NOW when it's actually ready
+          const { notifyAllUsers } = require('../utils/notificationHelper');
+          if (updatedContent && updatedContent.status === 'published') {
+            notifyAllUsers({
+              title: `New ${updatedContent.type || 'Movie'} Released!`,
+              body: updatedContent.title,
+              imageUrl: updatedContent.poster?.url || updatedContent.poster?.secure_url,
+              data: {
+                type: 'content',
+                id: updatedContent._id.toString(),
+                link: `/content/${updatedContent._id}`
+              }
+            });
+          }
+        }
+      });
     }
 
     // 2. Process episode videos sequentially in background to save CPU
     if (content.type === 'series' || content.type === 'hindi_series') {
-        (async () => {
-            for (let sIdx = 0; sIdx < content.seasons.length; sIdx++) {
-                const season = content.seasons[sIdx];
-                for (let eIdx = 0; eIdx < season.episodes.length; eIdx++) {
-                    const episode = season.episodes[eIdx];
-                    const fileField = `season_${sIdx}_episode_${eIdx}_video`;
-                    if (files[fileField]) {
-                        try {
-                            const hlsUrl = await mediaService.handleVideoHLS(files[fileField].path, episode._id, 'episode');
-                            if (hlsUrl) {
-                                await Content.updateOne(
-                                    { _id: content._id, "seasons.episodes._id": episode._id },
-                                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
-                                    { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
-                                ).exec();
-                            }
-                        } catch (err) {
-                            console.error(`[HLS] Error in sequential backup:`, err);
-                        }
-                    }
+      (async () => {
+        for (let sIdx = 0; sIdx < content.seasons.length; sIdx++) {
+          const season = content.seasons[sIdx];
+          for (let eIdx = 0; eIdx < season.episodes.length; eIdx++) {
+            const episode = season.episodes[eIdx];
+            const fileField = `season_${sIdx}_episode_${eIdx}_video`;
+            if (files[fileField]) {
+              try {
+                const hlsUrl = await mediaService.handleVideoHLS(files[fileField].path, episode._id, 'episode');
+                if (hlsUrl) {
+                  await Content.updateOne(
+                    { _id: content._id, "seasons.episodes._id": episode._id },
+                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
+                    { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
+                  ).exec();
                 }
+              } catch (err) {
+                console.error(`[HLS] Error in sequential backup:`, err);
+              }
             }
-        })();
+          }
+        }
+      })();
     }
 
     // Send immediate notification for Web Series or Content without a main video upload
     if (content.status === 'published' && !files.video) {
-        const { notifyAllUsers } = require('../utils/notificationHelper');
-        const hydrated = hydrateContent(content);
-        notifyAllUsers({
-            title: `New ${content.type === 'series' || content.type === 'hindi_series' ? 'Series' : 'Movie'} Released!`,
-            body: content.title,
-            imageUrl: hydrated.poster?.url || hydrated.poster?.secure_url,
-            data: {
-                type: 'content',
-                id: content._id.toString(),
-                link: `/content/${content._id}`
-            }
-        });
+      const { notifyAllUsers } = require('../utils/notificationHelper');
+      const hydrated = hydrateContent(content);
+      notifyAllUsers({
+        title: `New ${content.type === 'series' || content.type === 'hindi_series' ? 'Series' : 'Movie'} Released!`,
+        body: content.title,
+        imageUrl: hydrated.poster?.url || hydrated.poster?.secure_url,
+        data: {
+          type: 'content',
+          id: content._id.toString(),
+          link: `/content/${content._id}`
+        }
+      });
     }
 
     return hydrateContent(content);
@@ -241,39 +241,39 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
 
     // Process main video HLS if updated
     if (files.video) {
-        mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
-            if (hlsUrl) {
-                await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
-            }
-        });
+      mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
+        if (hlsUrl) {
+          await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
+        }
+      });
     }
 
     // Process updated episodes HLS in background sequentially to avoid CPU pinning
     (async () => {
-        const fileKeys = Object.keys(files);
-        for (const key of fileKeys) {
-            const match = key.match(/^season_(\d+)_episode_(\d+)_video$/);
-            if (match) {
-                const sIdx = parseInt(match[1]);
-                const eIdx = parseInt(match[2]);
-                const season = content.seasons[sIdx];
-                const episode = season?.episodes?.[eIdx];
-                if (episode) {
-                    try {
-                        const hlsUrl = await mediaService.handleVideoHLS(files[key].path, episode._id, 'episode');
-                        if (hlsUrl) {
-                            await Content.updateOne(
-                                { _id: content._id },
-                                { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
-                                { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
-                            ).exec();
-                        }
-                    } catch (err) {
-                        console.error(`[HLS] Failed episode conversion:`, err);
-                    }
-                }
+      const fileKeys = Object.keys(files);
+      for (const key of fileKeys) {
+        const match = key.match(/^season_(\d+)_episode_(\d+)_video$/);
+        if (match) {
+          const sIdx = parseInt(match[1]);
+          const eIdx = parseInt(match[2]);
+          const season = content.seasons[sIdx];
+          const episode = season?.episodes?.[eIdx];
+          if (episode) {
+            try {
+              const hlsUrl = await mediaService.handleVideoHLS(files[key].path, episode._id, 'episode');
+              if (hlsUrl) {
+                await Content.updateOne(
+                  { _id: content._id },
+                  { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
+                  { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
+                ).exec();
+              }
+            } catch (err) {
+              console.error(`[HLS] Failed episode conversion:`, err);
             }
+          }
         }
+      }
     })();
 
     return hydrateContent(content);
@@ -304,8 +304,8 @@ const toggleContentStatus = async (contentId, status) => {
 
 // Analytics helper
 const getContentAnalytics = async () => {
-    const stats = await Content.aggregate([{ $group: { _id: null, total: { $sum: 1 }, views: { $sum: "$views" } } }]);
-    return stats[0] || { total: 0, views: 0 };
+  const stats = await Content.aggregate([{ $group: { _id: null, total: { $sum: 1 }, views: { $sum: "$views" } } }]);
+  return stats[0] || { total: 0, views: 0 };
 };
 
 // UTILS

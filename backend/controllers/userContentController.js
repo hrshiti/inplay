@@ -394,7 +394,7 @@ const incrementViews = async (req, res) => {
   try {
     const content = await Content.findByIdAndUpdate(
       req.params.id,
-      { $inc: { views: 1 } },
+      { $inc: { views: 1, realViews: 1 } },
       { new: true }
     );
 

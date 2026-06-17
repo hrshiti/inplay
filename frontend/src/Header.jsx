@@ -12,11 +12,11 @@ const Header = ({ currentUser, onLoginClick }) => {
             <div className="brand-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
                 <img src={headerLogo} alt="InPlay" className="brand-logo-image" style={{ height: '30px' }} />
             </div>
-            
-            <div 
+
+            <div
                 onClick={() => navigate('/search')}
-                style={{ 
-                    cursor: 'pointer', 
+                style={{
+                    cursor: 'pointer',
                     padding: '8px',
                     display: 'flex',
                     alignItems: 'center',

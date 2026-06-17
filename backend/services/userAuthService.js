@@ -199,7 +199,7 @@ const getUserProfile = async (userId) => {
       if (!list || !Array.isArray(list) || list.length === 0) return [];
 
       const [contentItems, quickByteItems, forYouItems] = await Promise.all([
-        Content.find({ _id: { $in: list } }).select('title poster thumbnail type category isMovie isTV isBhojpuriHero isShortFilm backdrop image video seasons').lean(),
+        Content.find({ _id: { $in: list } }).select('title poster thumbnail type backdrop image video seasons').lean(),
         QuickByte.find({ _id: { $in: list } }).select('title video thumbnail type likes views').lean(),
         ForYou.find({ _id: { $in: list } }).select('title video thumbnail type likes views').lean()
       ]);
@@ -228,7 +228,7 @@ const getUserProfile = async (userId) => {
     const watchedContentMap = new Map();
     // Fetch all content details (including QuickBytes and ForYou if possible)
     const [contentMeta, quickByteMeta, forYouMeta] = await Promise.all([
-      Content.find({ _id: { $in: watchHistoryIds } }).select('title poster thumbnail type category isMovie isTV isBhojpuriHero isShortFilm backdrop image video seasons').lean(),
+      Content.find({ _id: { $in: watchHistoryIds } }).select('title poster thumbnail type backdrop image video seasons').lean(),
       QuickByte.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type likes views').lean(),
       ForYou.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type likes views').lean()
     ]);
@@ -504,7 +504,7 @@ const toggleLike = async (userId, contentId) => {
 // Save FCM Token
 const saveFCMToken = async (userId, token, rawPlatform = 'web', userAgent = '') => {
   let platform = (rawPlatform || 'web').toLowerCase();
-  
+
   // Backend fallback: if frontend says 'web' but User-Agent looks like mobile, override it
   if (platform === 'web' && userAgent) {
     if (/Android|iPhone|iPad|iPod|Mobile|wv|apk|app/i.test(userAgent)) {
@@ -514,7 +514,7 @@ const saveFCMToken = async (userId, token, rawPlatform = 'web', userAgent = '') 
   }
 
   console.log(`[FCM] Saving token for user ${userId}, platform: ${platform}, User-Agent: ${userAgent.substring(0, 50)}...`);
-  
+
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
 
@@ -530,12 +530,12 @@ const saveFCMToken = async (userId, token, rawPlatform = 'web', userAgent = '') 
   // Add token if not exists
   if (!user[field].includes(token)) {
     user[field].push(token);
-    
+
     // Limit to 10 tokens per platform
     if (user[field].length > 10) {
       user[field] = user[field].slice(-10);
     }
-    
+
     // Mark the field as modified (Mongoose requirement for arrays)
     user.markModified(field);
     await user.save();

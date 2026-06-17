@@ -4,6 +4,7 @@ import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check }
 import { MOVIES } from './data';
 import { getImageUrl } from './utils/imageUtils';
 import contentService from './services/api/contentService';
+import AdPlaceholder from './components/AdPlaceholder';
 
 export default function MovieDetailsPage({
     movie,
@@ -315,6 +316,9 @@ export default function MovieDetailsPage({
                         }
                     }} />
                 </div>
+
+                {/* Flutter AdMob Placeholder */}
+                <AdPlaceholder pageName="content-details" height={60} />
 
                 {/* Tabs */}
                 <div style={{ borderTop: '1px solid #333', paddingTop: '0px' }}>

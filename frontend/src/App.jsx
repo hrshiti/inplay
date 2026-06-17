@@ -48,6 +48,7 @@ import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, reques
 
 import Header from './Header';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
+import AdPlaceholder from './components/AdPlaceholder';
 import FloatingAudioPlayer from './components/FloatingAudioPlayer';
 import socketService from './services/socketService';
 import { trackLogout, trackAddToWatchlist, trackRemoveFromWatchlist, trackLikeVideo, trackUnlikeVideo } from './utils/analytics';
@@ -1117,66 +1118,66 @@ function App() {
                           if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
                           return true;
                         }).length > 0 && (
-                          <section className="section" style={{
-                            marginTop: '10px',
-                            background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
-                            paddingTop: '20px',
-                            paddingBottom: '20px',
-                            margin: '0 -16px', // Negative margin to stretch full width if container has padding
-                            paddingLeft: '16px',
-                            paddingRight: '16px'
-                          }}>
-                            <div className="section-header" style={{ marginBottom: '10px' }}>
-                              <h2 className="section-title">Continue Watching</h2>
-                              <span style={{ fontSize: '18px', color: '#888' }}>›</span>
-                            </div>
-                            <div className="horizontal-list hide-scrollbar">
-                              {continueWatching.filter(show => {
-                                if (activeFilter === 'Home' || activeFilter === 'All') return true;
-                                if (activeFilter === 'InPlay Cinema') return show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.isMovie;
-                                if (activeFilter === 'InPlay Bhojpuri') return show.type === 'bhojpuri' || show.category === 'Bhojpuri';
-                                if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
-                                return true;
-                              }).map(show => (
-                                <motion.div
-                                  key={show.id}
-                                  className="continue-card"
-                                  whileTap={{ scale: 0.95 }}
-                                  style={{ minWidth: '140px', marginRight: '16px', position: 'relative', cursor: 'pointer' }}
-                                  onClick={() => handleContentSelect(show)}
-                                >
-                                  <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
-                                    <img
-                                      src={getImageUrl(show.image)}
-                                      alt={show.title}
-                                      className="poster-img"
-                                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
-                                      onError={(e) => { e.target.src = 'https://placehold.co/200x300/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
-                                    />
-                                    {/* Play Overlay */}
-                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
-                                      <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '50%', backdropFilter: 'blur(5px)' }}>
-                                        <Play size={20} fill="white" />
+                            <section className="section" style={{
+                              marginTop: '10px',
+                              background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
+                              paddingTop: '20px',
+                              paddingBottom: '20px',
+                              margin: '0 -16px', // Negative margin to stretch full width if container has padding
+                              paddingLeft: '16px',
+                              paddingRight: '16px'
+                            }}>
+                              <div className="section-header" style={{ marginBottom: '10px' }}>
+                                <h2 className="section-title">Continue Watching</h2>
+                                <span style={{ fontSize: '18px', color: '#888' }}>›</span>
+                              </div>
+                              <div className="horizontal-list hide-scrollbar">
+                                {continueWatching.filter(show => {
+                                  if (activeFilter === 'Home' || activeFilter === 'All') return true;
+                                  if (activeFilter === 'InPlay Cinema') return show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.isMovie;
+                                  if (activeFilter === 'InPlay Bhojpuri') return show.type === 'bhojpuri' || show.category === 'Bhojpuri';
+                                  if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
+                                  return true;
+                                }).map(show => (
+                                  <motion.div
+                                    key={show.id}
+                                    className="continue-card"
+                                    whileTap={{ scale: 0.95 }}
+                                    style={{ minWidth: '140px', marginRight: '16px', position: 'relative', cursor: 'pointer' }}
+                                    onClick={() => handleContentSelect(show)}
+                                  >
+                                    <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
+                                      <img
+                                        src={getImageUrl(show.image)}
+                                        alt={show.title}
+                                        className="poster-img"
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                                        onError={(e) => { e.target.src = 'https://placehold.co/200x300/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
+                                      />
+                                      {/* Play Overlay */}
+                                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                                        <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '50%', backdropFilter: 'blur(5px)' }}>
+                                          <Play size={20} fill="white" />
+                                        </div>
+                                      </div>
+
+                                      {/* Progress Bar */}
+                                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: 'rgba(255,255,255,0.3)' }}>
+                                        <div style={{ width: `${show.progress}%`, height: '100%', background: '#ff0000' }} />
+                                      </div>
+
+                                      {/* Text Info Overlay */}
+                                      <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px', zIndex: 2 }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.8)', lineHeight: '1.2' }}>
+                                          {show.title}
+                                        </div>
                                       </div>
                                     </div>
-
-                                    {/* Progress Bar */}
-                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: 'rgba(255,255,255,0.3)' }}>
-                                      <div style={{ width: `${show.progress}%`, height: '100%', background: '#ff0000' }} />
-                                    </div>
-
-                                    {/* Text Info Overlay */}
-                                    <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px', zIndex: 2 }}>
-                                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.8)', lineHeight: '1.2' }}>
-                                        {show.title}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </div>
-                          </section>
-                        )}
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </section>
+                          )}
 
 
                         {/* Quick Bites (Vertical Content) Section */}
@@ -1267,9 +1268,9 @@ function App() {
                                           {verticalItem.title}
                                         </span>
                                         <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        {verticalItem.views > 0 && (
-                                          <><Eye size={10} /> {formatViews(verticalItem.views)} Views</>
-                                        )}
+                                          {verticalItem.views > 0 && (
+                                            <><Eye size={10} /> {formatViews(verticalItem.views)} Views</>
+                                          )}
                                         </span>
                                       </div>
                                     </motion.div>
@@ -1287,128 +1288,128 @@ function App() {
                           if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
                           return true;
                         }).length > 0 && (
-                          <section className="section" style={{ marginBottom: '32px', marginTop: '20px' }}>
-                            <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
-                                <h2 className="section-title" style={{ fontSize: '1.1rem' }}>Continue Watching</h2>
+                            <section className="section" style={{ marginBottom: '32px', marginTop: '20px' }}>
+                              <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
+                                  <h2 className="section-title" style={{ fontSize: '1.1rem' }}>Continue Watching</h2>
+                                </div>
                               </div>
-                            </div>
-                            <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
-                              {qbContinueWatching.filter(item => {
-                                if (activeFilter === 'Home' || activeFilter === 'All') return true;
-                                if (activeFilter === 'InPlay Cinema') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'new_release';
-                                if (activeFilter === 'InPlay Bhojpuri') return item.type === 'bhojpuri' || item.category === 'Bhojpuri';
-                                if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
-                                return true;
-                              }).map((item, index) => {
-                                // Get the proper image from the QuickByte data
-                                const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
+                              <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
+                                {qbContinueWatching.filter(item => {
+                                  if (activeFilter === 'Home' || activeFilter === 'All') return true;
+                                  if (activeFilter === 'InPlay Cinema') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'new_release';
+                                  if (activeFilter === 'InPlay Bhojpuri') return item.type === 'bhojpuri' || item.category === 'Bhojpuri';
+                                  if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
+                                  return true;
+                                }).map((item, index) => {
+                                  // Get the proper image from the QuickByte data
+                                  const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
 
-                                // Get the episode duration from episodes array
-                                let episodeDuration = item.duration || 0;
-                                if (item.episodes && item.episodes[item.episodeIndex]) {
-                                  episodeDuration = item.episodes[item.episodeIndex].duration || episodeDuration;
-                                } else if (item.video?.duration) {
-                                  episodeDuration = item.video.duration;
-                                }
-
-                                // Calculate formatted duration for display
-                                const formatDuration = (seconds) => {
-                                  if (!seconds) return '0m';
-                                  const mins = Math.floor(seconds / 60);
-                                  const secs = Math.floor(seconds % 60);
-                                  if (mins > 0) {
-                                    return `${mins}m ${secs}s`;
+                                  // Get the episode duration from episodes array
+                                  let episodeDuration = item.duration || 0;
+                                  if (item.episodes && item.episodes[item.episodeIndex]) {
+                                    episodeDuration = item.episodes[item.episodeIndex].duration || episodeDuration;
+                                  } else if (item.video?.duration) {
+                                    episodeDuration = item.video.duration;
                                   }
-                                  return `${secs}s`;
-                                };
 
-                                const isCinema = activeFilter === 'InPlay Cinema';
-                                const cardWidth = isCinema ? '180px' : '120px';
-                                const cardHeight = isCinema ? '120px' : '210px';
+                                  // Calculate formatted duration for display
+                                  const formatDuration = (seconds) => {
+                                    if (!seconds) return '0m';
+                                    const mins = Math.floor(seconds / 60);
+                                    const secs = Math.floor(seconds % 60);
+                                    if (mins > 0) {
+                                      return `${mins}m ${secs}s`;
+                                    }
+                                    return `${secs}s`;
+                                  };
 
-                                return (
-                                  <motion.div
-                                    key={item._id || item.id || index}
-                                    whileHover={{ scale: 1.05, y: -5 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleResumeQuickByte(item)}
-                                    style={{
-                                      flex: `0 0 ${cardWidth}`,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '10px'
-                                    }}
-                                  >
-                                    <div style={{
-                                      width: cardWidth,
-                                      height: cardHeight,
-                                      borderRadius: '16px',
-                                      overflow: 'hidden',
-                                      position: 'relative',
-                                      boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
-                                      border: '1px solid rgba(255,255,255,0.1)'
-                                    }}>
-                                      <img
-                                        src={getImageUrl(image)}
-                                        alt={item.title}
-                                        style={{ width: '100%', height: '100%', objectFit: isCinema ? 'cover' : 'contain', objectPosition: 'center top', background: '#000' }}
-                                        onError={(e) => { e.target.src = 'https://placehold.co/150x267/333/FFF?text=' + (item.title || 'InPlay')?.substring(0, 5) }}
-                                      />
+                                  const isCinema = activeFilter === 'InPlay Cinema';
+                                  const cardWidth = isCinema ? '180px' : '120px';
+                                  const cardHeight = isCinema ? '120px' : '210px';
 
-                                      <div style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)',
+                                  return (
+                                    <motion.div
+                                      key={item._id || item.id || index}
+                                      whileHover={{ scale: 1.05, y: -5 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleResumeQuickByte(item)}
+                                      style={{
+                                        flex: `0 0 ${cardWidth}`,
+                                        cursor: 'pointer',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        justifyContent: 'flex-end',
-                                        padding: '10px'
-                                      }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-
-                                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
-                                            {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
-                                          </span>
-                                        </div>
-
-                                        {episodeDuration && item.watchedSeconds !== undefined && (
-                                          <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${Math.min((item.watchedSeconds / episodeDuration) * 100, 100)}%`, height: '100%', background: '#e50914' }}></div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                      <span style={{
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        color: '#fff',
-                                        textAlign: 'left',
-                                        maxWidth: '100%',
-                                        whiteSpace: 'nowrap',
+                                        gap: '10px'
+                                      }}
+                                    >
+                                      <div style={{
+                                        width: cardWidth,
+                                        height: cardHeight,
+                                        borderRadius: '16px',
                                         overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
+                                        position: 'relative',
+                                        boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
                                       }}>
-                                        {item.title}
-                                      </span>
-                                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      {item.views > 0 ? (
-                                        <><Eye size={10} /> {formatViews(item.views)} Views • {formatDuration(episodeDuration)}</>
-                                      ) : (
-                                        <>{formatDuration(episodeDuration)}</>
-                                      )}
-                                      </span>
-                                    </div>
-                                  </motion.div>
-                                )
-                              })}
-                            </div>
-                          </section>
-                        )}
+                                        <img
+                                          src={getImageUrl(image)}
+                                          alt={item.title}
+                                          style={{ width: '100%', height: '100%', objectFit: isCinema ? 'cover' : 'contain', objectPosition: 'center top', background: '#000' }}
+                                          onError={(e) => { e.target.src = 'https://placehold.co/150x267/333/FFF?text=' + (item.title || 'InPlay')?.substring(0, 5) }}
+                                        />
+
+                                        <div style={{
+                                          position: 'absolute',
+                                          inset: 0,
+                                          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          justifyContent: 'flex-end',
+                                          padding: '10px'
+                                        }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+
+                                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>
+                                              {item.episodeIndex !== undefined ? `Ep ${item.episodeIndex + 1}` : ''}
+                                            </span>
+                                          </div>
+
+                                          {episodeDuration && item.watchedSeconds !== undefined && (
+                                            <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                                              <div style={{ width: `${Math.min((item.watchedSeconds / episodeDuration) * 100, 100)}%`, height: '100%', background: '#e50914' }}></div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <span style={{
+                                          fontSize: '12px',
+                                          fontWeight: '700',
+                                          color: '#fff',
+                                          textAlign: 'left',
+                                          maxWidth: '100%',
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis'
+                                        }}>
+                                          {item.title}
+                                        </span>
+                                        <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          {item.views > 0 ? (
+                                            <><Eye size={10} /> {formatViews(item.views)} Views • {formatDuration(episodeDuration)}</>
+                                          ) : (
+                                            <>{formatDuration(episodeDuration)}</>
+                                          )}
+                                        </span>
+                                      </div>
+                                    </motion.div>
+                                  )
+                                })}
+                              </div>
+                            </section>
+                          )}
 
                         {/* Promotion & Ads Section */}
                         {/* Promotion & Ads Section */}
@@ -2627,7 +2628,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       {/* Dynamic Bhojpuri Sections */}
       {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && (
         <div style={{ marginTop: '24px' }}>
-          
+
           {/* Continue Watching (Bhojpuri) Section */}
           {continueWatching && continueWatching.filter(show => show.type === 'bhojpuri' || show.category === 'Bhojpuri').length > 0 && (
             <section className="section" style={{
@@ -2709,6 +2710,13 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
             </section>
           )}
 
+          {/* Flutter AdMob Placeholder for InPlay Bhojpuri */}
+          {activeFilter === 'InPlay Bhojpuri' && (
+            <div style={{ marginTop: '16px' }}>
+              <AdPlaceholder pageName="inplay-bhojpuri" height={60} />
+            </div>
+          )}
+
           {bhojpuriSections && bhojpuriSections.length > 0 && bhojpuriSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
             <section key={section._id} className="section" style={{ marginBottom: '24px' }}>
               <div className="section-header">
@@ -2752,6 +2760,13 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               </div>
             </section>
           ))}
+        </div>
+      )}
+
+      {/* Flutter AdMob Placeholder for InPlay Cinema */}
+      {activeFilter === 'InPlay Cinema' && (
+        <div style={{ marginTop: '16px' }}>
+          <AdPlaceholder pageName="inplay-cinema" height={60} />
         </div>
       )}
 
@@ -2838,4 +2853,3 @@ function AppWithAudioProvider() {
 }
 
 export default AppWithAudioProvider;
-
