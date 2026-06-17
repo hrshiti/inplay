@@ -78,10 +78,18 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     useEffect(() => {
         const handleFullScreenChange = () => {
-            setIsFullScreen(!!document.fullscreenElement);
+            const isFull = !!document.fullscreenElement || !!document.webkitFullscreenElement;
+            setIsFullScreen(isFull);
+            if (!isFull && window.screen && screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
         };
         document.addEventListener('fullscreenchange', handleFullScreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullScreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullScreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullScreenChange);
+        };
     }, []);
 
     // Define Icon Sizes based on mode
@@ -486,24 +494,36 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const mainContainerRef = useRef(null);
     const [showEpisodeList, setShowEpisodeList] = useState(false);
 
-    const toggleFullScreen = (e) => {
-        e.stopPropagation();
+    const toggleFullScreen = async (e) => {
+        if (e) e.stopPropagation();
         const el = mainContainerRef.current;
         const videoEl = videoRef.current;
         // iOS Safari uses webkitEnterFullscreen on the video element itself
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
             if (el && el.requestFullscreen) {
-                el.requestFullscreen().catch(err => console.error(err));
+                await el.requestFullscreen().catch(err => console.error(err));
             } else if (el && el.webkitRequestFullscreen) {
                 el.webkitRequestFullscreen(); // Safari desktop
             } else if (videoEl && videoEl.webkitEnterFullscreen) {
                 videoEl.webkitEnterFullscreen(); // iOS Safari
+            }
+
+            if (!isVertical && window.screen && screen.orientation && screen.orientation.lock) {
+                try {
+                    await screen.orientation.lock('landscape');
+                } catch (err) {
+                    console.warn("Screen orientation lock failed:", err);
+                }
             }
         } else {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
             } else if (document.webkitExitFullscreen) {
                 document.webkitExitFullscreen();
+            }
+
+            if (window.screen && screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
             }
         }
     };
