@@ -1,74 +1,96 @@
 import React, { useEffect, useRef } from 'react';
 
+const canCallFlutter = () =>
+  window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function';
+
+const callUpdateAdPosition = (payload) => {
+  if (canCallFlutter()) {
+    window.flutter_inappwebview.callHandler('updateAdPosition', payload);
+  }
+};
+
 /**
  * AdPlaceholder
  * Creates an empty space in the React DOM and continuously syncs its Y-coordinate
  * to the Flutter layer so that a Native AdMob Banner can be overlaid exactly on top of it.
  */
-const AdPlaceholder = ({ pageName, height = 60 }) => {
+const AdPlaceholder = ({ pageName, height = 60, scrollContainerRef }) => {
   const adPlaceholderRef = useRef(null);
+  const bridgeReadyRef = useRef(canCallFlutter());
 
   useEffect(() => {
     let animationFrameId;
+    let resizeObserver;
 
     const sendPositionToFlutter = () => {
-      if (adPlaceholderRef.current) {
-        const rect = adPlaceholderRef.current.getBoundingClientRect();
-        
-        // Send Y position to Flutter via Javascript bridge
-        if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-           window.flutter_inappwebview.callHandler('updateAdPosition', {
-             page: pageName,
-             y: rect.top,
-             // Optional: send visible flag so flutter knows if it's currently on screen
-             visible: rect.top < window.innerHeight && rect.bottom > 0
-           });
-        }
-      }
+      if (!bridgeReadyRef.current || !adPlaceholderRef.current) return;
+
+      const rect = adPlaceholderRef.current.getBoundingClientRect();
+
+      callUpdateAdPosition({
+        page: pageName,
+        y: rect.top,
+        visible: rect.top < window.innerHeight && rect.bottom > 0,
+      });
     };
 
-    // Use requestAnimationFrame for smoother scroll handling without blocking main thread
     const handleScroll = () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       animationFrameId = requestAnimationFrame(sendPositionToFlutter);
     };
 
-    // Send initial position immediately
-    sendPositionToFlutter();
-    
-    // Add event listeners. Passive: true improves scrolling performance
+    const onBridgeReady = () => {
+      bridgeReadyRef.current = true;
+      sendPositionToFlutter();
+    };
+
+    const scrollContainer = scrollContainerRef?.current;
+
+    if (canCallFlutter()) {
+      bridgeReadyRef.current = true;
+    }
+
+    window.addEventListener('flutterInAppWebViewPlatformReady', onBridgeReady);
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll);
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    sendPositionToFlutter();
+
+    if (adPlaceholderRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(handleScroll);
+      resizeObserver.observe(adPlaceholderRef.current);
+    }
 
     return () => {
+      window.removeEventListener('flutterInAppWebViewPlatformReady', onBridgeReady);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      
-      // When unmounting, tell flutter to hide the ad
-      if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-         window.flutter_inappwebview.callHandler('updateAdPosition', {
-           page: pageName,
-           y: -1000,
-           visible: false
-         });
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
       }
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      resizeObserver?.disconnect();
+
+      callUpdateAdPosition({ page: pageName, y: -1000, visible: false });
     };
-  }, [pageName]);
+  }, [pageName, scrollContainerRef]);
 
   return (
-    <div 
-      ref={adPlaceholderRef} 
+    <div
+      ref={adPlaceholderRef}
       className="flutter-ad-placeholder"
-      style={{ 
-        width: '100%', 
-        height: `${height}px`, 
-        margin: '12px 0', 
+      style={{
+        width: '100%',
+        height: `${height}px`,
+        margin: '12px 0',
         background: 'transparent',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
-      }} 
+        justifyContent: 'center',
+      }}
     />
   );
 };

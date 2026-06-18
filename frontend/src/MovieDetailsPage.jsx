@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { MOVIES } from './data';
@@ -28,6 +28,7 @@ export default function MovieDetailsPage({
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     const [similarContent, setSimilarContent] = useState([]);
+    const scrollContainerRef = useRef(null);
 
     // Fetch full details (Cast, Producer, etc might be missing in list view)
     useEffect(() => {
@@ -94,6 +95,7 @@ export default function MovieDetailsPage({
 
     return (
         <motion.div
+            ref={scrollContainerRef}
             className="movie-details-page"
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
@@ -318,7 +320,7 @@ export default function MovieDetailsPage({
                 </div>
 
                 {/* Flutter AdMob Placeholder */}
-                <AdPlaceholder pageName="content-details" height={60} />
+                <AdPlaceholder pageName="content-details" height={60} scrollContainerRef={scrollContainerRef} />
 
                 {/* Tabs */}
                 <div style={{ borderTop: '1px solid #333', paddingTop: '0px' }}>
