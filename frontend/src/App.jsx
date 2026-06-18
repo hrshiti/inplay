@@ -2889,36 +2889,48 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 <h2 className="section-title">Continue Watching</h2>
                 <span style={{ fontSize: '18px', color: '#888' }}>›</span>
               </div>
-              <div className="horizontal-list hide-scrollbar">
+              <div className="horizontal-list hide-scrollbar" style={{ gap: '12px', paddingBottom: '10px' }}>
                 {continueWatching.filter(show => 
                   (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
-                ).map(show => (
+                ).map((show, index) => {
+                  const formatDuration = (seconds) => {
+                    if (!seconds) return '0m';
+                    const mins = Math.floor(seconds / 60);
+                    const secs = Math.floor(seconds % 60);
+                    if (mins > 0) return `${mins}m ${secs}s`;
+                    return `${secs}s`;
+                  };
+                  return (
                   <motion.div
-                    key={`cinema-cw-${show.id}`}
-                    className="continue-card"
+                    key={`cinema-cw-${show.id || index}`}
+                    whileHover={{ scale: 1.05, y: -5 }}
                     whileTap={{ scale: 0.95 }}
-                    style={{ minWidth: '140px', marginRight: '16px', position: 'relative', cursor: 'pointer' }}
                     onClick={() => setSelectedMovie(show)}
+                    style={{ flex: '0 0 120px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px' }}
                   >
-                    <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
+                    <div style={{ width: '120px', height: '180px', borderRadius: '12px', overflow: 'hidden', position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <img
-                        src={getImageUrl(show.image)}
+                        src={getImageUrl(show.image || show.poster?.url)}
                         alt={show.title}
-                        className="poster-img"
                         style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
-                        onError={(e) => { e.target.src = 'https://placehold.co/200x300/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
+                        onError={(e) => { e.target.src = 'https://placehold.co/120x180/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
                       />
-                      <div className="progress-bar-container">
-                        <div className="progress-bar" style={{ width: `${show.progress}%` }}></div>
-                      </div>
-                      <div className="play-icon-overlay">
-                        <div className="play-circle">
-                          <Play size={20} fill="white" stroke="none" />
-                        </div>
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
+                        {show.progress > 0 && (
+                          <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(show.progress, 100)}%`, height: '100%', background: '#e50914' }}></div>
+                          </div>
+                        )}
                       </div>
                     </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {show.views > 0 && <><Eye size={10} /> {formatViews(show.views)} Views • </>}
+                        {formatDuration(show.totalDuration || show.duration)}
+                      </span>
+                    </div>
                   </motion.div>
-                ))}
+                )})}
               </div>
             </section>
           )}
