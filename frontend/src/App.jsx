@@ -2524,13 +2524,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   }}
                 >
                   <img src={getImageUrl(movie.poster?.url || movie.poster || movie.thumbnail?.url || movie.thumbnail || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-                  {isActive && (
-                    <div className="hero-overlay" style={{ zIndex: 2 }}>
-                      <div className="hero-content">
-                        <motion.h2 className="hero-title">{movie.title}</motion.h2>
-                      </div>
-                    </div>
-                  )}
                 </motion.div>
               )
             })}
