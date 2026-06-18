@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Download, ChevronRight, Settings, User, Plus, ThumbsUp, Play } from 'lucide-react';
 import { MY_SPACE_DATA } from './data';
+import SettingsPage from './SettingsPage';
 
-export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHistory, continueWatching, currentUser }) {
+export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHistory, continueWatching, currentUser, onLogout, onUpdateUser }) {
     const [avatarError, setAvatarError] = useState(false);
     const containerRef = useRef(null);
     const navigate = useNavigate();
@@ -28,8 +29,7 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
             >
                 <motion.div
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/settings')}
-                    style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, cursor: 'default' }}
                 >
                     <div style={{ position: 'relative' }}>
                         {userAvatar && !avatarError ? (
@@ -65,14 +65,6 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
                         <h2 style={{ fontSize: '1.25rem', marginBottom: '4px' }}>{userName}</h2>
                     </div>
                 </motion.div>
-
-                <motion.button
-                    whileTap={{ scale: 0.9, rotate: 90 }}
-                    onClick={() => navigate('/settings')}
-                    style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', padding: '8px' }}
-                >
-                    <Settings size={24} />
-                </motion.button>
             </motion.div>
 
             {/* My List Section */}
@@ -120,6 +112,14 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
                     </div>
                 </Section>
             )}
+
+            {/* Embedded Settings / Account Options */}
+            <SettingsPage 
+                embedded={true} 
+                currentUser={currentUser} 
+                onLogout={onLogout} 
+                onUpdateUser={onUpdateUser} 
+            />
 
         </div>
     );

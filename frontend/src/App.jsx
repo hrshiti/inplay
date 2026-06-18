@@ -1816,6 +1816,8 @@ function App() {
                       continueWatching={continueWatching}
                       onToggleMyList={handleToggleMyList}
                       onToggleLike={handleToggleLike}
+                      onLogout={handleLogout}
+                      onUpdateUser={setCurrentUser}
                     />
                   </motion.div>
                 )}

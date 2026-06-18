@@ -9,7 +9,7 @@ import { getImageUrl } from './utils/imageUtils';
 import subscriptionService from './services/api/subscriptionService';
 import { trackProfileUpdated, trackSubscriptionCancelled } from './utils/analytics';
 
-export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
+export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embedded = false }) {
     const navigate = useNavigate();
     const [activeModal, setActiveModal] = useState(null); // 'profile', 'plan', 'notifications', 'language', 'appearance'
     const [avatarError, setAvatarError] = useState(false);
@@ -273,12 +273,14 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
 
     return (
         <div className="settings-page" style={{
-            minHeight: '100vh',
-            background: '#000',
+            minHeight: embedded ? 'auto' : '100vh',
+            background: embedded ? 'transparent' : '#000',
             color: 'white',
-            paddingBottom: '100px'
+            paddingBottom: embedded ? '20px' : '100px',
+            marginTop: embedded ? '24px' : '0'
         }}>
             {/* Header */}
+            {!embedded && (
             <header style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -299,8 +301,10 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                 </motion.button>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Settings</h2>
             </header>
+            )}
 
             {/* Profile Brief */}
+            {!embedded && (
             <div style={{ padding: '0 20px 20px' }}>
                 <div style={{
                     background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
@@ -338,7 +342,10 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                         <span style={{ fontSize: '0.9rem', color: '#888' }}>{userEmail}</span>
                     </div>
                 </div>
+            </div>
+            )}
 
+            <div style={{ padding: embedded ? '0' : '0 20px 20px' }}>
                 {/* Settings Sections */}
                 {sections.map((section, idx) => (
                     <div key={idx} style={{ marginBottom: '32px' }}>
@@ -392,7 +399,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser }) {
                     </div>
                 ))}
 
-            <div style={{ padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ padding: embedded ? '20px 0 0' : '0 24px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                     onClick={onLogout}
                     style={{
