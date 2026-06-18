@@ -166,7 +166,7 @@ const getMyList = async (req, res) => {
 // @access  Private
 const updateWatchHistory = async (req, res) => {
   try {
-    const { contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0 } = req.body;
+    const { contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0, contentType = '' } = req.body;
 
     if (!contentId || progress === undefined) {
       return res.status(400).json({
@@ -181,7 +181,8 @@ const updateWatchHistory = async (req, res) => {
       progress,
       completed,
       watchedSeconds,
-      totalDuration
+      totalDuration,
+      contentType
     );
 
     res.status(200).json({

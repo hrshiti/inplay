@@ -231,7 +231,8 @@ function ReelItem({
                 progress: completed ? 100 : progress,
                 watchedSeconds: currentTime,
                 totalDuration: duration,
-                completed: completed || progress > 90
+                completed: completed || progress > 90,
+                contentType: reel.type || (apiPrefix === 'quickbytes' ? 'quick_byte' : 'reel')
             });
         } catch (e) {
             console.error("Failed to sync reel progress", e);

@@ -228,24 +228,28 @@ const getUserProfile = async (userId) => {
     const watchedContentMap = new Map();
     // Fetch all content details (including QuickBytes and ForYou if possible)
     const [contentMeta, quickByteMeta, forYouMeta] = await Promise.all([
-      Content.find({ _id: { $in: watchHistoryIds } }).select('title poster thumbnail type backdrop image video seasons').lean(),
-      QuickByte.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type likes views').lean(),
+      Content.find({ _id: { $in: watchHistoryIds } }).select('title poster thumbnail type category backdrop image video seasons').lean(),
+      QuickByte.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type category targetCategory likes views isMovie isTV isBhojpuriHero isDarmaaHero').lean(),
       ForYou.find({ _id: { $in: watchHistoryIds } }).select('title video thumbnail type likes views').lean()
     ]);
 
-    contentMeta.forEach(i => watchedContentMap.set(i._id.toString(), { ...i, type: i.type || 'movie' }));
-    quickByteMeta.forEach(i => watchedContentMap.set(i._id.toString(), { ...i, type: 'reel' }));
-    forYouMeta.forEach(i => watchedContentMap.set(i._id.toString(), { ...i, type: 'reel' }));
+    contentMeta.forEach(i => watchedContentMap.set(i._id.toString(), { ...i, _source: 'content' }));
+    quickByteMeta.forEach(i => watchedContentMap.set(i._id.toString(), { ...i, _source: 'quickbyte' }));
+    forYouMeta.forEach(i => watchedContentMap.set(i._id.toString(), { ...i, _source: 'foryou', type: i.type || 'reel' }));
 
     const fullHistory = user.watchHistory.map(entry => {
       if (!entry.content) return null;
       const details = watchedContentMap.get(entry.content.toString());
       if (!details) return null;
+      // savedContentType: the type the frontend knew at watch time (e.g. 'bhojpuri', 'hindi_series', 'quick_byte')
+      const savedContentType = entry.contentType || '';
       return {
-        ...entry, // Contains watchedAt, progress, watchedSeconds, totalDuration, completed
+        ...entry.toObject ? entry.toObject() : entry,
         ...details,
         id: details._id,
-        image: details.poster?.url || details.thumbnail?.url || details.image
+        image: details.poster?.url || details.thumbnail?.url || details.image,
+        // contentType = ground truth for category filtering
+        contentType: savedContentType || details.type || ''
       };
     }).filter(Boolean);
 

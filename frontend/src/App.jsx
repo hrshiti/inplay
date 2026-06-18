@@ -1112,11 +1112,13 @@ function App() {
 
                         {/* Continue Watching Section */}
                         {continueWatching.filter(show => {
-                          if (activeFilter === 'Home' || activeFilter === 'All') return true;
-                          if (activeFilter === 'InPlay Cinema') return show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.isMovie;
-                          if (activeFilter === 'InPlay Bhojpuri') return show.type === 'bhojpuri' || show.category === 'Bhojpuri';
-                          if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
-                          return true;
+                          // contentType = saved at watch time (most reliable)
+                          const ct = show.contentType || show.type || '';
+                          if (activeFilter === 'Home' || activeFilter === 'All' || activeFilter === 'Popular') return true;
+                          if (activeFilter === 'InPlay Cinema') return (ct === 'movie' || ct === 'action' || ct === 'new_release' || ct === 'trending_now' || ct === 'trending_song' || show.isMovie) && ct !== 'bhojpuri';
+                          if (activeFilter === 'InPlay Bhojpuri') return ct === 'bhojpuri';
+                          if (activeFilter === 'InPlay Shorts') return ct === 'series' || ct === 'hindi_series' || show.isTV;
+                          return false;
                         }).length > 0 && (
                             <section className="section" style={{
                               marginTop: '10px',
@@ -1133,11 +1135,12 @@ function App() {
                               </div>
                               <div className="horizontal-list hide-scrollbar">
                                 {continueWatching.filter(show => {
-                                  if (activeFilter === 'Home' || activeFilter === 'All') return true;
-                                  if (activeFilter === 'InPlay Cinema') return show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.isMovie;
-                                  if (activeFilter === 'InPlay Bhojpuri') return show.type === 'bhojpuri' || show.category === 'Bhojpuri';
-                                  if (activeFilter === 'InPlay Dramaa') return show.type === 'series' || show.type === 'hindi_series' || show.isTV;
-                                  return true;
+                                  const ct = show.contentType || show.type || '';
+                                  if (activeFilter === 'Home' || activeFilter === 'All' || activeFilter === 'Popular') return true;
+                                  if (activeFilter === 'InPlay Cinema') return (ct === 'movie' || ct === 'action' || ct === 'new_release' || ct === 'trending_now' || ct === 'trending_song' || show.isMovie) && ct !== 'bhojpuri';
+                                  if (activeFilter === 'InPlay Bhojpuri') return ct === 'bhojpuri';
+                                  if (activeFilter === 'InPlay Shorts') return ct === 'series' || ct === 'hindi_series' || show.isTV;
+                                  return false;
                                 }).map(show => (
                                   <motion.div
                                     key={show.id}
@@ -1282,11 +1285,14 @@ function App() {
 
                         {/* Continue Watching (Quick Bites) Section */}
                         {qbContinueWatching.filter(item => {
-                          if (activeFilter === 'Home' || activeFilter === 'All') return true;
-                          if (activeFilter === 'InPlay Cinema') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'new_release';
-                          if (activeFilter === 'InPlay Bhojpuri') return item.type === 'bhojpuri' || item.category === 'Bhojpuri';
-                          if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
-                          return true;
+                          // For QB: use targetCategory (reliable) + contentType fallback
+                          const tc = item.targetCategory || '';
+                          const ct = item.contentType || item.type || '';
+                          if (activeFilter === 'Home' || activeFilter === 'All' || activeFilter === 'Popular') return true;
+                          if (activeFilter === 'InPlay Cinema') return (item.isMovie || ct === 'movie' || ct === 'action' || ct === 'new_release') && tc !== 'Bhojpuri' && ct !== 'bhojpuri';
+                          if (activeFilter === 'InPlay Bhojpuri') return tc === 'Bhojpuri' || item.isBhojpuriHero || ct === 'bhojpuri';
+                          if (activeFilter === 'InPlay Shorts') return tc === 'Darmaa' || tc === 'Both' || item.isDarmaaHero;
+                          return false;
                         }).length > 0 && (
                             <section className="section" style={{ marginBottom: '32px', marginTop: '20px' }}>
                               <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
@@ -1297,11 +1303,13 @@ function App() {
                               </div>
                               <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
                                 {qbContinueWatching.filter(item => {
-                                  if (activeFilter === 'Home' || activeFilter === 'All') return true;
-                                  if (activeFilter === 'InPlay Cinema') return item.isMovie || item.type === 'movie' || item.type === 'action' || item.type === 'new_release';
-                                  if (activeFilter === 'InPlay Bhojpuri') return item.type === 'bhojpuri' || item.category === 'Bhojpuri';
-                                  if (activeFilter === 'InPlay Dramaa') return item.isTV || item.type === 'series' || item.type === 'hindi_series';
-                                  return true;
+                                  const tc = item.targetCategory || '';
+                                  const ct = item.contentType || item.type || '';
+                                  if (activeFilter === 'Home' || activeFilter === 'All' || activeFilter === 'Popular') return true;
+                                  if (activeFilter === 'InPlay Cinema') return (item.isMovie || ct === 'movie' || ct === 'action' || ct === 'new_release') && tc !== 'Bhojpuri' && ct !== 'bhojpuri';
+                                  if (activeFilter === 'InPlay Bhojpuri') return tc === 'Bhojpuri' || item.isBhojpuriHero || ct === 'bhojpuri';
+                                  if (activeFilter === 'InPlay Shorts') return tc === 'Darmaa' || tc === 'Both' || item.isDarmaaHero;
+                                  return false;
                                 }).map((item, index) => {
                                   // Get the proper image from the QuickByte data
                                   const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
@@ -2513,7 +2521,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       )}
 
       {/* Continue Watching (InPlay Dramaa) Section */}
-      {activeFilter === 'InPlay Shorts' && qbContinueWatching && qbContinueWatching.length > 0 && (
+      {activeFilter === 'InPlay Shorts' && qbContinueWatching && qbContinueWatching.filter(item => item.targetCategory === 'Darmaa' || item.targetCategory === 'Both' || item.isDarmaaHero).length > 0 && (
         <div style={{ marginTop: '24px' }}>
           <section className="section" style={{ marginBottom: '24px' }}>
             <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
@@ -2523,7 +2531,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               </div>
             </div>
             <div className="horizontal-list hide-scrollbar" style={{ gap: '18px', padding: '0 20px 20px' }}>
-              {qbContinueWatching.map((item, index) => {
+              {qbContinueWatching.filter(item => item.targetCategory === 'Darmaa' || item.targetCategory === 'Both' || item.isDarmaaHero).map((item, index) => {
                 const image = item.thumbnail?.url || item.thumbnail?.secure_url || item.poster?.url || item.image || "https://placehold.co/150x267/333/FFF?text=No+Image";
                 let episodeDuration = item.duration || 0;
                 if (item.episodes && item.episodes[item.episodeIndex]) {

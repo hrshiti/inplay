@@ -361,7 +361,7 @@ const getUserMyList = async (userId) => {
 const mongoose = require('mongoose');
 
 // Update watch history
-const updateWatchHistory = async (userId, contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0) => {
+const updateWatchHistory = async (userId, contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0, contentType = '') => {
   // Only track if it's a valid MongoDB ID (ignore mock data IDs like 1, 2, etc.)
   if (!mongoose.Types.ObjectId.isValid(contentId)) {
     return { message: 'Skipping mock content tracking' };
@@ -383,12 +383,14 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
     existingEntry.watchedSeconds = watchedSeconds;
     existingEntry.totalDuration = totalDuration;
     existingEntry.watchedAt = new Date();
+    if (contentType) existingEntry.contentType = contentType;
     if (completed) existingEntry.completed = true;
     // Auto complete if progress is > 95%
     if (progress > 95) existingEntry.completed = true;
   } else {
     user.watchHistory.unshift({
       content: contentId,
+      contentType: contentType || '',
       progress,
       watchedSeconds,
       totalDuration,

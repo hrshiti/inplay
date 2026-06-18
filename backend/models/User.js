@@ -55,6 +55,10 @@ const userSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Content'
     },
+    contentType: {
+      type: String,
+      default: ''
+    },
     watchedAt: {
       type: Date,
       default: Date.now

@@ -292,7 +292,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 watchedSeconds: currentTime,
                 totalDuration: duration,
                 completed: progress > 95,
-                episodeIndex: currentIndex // Adding this for backend if supported
+                episodeIndex: currentIndex,
+                contentType: movie.type || ''
             });
             trackWatchTime({ contentId, durationWatched: currentTime });
             lastSyncTime.current = currentTime;
