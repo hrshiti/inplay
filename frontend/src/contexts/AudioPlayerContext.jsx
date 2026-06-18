@@ -26,7 +26,7 @@ export const AudioPlayerProvider = ({ children }) => {
     // Initialize audio element only once
     useEffect(() => {
         if (!isInitialized.current) {
-            console.log('Initializing audio player...');
+            // console.log('Initializing audio player...');
             audioRef.current = new Audio();
             audioRef.current.volume = 1.0;
             audioRef.current.preload = 'metadata';
@@ -41,7 +41,7 @@ export const AudioPlayerProvider = ({ children }) => {
                     if (audioRef.current.currentTime >= 3 && !viewCounted.current && lastPlayedSeriesId.current) {
                         viewCounted.current = true;
                         contentService.incrementContentView(lastPlayedSeriesId.current, 'audio-series')
-                            .then(() => console.log('Audio series view counted:', lastPlayedSeriesId.current))
+                            .then(() => { /* console.log('Audio series view counted:', lastPlayedSeriesId.current); */ })
                             .catch(err => console.error('Failed to count audio view:', err));
                     }
                 }
@@ -49,13 +49,13 @@ export const AudioPlayerProvider = ({ children }) => {
 
             audioRef.current.addEventListener('loadedmetadata', () => {
                 if (audioRef.current) {
-                    console.log('Audio metadata loaded, duration:', audioRef.current.duration);
+                    // console.log('Audio metadata loaded, duration:', audioRef.current.duration);
                     setDuration(audioRef.current.duration || 0);
                 }
             });
 
             audioRef.current.addEventListener('ended', () => {
-                console.log('Audio ended');
+                // console.log('Audio ended');
                 setIsPlaying(false);
             });
 
@@ -82,11 +82,11 @@ export const AudioPlayerProvider = ({ children }) => {
             });
 
             audioRef.current.addEventListener('canplay', () => {
-                console.log('Audio can play');
+                // console.log('Audio can play');
             });
 
             audioRef.current.addEventListener('loadstart', () => {
-                console.log('Audio load started');
+                // console.log('Audio load started');
             });
 
             isInitialized.current = true;
@@ -94,7 +94,7 @@ export const AudioPlayerProvider = ({ children }) => {
 
         return () => {
             if (audioRef.current && isInitialized.current) {
-                console.log('Cleaning up audio player...');
+                // console.log('Cleaning up audio player...');
                 audioRef.current.pause();
                 audioRef.current.src = '';
                 audioRef.current = null;
@@ -108,14 +108,14 @@ export const AudioPlayerProvider = ({ children }) => {
         if (!audioRef.current) return;
 
         const handleEnded = () => {
-            console.log('Episode ended, checking for next...');
+            // console.log('Episode ended, checking for next...');
             if (selectedSeries?.episodes && currentEpisode) {
                 const currentIndex = selectedSeries.episodes.findIndex(
                     e => e._id === currentEpisode._id
                 );
                 if (currentIndex !== -1 && currentIndex < selectedSeries.episodes.length - 1) {
                     const nextEpisode = selectedSeries.episodes[currentIndex + 1];
-                    console.log('Playing next episode:', nextEpisode.title);
+                    // console.log('Playing next episode:', nextEpisode.title);
                     playEpisode(nextEpisode, selectedSeries);
                 }
             }
@@ -137,8 +137,8 @@ export const AudioPlayerProvider = ({ children }) => {
         }
 
         try {
-            console.log('Playing episode:', episode.title);
-            console.log('Audio URL:', episode.audioUrl);
+            // console.log('Playing episode:', episode.title);
+            // console.log('Audio URL:', episode.audioUrl);
 
             const episodeWithImage = {
                 ...episode,
@@ -151,7 +151,7 @@ export const AudioPlayerProvider = ({ children }) => {
 
             // Set new source
             const audioUrl = getImageUrl(episode.audioUrl);
-            console.log('Resolved audio URL:', audioUrl);
+            // console.log('Resolved audio URL:', audioUrl);
 
             audioRef.current.src = audioUrl;
 
@@ -174,7 +174,7 @@ export const AudioPlayerProvider = ({ children }) => {
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        console.log('Playback started successfully');
+                        // console.log('Playback started successfully');
                         setIsPlaying(true);
                     })
                     .catch(error => {
@@ -196,17 +196,17 @@ export const AudioPlayerProvider = ({ children }) => {
 
         try {
             if (isPlaying) {
-                console.log('Pausing audio');
+                // console.log('Pausing audio');
                 audioRef.current.pause();
                 setIsPlaying(false);
             } else {
-                console.log('Resuming audio');
+                // console.log('Resuming audio');
                 const playPromise = audioRef.current.play();
 
                 if (playPromise !== undefined) {
                     playPromise
                         .then(() => {
-                            console.log('Playback resumed');
+                            // console.log('Playback resumed');
                             setIsPlaying(true);
                         })
                         .catch(error => {
@@ -223,7 +223,7 @@ export const AudioPlayerProvider = ({ children }) => {
 
     const seekTo = (time) => {
         if (audioRef.current && !isNaN(time)) {
-            console.log('Seeking to:', time);
+            // console.log('Seeking to:', time);
             audioRef.current.currentTime = time;
             setCurrentTime(time);
         }
@@ -270,7 +270,7 @@ export const AudioPlayerProvider = ({ children }) => {
     };
 
     const stopAudio = () => {
-        console.log('Stopping audio');
+        // console.log('Stopping audio');
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;

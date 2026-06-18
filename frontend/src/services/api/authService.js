@@ -1,4 +1,4 @@
-const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
+﻿const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
 // Remove trailing slash if exists and ensure /api suffix
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 import socketService from '../socketService';
@@ -52,7 +52,7 @@ const authService = {
 
             // If API failed but it's the default user, we provide a fallback (if specifically requested for "default login")
             if (isDefault) {
-                console.log("Using default credentials fallback");
+                // console.log("Using default credentials fallback");
                 const mockData = {
                     success: true,
                     token: 'mock_token_for_default_user',

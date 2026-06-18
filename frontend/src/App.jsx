@@ -60,7 +60,7 @@ const formatViews = (views) => {
   return views.toString();
 };
 
-console.log('🔥 [DEBUG] App.jsx bundle executed');
+// console.log('🔥 [DEBUG] App.jsx bundle executed');
 
 const FILTERS = ['All', 'Movies', 'TV Shows', 'Anime'];
 
@@ -72,7 +72,7 @@ function App() {
     const params = new URLSearchParams(location.search);
     const notificationId = params.get('notificationId');
     if (notificationId) {
-      console.log('🔔 [App] Found notificationId in URL:', notificationId);
+      // console.log('🔔 [App] Found notificationId in URL:', notificationId);
       markNotificationAsSeen(notificationId);
 
       // Clean up URL parameters dynamically
@@ -114,7 +114,7 @@ function App() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('🚀 [APP] Loading finished, showing main content');
+      // console.log('🚀 [APP] Loading finished, showing main content');
       setLoading(false);
     }, 1500); // Reduced from 3000ms for better UX
     return () => clearTimeout(timer);
@@ -423,6 +423,7 @@ function App() {
 
         setContentSections(sections);
         setAllContent(allContentData || []);
+        console.log('📢 [Ad Service] Setting promotions in App state:', promoData);
         setPromotions(promoData || []);
 
       } catch (error) {
@@ -628,12 +629,12 @@ function App() {
     // Initialize push notifications
     const initNotifications = async () => {
       try {
-        console.log('🔔 [FCM] Initializing notifications...');
+        // console.log('🔔 [FCM] Initializing notifications...');
         const permissionStatus = Notification.permission;
-        console.log('🔔 [FCM] Notification permission status:', permissionStatus);
+        // console.log('🔔 [FCM] Notification permission status:', permissionStatus);
 
         if (currentUser) {
-          console.log('🔔 [FCM] Attempting to register token with backend...');
+          // console.log('🔔 [FCM] Attempting to register token with backend...');
 
           // Connect/Register Socket for real-time events
           socketService.connect(currentUser._id || currentUser.id);
@@ -645,7 +646,7 @@ function App() {
 
           await registerFCMTokenWithBackend(currentUser._id, !hasTokens);
         } else if (!currentUser) {
-          console.log('🔔 [FCM] Skipping registration: No current user');
+          // console.log('🔔 [FCM] Skipping registration: No current user');
         }
 
         if (permissionStatus !== 'granted') {
@@ -661,7 +662,7 @@ function App() {
     // Trigger permission request on first user interaction (required for mobile browsers)
     const handleFirstInteraction = async () => {
       if (Notification.permission === 'default') {
-        console.log('👆 [FCM] User interaction detected, requesting notification permission...');
+        // console.log('👆 [FCM] User interaction detected, requesting notification permission...');
         await requestNotificationPermission();
         // After permission is granted, re-run init to get token
         initNotifications();

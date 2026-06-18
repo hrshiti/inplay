@@ -10,7 +10,11 @@ const AdCarousel = ({ promotions }) => {
     const videoRef = useRef(null);
 
     useEffect(() => {
-        if (!promotions || promotions.length === 0) return;
+        if (!promotions || promotions.length === 0) {
+            console.log('📢 [Ad Carousel] No promotions provided or promotions list is empty.');
+            return;
+        }
+        console.log('📢 [Ad Carousel] Loaded promotions list:', promotions);
 
         const interval = setInterval(() => {
             setCurrentIndex((prevIndex) => (prevIndex + 1) % promotions.length);
@@ -20,8 +24,9 @@ const AdCarousel = ({ promotions }) => {
     }, [promotions]);
 
     useEffect(() => {
-        // Simple swipe/interval logic remains the same. 
-        // HlsPlayer will handle its own manifest loading.
+        if (!promotions || promotions.length === 0) return;
+        const currentPromo = promotions[currentIndex];
+        console.log(`📢 [Ad Carousel] Active index: ${currentIndex} (${currentIndex + 1} of ${promotions.length}). Displaying Ad: "${currentPromo.title}"`, currentPromo);
     }, [currentIndex, promotions]);
 
     if (!promotions || promotions.length === 0) return null;
@@ -52,7 +57,11 @@ const AdCarousel = ({ promotions }) => {
                                 style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', background: '#111' }}
                             />
                             <button
-                                onClick={() => setIsMuted(!isMuted)}
+                                onClick={() => {
+                                    const nextMuted = !isMuted;
+                                    setIsMuted(nextMuted);
+                                    console.log(`🔊 [Ad Carousel] Volume toggled: ${nextMuted ? 'Muted' : 'Unmuted'}`);
+                                }}
                                 style={{
                                     position: 'absolute',
                                     bottom: '10px',
@@ -74,7 +83,10 @@ const AdCarousel = ({ promotions }) => {
                             src={getImageUrl(currentPromo.posterImageUrl)}
                             alt={currentPromo.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center', background: '#111' }}
-                            onError={(e) => { e.target.src = `https://placehold.co/800x450/111/FFF?text=${currentPromo.title}` }}
+                            onError={(e) => {
+                                console.error(`❌ [Ad Carousel] Error loading ad image poster for "${currentPromo.title}". Falling back to placeholder.`);
+                                e.target.src = `https://placehold.co/800x450/111/FFF?text=${currentPromo.title}`;
+                            }}
                         />
                     )}
 

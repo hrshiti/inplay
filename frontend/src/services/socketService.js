@@ -1,4 +1,4 @@
-import { io } from 'socket.io-client';
+﻿import { io } from 'socket.io-client';
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
 
@@ -18,7 +18,7 @@ let socket = null;
 const socketService = {
     connect(userId) {
         if (!socket) {
-            console.log('🔌 [Socket] Connecting to:', SOCKET_URL);
+            // console.log('🔌 [Socket] Connecting to:', SOCKET_URL);
             socket = io(SOCKET_URL, {
                 autoConnect: true,
                 reconnection: true,
@@ -31,7 +31,7 @@ const socketService = {
             });
 
             socket.on('connect', () => {
-                console.log('🔌 [Socket] Connected successfully! ID:', socket.id);
+                // console.log('🔌 [Socket] Connected successfully! ID:', socket.id);
                 if (userId) {
                     this.registerUser(userId);
                 }
@@ -42,16 +42,16 @@ const socketService = {
             });
 
             socket.on('disconnect', (reason) => {
-                console.log('🔌 [Socket] Disconnected. Reason:', reason);
+                // console.log('🔌 [Socket] Disconnected. Reason:', reason);
             });
 
             socket.on('force_logout_all', (data) => {
-                console.log('🚫 [Socket] EVENT: force_logout_all received');
+                // console.log('🚫 [Socket] EVENT: force_logout_all received');
                 this.handleForceLogout(data.message || 'FORCE_LOGOUT_ALL');
             });
 
             socket.on('force_logout', (data) => {
-                console.log('🚫 [Socket] EVENT: force_logout received');
+                // console.log('🚫 [Socket] EVENT: force_logout received');
                 this.handleForceLogout(data.message || 'FORCE_LOGOUT');
             });
         }
@@ -61,7 +61,7 @@ const socketService = {
     registerUser(userId) {
         if (socket && userId) {
             socket.emit('register', userId);
-            console.log('🔌 [Socket] Registered user room:', userId);
+            // console.log('🔌 [Socket] Registered user room:', userId);
         }
     },
 
@@ -77,7 +77,7 @@ const socketService = {
     },
 
     handleForceLogout(message) {
-        console.log('🚨 [Socket] Triggering Force Logout Cleanup');
+        // console.log('🚨 [Socket] Triggering Force Logout Cleanup');
         
         // Comprehensive list of keys to clear (matching authService.logout + extras)
         const keysToRemove = [
@@ -90,7 +90,7 @@ const socketService = {
         
         try {
             keysToRemove.forEach(k => localStorage.removeItem(k));
-            console.log('✅ [Socket] LocalStorage cleared');
+            // console.log('✅ [Socket] LocalStorage cleared');
         } catch (e) {
             console.error('❌ [Socket] Storage clear failed:', e);
             localStorage.clear(); // Nuclear option
@@ -104,7 +104,7 @@ const socketService = {
         const redirectPath = isAdmin ? '/admin/login' : '/login';
         const finalUrl = `${redirectPath}?reason=${encodeURIComponent(message)}`;
         
-        console.log('🚀 [Socket] Redirecting to:', finalUrl);
+        // console.log('🚀 [Socket] Redirecting to:', finalUrl);
 
         // For Flutter WebView, we use a more aggressive redirection
         setTimeout(() => {

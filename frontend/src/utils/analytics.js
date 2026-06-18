@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Core Analytics Module.
  * Decouples the UI components from the Firebase Analytics implementation.
  * Provides a clean, reusable API for tracking events.
@@ -30,7 +30,7 @@ const safeLogEvent = (eventName, params = {}) => {
       logEvent(analytics, eventName, eventParams);
       
       if (import.meta.env.DEV) {
-        console.log(`📊 [Analytics Debug] ${eventName}`, eventParams);
+        // console.log(`📊 [Analytics Debug] ${eventName}`, eventParams);
       }
     } catch (error) {
       console.warn(`[Analytics] Failed to log event: ${eventName}`, error);

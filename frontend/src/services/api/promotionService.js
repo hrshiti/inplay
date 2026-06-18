@@ -10,6 +10,7 @@ const getActivePromotions = async (location) => {
     try {
         const url = location ? `${API_URL}/active?location=${location}` : `${API_URL}/active`;
         const response = await axios.get(url);
+        console.log('📢 [Ad Service] Successfully fetched active promotions:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error fetching active promotions', error);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { MOVIES } from './data';
@@ -180,7 +180,7 @@ export default function MovieDetailsPage({
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
-                            console.log("Play clicked for:", displayMovie.title);
+                            // console.log("Play clicked for:", displayMovie.title);
                             if (onPlay) {
                                 // Special handling for Series (Hindi Series)
                                 if ((displayMovie.type === 'hindi_series' || displayMovie.category === 'Hindi Series') && (!displayMovie.video || displayMovie.video === '')) {
@@ -307,7 +307,7 @@ export default function MovieDetailsPage({
                                     url: window.location.href
                                 });
                             } catch (error) {
-                                console.log('Error sharing:', error);
+                                // console.log('Error sharing:', error);
                             }
                         } else {
                             // Fallback

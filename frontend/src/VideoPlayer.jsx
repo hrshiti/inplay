@@ -66,7 +66,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const videoSrc = getVideoUrl(currentItem);
     useEffect(() => {
         if (videoSrc) {
-            console.log("Playing video URL:", videoSrc);
+            // console.log("Playing video URL:", videoSrc);
         }
     }, [videoSrc]);
 
@@ -127,7 +127,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 // Intro ended or skipped, force play the main video
                 const playPromise = videoRef.current.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(e => console.log("Playback failed after intro:", e));
+                    playPromise.catch(e => { /* console.log("Playback failed after intro:", e); */ });
                 }
             }
         }
@@ -231,7 +231,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             try {
                 await contentService.incrementContentView(contentId, contentType);
                 trackVideoView({ contentId, contentType, title: movie.title });
-                console.log('View count incremented for:', contentId);
+                // console.log('View count incremented for:', contentId);
             } catch (error) {
                 console.error('Failed to track view:', error);
             }
@@ -479,11 +479,11 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                     url: window.location.href,
                 });
             } catch (error) {
-                console.log('Error sharing:', error);
+                // console.log('Error sharing:', error);
             }
         } else {
             // Fallback or explicit instruction
-            console.log("Share not supported");
+            // console.log("Share not supported");
         }
     };
 
@@ -553,7 +553,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 }
             }
         } catch (error) {
-            console.log("Rotation failed:", error);
+            // console.log("Rotation failed:", error);
         }
     };
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+﻿import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Hls from 'hls.js';
 
 const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, style = {}, onTimeUpdate, onPause, onEnded, startTime, ...props }, ref) => {
@@ -20,7 +20,7 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
         }
 
         const effectiveSrc = hlsUrl || src;
-        console.log(`[HlsPlayer] Initializing with source: ${effectiveSrc}`);
+        // console.log(`[HlsPlayer] Initializing with source: ${effectiveSrc}`);
 
         if (effectiveSrc && (effectiveSrc.includes('.m3u8') || hlsUrl)) {
             if (Hls.isSupported()) {
@@ -41,7 +41,7 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
                 hls.attachMedia(video);
                 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    console.log(`[HlsPlayer] Manifest parsed successfully for ${effectiveSrc}`);
+                    // console.log(`[HlsPlayer] Manifest parsed successfully for ${effectiveSrc}`);
                     if (startTime) {
                         video.currentTime = startTime;
                     }

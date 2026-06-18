@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Play, Pause, SkipBack, SkipForward, X, Clock, ChevronLeft } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUtils';
@@ -38,7 +38,7 @@ export default function AudioSeriesUserPage({ onBack }) {
             if (seriesId) {
                 const found = seriesList.find(s => s._id === seriesId);
                 if (found) {
-                    console.log("🔔 [AudioSeries] Auto-selecting series from URL:", seriesId);
+                    // console.log("🔔 [AudioSeries] Auto-selecting series from URL:", seriesId);
                     setSelectedSeries(found);
                     
                     // Clean up URL query parameters to look sleek
@@ -55,9 +55,9 @@ export default function AudioSeriesUserPage({ onBack }) {
 
     const fetchSeries = async () => {
         try {
-            console.log("Fetching audio series from:", API_URL);
+            // console.log("Fetching audio series from:", API_URL);
             const res = await axios.get(API_URL);
-            console.log("Audio Series Data:", res.data);
+            // console.log("Audio Series Data:", res.data);
             setSeriesList(res.data.data);
             setLoading(false);
         } catch (error) {

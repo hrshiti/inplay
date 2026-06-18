@@ -16,7 +16,7 @@ async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('✅ Service Worker registered:', registration.scope);
+            // console.log('✅ Service Worker registered:', registration.scope);
             return registration;
         } catch (error) {
             console.error('❌ Service Worker registration failed:', error);
@@ -31,7 +31,7 @@ async function registerServiceWorker() {
 async function requestNotificationPermission() {
     if ('Notification' in window) {
         const permission = await Notification.requestPermission();
-        console.log('Notification permission state:', permission);
+        // console.log('Notification permission state:', permission);
         return permission === 'granted';
     }
     return false;
@@ -63,7 +63,7 @@ async function getFCMToken() {
         });
 
         if (token) {
-            console.log('✅ FCM Token obtained:', token);
+            // console.log('✅ FCM Token obtained:', token);
             return token;
         } else {
             console.warn('❌ No FCM token available');
@@ -84,7 +84,7 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
     try {
         const authToken = localStorage.getItem('inplay_token');
         if (!authToken) {
-            console.log('No auth token found, skipping FCM registration');
+            // console.log('No auth token found, skipping FCM registration');
             return;
         }
 
@@ -112,12 +112,12 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
             platform = 'app';
         }
         
-        console.log(`📱 [FCM] Platform Detection Result: ${platform}`);
-        console.log(`📱 [FCM] Is Standalone (PWA): ${isStandalone}`);
-        console.log(`📱 [FCM] Is WebView: ${!!isWebView}`);
-        console.log(`📱 [FCM] Bridge Detected: ${!!window.InPlayMobile}`);
-        console.log(`📱 [FCM] User Agent: ${userAgent}`);
-        console.log(`📱 [FCM] Notification Permission: ${Notification.permission}`);
+        // console.log(`📱 [FCM] Platform Detection Result: ${platform}`);
+        // console.log(`📱 [FCM] Is Standalone (PWA): ${isStandalone}`);
+        // console.log(`📱 [FCM] Is WebView: ${!!isWebView}`);
+        // console.log(`📱 [FCM] Bridge Detected: ${!!window.InPlayMobile}`);
+        // console.log(`📱 [FCM] User Agent: ${userAgent}`);
+        // console.log(`📱 [FCM] Notification Permission: ${Notification.permission}`);
         
         // Use manual token if provided (from native bridge), else get from Firebase Web SDK
         let token = manualToken || await getFCMToken();
@@ -126,7 +126,7 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
         if (!token) {
             token = localStorage.getItem('last_native_fcm_token');
             if (token) {
-                console.log('📱 [FCM] Using persisted native token as fallback');
+                // console.log('📱 [FCM] Using persisted native token as fallback');
                 // If we use native token fallback, we should ensure platform is set correctly
                 if (!manualPlatform) {
                     const savedPlatform = localStorage.getItem('last_native_fcm_platform');
@@ -150,24 +150,24 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
 
         // Force cleanup if userId changed
         if (savedUserId && userId && String(savedUserId) !== String(userId)) {
-            console.log('🔄 User ID changed, clearing old FCM registration state');
+            // console.log('🔄 User ID changed, clearing old FCM registration state');
             localStorage.removeItem('fcm_token_registered');
         }
 
         // Force update if platform detection has improved (e.g., went from 'web' to 'android')
         const platformChanged = savedPlatform && savedPlatform !== platform;
         if (platformChanged) {
-            console.log(`🔄 Platform detection changed from ${savedPlatform} to ${platform}, forcing re-registration`);
+            // console.log(`🔄 Platform detection changed from ${savedPlatform} to ${platform}, forcing re-registration`);
         }
 
         // Only skip if token, platform AND userId match
         if (savedToken === token && savedPlatform === platform && String(savedUserId) === String(userId) && !forceUpdate && !platformChanged) {
-            console.log(`ℹ️ FCM token already registered locally for ${platform} (User: ${userId})`);
+            // console.log(`ℹ️ FCM token already registered locally for ${platform} (User: ${userId})`);
             return;
         }
 
         const API_URL = getApiUrl();
-        console.log(`📡 Sending ${platform} token to backend: ${API_URL}/user/auth/fcm-token`);
+        // console.log(`📡 Sending ${platform} token to backend: ${API_URL}/user/auth/fcm-token`);
 
         try {
             const response = await fetch(`${API_URL}/user/auth/fcm-token`, {
@@ -189,7 +189,7 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
                 localStorage.setItem('fcm_token_registered', token);
                 localStorage.setItem('fcm_platform', platform);
                 if (userId) localStorage.setItem('fcm_user_id', String(userId));
-                console.log(`✅ FCM token registered for ${platform} successfully`);
+                // console.log(`✅ FCM token registered for ${platform} successfully`);
             } else {
                 console.error('❌ Backend failed to save FCM token:', data.message);
             }
@@ -206,7 +206,7 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
 function setupForegroundNotificationHandler(handler) {
     // Listen for tokens from native bridge (Flutter/WebView)
     window.setMobileFCMToken = async (token) => {
-        console.log('📱 [FCM] Token received from Native Bridge');
+        // console.log('📱 [FCM] Token received from Native Bridge');
         
         // Always persist the native token so it can be used after login if needed
         if (token) {
@@ -220,16 +220,16 @@ function setupForegroundNotificationHandler(handler) {
             
             const authToken = localStorage.getItem('inplay_token');
             if (authToken) {
-                console.log('📱 [FCM] User is logged in, registering native token immediately');
+                // console.log('📱 [FCM] User is logged in, registering native token immediately');
                 await registerFCMTokenWithBackend(null, true, token, platform);
             } else {
-                console.log('📱 [FCM] User not logged in, token persisted for later registration');
+                // console.log('📱 [FCM] User not logged in, token persisted for later registration');
             }
         }
     };
 
     onMessage(messaging, (payload) => {
-        console.log('📬 Foreground message received:', payload);
+        // console.log('📬 Foreground message received:', payload);
 
         // Rely only on the beautiful in-app Toast notification when the app is in the foreground
         if (handler) handler(payload);
@@ -239,15 +239,15 @@ function setupForegroundNotificationHandler(handler) {
 // Mark notification as seen
 async function markNotificationAsSeen(notificationId) {
     try {
-        console.log(`🔔 [FCM] markNotificationAsSeen called with ID: ${notificationId}`);
+        // console.log(`🔔 [FCM] markNotificationAsSeen called with ID: ${notificationId}`);
         const authToken = localStorage.getItem('inplay_token');
         if (!authToken) {
-            console.log('🔔 [FCM] markNotificationAsSeen: No auth token found in localStorage, skipping seen API call');
+            // console.log('🔔 [FCM] markNotificationAsSeen: No auth token found in localStorage, skipping seen API call');
             return;
         }
 
         const API_URL = getApiUrl();
-        console.log(`🔔 [FCM] markNotificationAsSeen: Sending POST to ${API_URL}/user/notifications/${notificationId}/seen`);
+        // console.log(`🔔 [FCM] markNotificationAsSeen: Sending POST to ${API_URL}/user/notifications/${notificationId}/seen`);
         const response = await fetch(`${API_URL}/user/notifications/${notificationId}/seen`, {
             method: 'POST',
             headers: {
@@ -257,12 +257,12 @@ async function markNotificationAsSeen(notificationId) {
         });
 
         const resData = await response.json();
-        console.log(`🔔 [FCM] markNotificationAsSeen: Received response status ${response.status}`, resData);
+        // console.log(`🔔 [FCM] markNotificationAsSeen: Received response status ${response.status}`, resData);
 
         if (!response.ok) {
             console.warn(`🔔 [FCM] Failed to mark notification ${notificationId} as seen: ${resData.message}`);
         } else {
-            console.log(`🔔 [FCM] ✅ Notification ${notificationId} marked as seen successfully`);
+            // console.log(`🔔 [FCM] ✅ Notification ${notificationId} marked as seen successfully`);
         }
     } catch (error) {
         console.error('🔔 [FCM] Error marking notification as seen:', error);

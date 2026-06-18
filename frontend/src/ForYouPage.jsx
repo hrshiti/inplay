@@ -41,7 +41,7 @@ export default function ForYouPage({ onBack, likedVideos = [], onToggleLike, ini
             const data = mode === 'quick_byte'
                 ? await contentService.getQuickBytes(50)
                 : await contentService.getForYouReels();
-            console.log("ForYouPage Fetch Result:", data); // Debug Log
+            // console.log("ForYouPage Fetch Result:", data); // Debug Log
             setReels(data);
         };
         fetchReels();
@@ -259,7 +259,7 @@ function ReelItem({
                     }
                     if (videoRef.current) {
                         videoRef.current.currentTime = 0;
-                        videoRef.current.play().catch(e => console.log("Autoplay blocked", e));
+                        videoRef.current.play().catch(e => { /* console.log("Autoplay blocked", e); */ });
                     }
 
                     // Track View after 3 seconds
@@ -269,7 +269,7 @@ function ReelItem({
                             viewCounted.current = true;
                             try {
                                 await contentService.incrementContentView(reel._id, apiPrefix);
-                                console.log('Reel view counted:', reel._id);
+                                // console.log('Reel view counted:', reel._id);
                             } catch (e) {
                                 console.error("Failed to track reel view", e);
                             }
@@ -350,7 +350,7 @@ function ReelItem({
                     url: window.location.href
                 });
             } catch (err) {
-                console.log("Share skipped");
+                // console.log("Share skipped");
             }
         } else {
             alert('Link copied to clipboard!');
@@ -362,7 +362,7 @@ function ReelItem({
     const currentVideoSrc = getImageUrl(episodes[currentEpIndex]?.url) || '';
     useEffect(() => {
         if (currentVideoSrc && isActiveIndex) {
-            console.log("Playing Reel URL:", currentVideoSrc);
+            // console.log("Playing Reel URL:", currentVideoSrc);
         }
     }, [currentVideoSrc, isActiveIndex]);
 
@@ -396,7 +396,7 @@ function ReelItem({
             if (playPromise !== undefined) {
                 playPromise.catch(e => {
                     // Auto-play was prevented
-                    console.log("Auto-play prevented on episode change");
+                    // console.log("Auto-play prevented on episode change");
                 });
             }
         }
