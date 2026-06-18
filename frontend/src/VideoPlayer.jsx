@@ -315,7 +315,6 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             console.error("Failed to sync progress", e);
             if (e.message && e.message.toLowerCase().includes('subscription')) {
                 if (videoRef.current) videoRef.current.pause();
-                onClose();
                 navigate('/plan');
                 return true;
             }
@@ -344,7 +343,6 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         const isExhausted = await syncProgress(true);
         if (isExhausted) {
             if (videoRef.current) videoRef.current.pause();
-            onClose();
             navigate('/plan');
             return;
         }
@@ -360,7 +358,6 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         const isExhausted = await syncProgress(true);
         if (isExhausted) {
             if (videoRef.current) videoRef.current.pause();
-            onClose();
             navigate('/plan');
             return;
         }
