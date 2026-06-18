@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash, GripVertical, Check, X, Search } from 'lucide-react';
-import CinemaSectionService from '../../../services/api/CinemaSectionService';
+import CinemaSectionService from '../../../services/api/cinemaSectionService';
 import contentService from '../../../services/api/contentService';
 import { getImageUrl } from '../../../utils/imageUtils';
 
