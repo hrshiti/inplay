@@ -2,15 +2,14 @@ const express = require('express');
 const router = express.Router();
 
 const userContentController = require('../controllers/userContentController');
+const { protect, optionalProtect } = require('../middlewares/auth');
 
-// Public routes (no auth required)
-router.get('/all', userContentController.getAllContent);
+// Public routes (no auth required, but token accepted if present)
+router.get('/all', optionalProtect, userContentController.getAllContent);
 router.get('/trending', userContentController.getTrendingContent);
 router.get('/new-releases', userContentController.getNewReleases);
 router.get('/category/:category', userContentController.getContentByCategory);
 router.post('/:id/view', userContentController.incrementViews);
-
-const { protect, optionalProtect } = require('../middlewares/auth');
 
 router.get('/:id', optionalProtect, userContentController.getContent);
 router.get('/:id/stream', protect, userContentController.streamContent);

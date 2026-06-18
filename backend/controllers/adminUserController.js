@@ -7,7 +7,7 @@ const User = require('../models/User');
 const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 2000;
 
     const filters = {
       role: req.query.role,

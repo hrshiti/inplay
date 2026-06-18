@@ -14,8 +14,15 @@ const contentService = {
         if (filters.dynamicTabId) queryParams.append('dynamicTabId', filters.dynamicTabId);
         if (filters.dynamicTabs) queryParams.append('dynamicTabs', filters.dynamicTabs);
 
+        const token = localStorage.getItem('inplay_token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_URL}/content/all?${queryParams.toString()}`, {
             method: 'GET',
+            headers: headers,
         });
 
         if (!response.ok) {
@@ -52,8 +59,15 @@ const contentService = {
 
     // New method for Quick Bytes
     async getQuickBytes(limit = 20) {
+        const token = localStorage.getItem('inplay_token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_URL}/quickbytes?status=published&limit=${limit}`, {
             method: 'GET',
+            headers: headers,
         });
 
         if (!response.ok) {
@@ -98,7 +112,11 @@ const contentService = {
             },
             body: JSON.stringify(watchData),
         });
-        return await response.json();
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to update watch history');
+        }
+        return data;
     },
 
     async getNewReleases(limit = 10) {
@@ -145,7 +163,13 @@ const contentService = {
 
     async getDarmaaSections() {
         try {
-            const response = await fetch(`${API_URL}/public/darmaa-sections`);
+            const token = localStorage.getItem('inplay_token');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_URL}/public/darmaa-sections`, { headers });
             if (!response.ok) return [];
             const data = await response.json();
             return data.data || [];
@@ -157,7 +181,13 @@ const contentService = {
 
     async getBhojpuriSections() {
         try {
-            const response = await fetch(`${API_URL}/public/bhojpuri-sections`);
+            const token = localStorage.getItem('inplay_token');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_URL}/public/bhojpuri-sections`, { headers });
             if (!response.ok) return [];
             const data = await response.json();
             return data.data || [];
@@ -169,7 +199,13 @@ const contentService = {
 
     async getCinemaSections() {
         try {
-            const response = await fetch(`${API_URL}/public/cinema-sections`);
+            const token = localStorage.getItem('inplay_token');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_URL}/public/cinema-sections`, { headers });
             if (!response.ok) return [];
             const data = await response.json();
             return data.data || [];

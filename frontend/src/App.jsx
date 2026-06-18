@@ -2021,24 +2021,25 @@ function ContentDetailsRoute({
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    // 1. Try finding in loaded content
+    // We always fetch fresh data to ensure subscription/lock states are accurate.
+    // We can use the found item from allContent as initial state for faster rendering.
     let found = allContent.find(i => (i._id === id || i.id === id));
-    if (found) {
+    if (found && !movie) {
       setMovie(found);
-      return;
     }
 
-    // 2. Fetch if not found
     if (!hasFetched.current) {
       hasFetched.current = true;
       contentService.getContentById(id)
         .then(data => {
           if (data) setMovie(data);
-          else navigate('/', { replace: true });
+          else if (!found) navigate('/', { replace: true });
         })
-        .catch(() => navigate('/', { replace: true }));
+        .catch(() => {
+            if (!found) navigate('/', { replace: true });
+        });
     }
-  }, [id, allContent, navigate]);
+  }, [id, allContent, navigate, movie]);
 
   if (!movie) return null; // Or a loading spinner
 
@@ -2076,16 +2077,12 @@ function WatchPageRoute({
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (movie) return;
-
-    // 1. Try finding in loaded content
+    // Always fetch fresh data to ensure subscription/lock states are accurate.
     let found = allContent.find(i => (i._id === id || i.id === id));
-    if (found) {
+    if (found && !movie) {
       setMovie(found);
-      return;
     }
 
-    // 2. Fetch if not found in loaded content or passed via state
     if (!hasFetched.current) {
       hasFetched.current = true;
 
@@ -2100,9 +2097,11 @@ function WatchPageRoute({
           contentService.getQuickByteById(id)
             .then(qbData => {
               if (qbData) setMovie(qbData);
-              else navigate('/', { replace: true });
+              else if (!movie && !found) navigate('/', { replace: true });
             })
-            .catch(() => navigate('/', { replace: true }));
+            .catch(() => {
+                if (!movie && !found) navigate('/', { replace: true });
+            });
         });
     }
   }, [id, allContent, navigate, movie]);
@@ -2672,7 +2671,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {!(item.targetCategory === 'Bhojpuri' || item.category === 'Bhojpuri' || item.isBhojpuriHero) && item.views > 0 && <><Eye size={10} /> {formatViews(item.views)} Views • </>}
+                        {!(item.targetCategory === 'Bhojpuri' || item.category === 'Bhojpuri' || item.isBhojpuriHero || item.category === 'Cinema' || item.targetCategory === 'Cinema') && item.views > 0 && <><Eye size={10} /> {formatViews(item.views)} Views • </>}
                         {formatDuration(episodeDuration)}
                       </span>
                     </div>
@@ -2719,7 +2718,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                       </div>
                       <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                         {!isUpcoming ? (
-                          <>{movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
+                          <>{(activeFilter === 'InPlay Shorts' || activeFilter === 'Originals') && movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
                         ) : (
                           <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
                         )}
@@ -2891,7 +2890,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 <h2 className="section-title">Continue Watching</h2>
                 <span style={{ fontSize: '18px', color: '#888' }}>›</span>
               </div>
-              <div className="horizontal-list hide-scrollbar" style={{ gap: '12px', paddingBottom: '10px' }}>
+              <div className="horizontal-list hide-scrollbar" style={{ gap: '8px', paddingBottom: '10px' }}>
                 {continueWatching.filter(show => 
                   (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
                 ).map((show, index) => {
@@ -2918,9 +2917,9 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                         onError={(e) => { e.target.src = 'https://placehold.co/120x180/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
                       />
                       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
-                        {show.progress > 0 && (
+                        {((show.totalDuration && show.watchedSeconds !== undefined) || show.progress > 0) && (
                           <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(show.progress, 100)}%`, height: '100%', background: '#e50914' }}></div>
+                            <div style={{ width: `${show.watchedSeconds ? Math.min((show.watchedSeconds / show.totalDuration) * 100, 100) : Math.min(show.progress || 0, 100)}%`, height: '100%', background: '#e50914' }}></div>
                           </div>
                         )}
                       </div>

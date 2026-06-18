@@ -308,6 +308,11 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             lastSyncTime.current = currentTime;
         } catch (e) {
             console.error("Failed to sync progress", e);
+            if (e.message && e.message.toLowerCase().includes('subscription')) {
+                if (videoRef.current) videoRef.current.pause();
+                onClose();
+                navigate('/plan');
+            }
         }
     };
 

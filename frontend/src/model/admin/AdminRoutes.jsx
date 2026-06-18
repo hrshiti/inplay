@@ -790,7 +790,7 @@ const Users = () => {
         totalWatchTime: ((user.watchHistory?.reduce((acc, entry) => acc + (entry.watchedSeconds || 0), 0) || 0) / 3600).toFixed(1),
         fullData: user,
         favoriteGenre: user.preferences?.favoriteGenres?.[0] || 'N/A',
-        joinDate: user.createdAt || new Date(),
+        joinDate: new Date(user.createdAt || Date.now()).toLocaleDateString(),
         lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'
       }));
 
@@ -1442,6 +1442,7 @@ const Subscriptions = () => {
         title="Active Subscriptions"
         loading={loading}
         emptyMessage="No active subscriptions found."
+        onView={(row) => alert(`Please navigate to the "Users" tab to view or manage the user: ${row.name}`)}
       />
     </div>
   );

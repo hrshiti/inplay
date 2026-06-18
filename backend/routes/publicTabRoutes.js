@@ -9,7 +9,7 @@ const { optionalProtect } = require('../middlewares/auth');
 router.get('/dynamic-structure', getDynamicStructure);
 router.get('/dynamic-content', getDynamicContent);
 router.get('/darmaa-sections', optionalProtect, getActiveSections);
-router.get('/bhojpuri-sections', getActiveBhojpuriSections);
-router.get('/cinema-sections', getActiveCinemaSections);
+router.get('/bhojpuri-sections', optionalProtect, getActiveBhojpuriSections);
+router.get('/cinema-sections', optionalProtect, getActiveCinemaSections);
 
 module.exports = router;
