@@ -6,9 +6,9 @@ const { generateSignedUrl } = require('../config/cloudinary');
 const { DOWNLOAD_EXPIRY_DAYS } = require('../constants');
 
 // Generate secure download license for content
-const generateDownloadLicense = async (contentId, userId, deviceId) => {
+const generateDownloadLicense = async (contentId, userId, deviceId, episodeIndex = null) => {
   // Verify user access to content
-  const accessCheck = await checkDownloadAccess(contentId, userId);
+  const accessCheck = await checkDownloadAccess(contentId, userId, episodeIndex);
   if (!accessCheck.hasAccess) {
     throw new Error(accessCheck.message || 'Access denied for download');
   }
@@ -152,8 +152,28 @@ const validateDownloadLicense = async (licenseKey, deviceId) => {
   };
 };
 
+// Helper to check if a user has an active subscription
+const checkIsSubscribed = async (userId) => {
+  if (!userId) return false;
+  try {
+    const user = await User.findById(userId);
+    if (!user) return false;
+    if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485') {
+      return true;
+    }
+    if (user.subscription && user.subscription.isActive) {
+      if (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()) {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  return false;
+};
+
 // Check if user has access to download content
-const checkDownloadAccess = async (contentId, userId) => {
+const checkDownloadAccess = async (contentId, userId, episodeIndex = null) => {
   const content = await Content.findById(contentId);
   if (!content) {
     return { hasAccess: false, message: 'Content not found' };
@@ -162,6 +182,29 @@ const checkDownloadAccess = async (contentId, userId) => {
   // Check if content is published
   if (content.status !== 'published') {
     return { hasAccess: false, message: 'Content not available' };
+  }
+
+  // Check if InPlay Drama category
+  const isDarmaa = content.category && /inplay\s*dhar?maa?/i.test(content.category);
+  if (isDarmaa) {
+    const isSubscribed = await checkIsSubscribed(userId);
+    if (!isSubscribed) {
+      const user = await User.findById(userId);
+      const freeEpisodesWatched = user?.freeEpisodesWatched || [];
+      const reqEpIdx = episodeIndex !== null ? parseInt(episodeIndex, 10) : 0;
+
+      // Check if this specific episode is already watched
+      const isAlreadyWatched = freeEpisodesWatched.some(
+        item => item.contentId.toString() === contentId.toString() && item.episodeIndex === reqEpIdx
+      );
+
+      if (!isAlreadyWatched) {
+        const remainingPasses = Math.max(0, 5 - freeEpisodesWatched.length);
+        if (remainingPasses <= 0) {
+          return { hasAccess: false, message: 'An active subscription is required to download this episode.' };
+        }
+      }
+    }
   }
 
   // All content is now free and downloadable by authenticated users

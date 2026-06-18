@@ -10,16 +10,14 @@ router.get('/new-releases', userContentController.getNewReleases);
 router.get('/category/:category', userContentController.getContentByCategory);
 router.post('/:id/view', userContentController.incrementViews);
 
-// Routes requiring authentication for full access
-const { protect, subscribed } = require('../middlewares/auth');
-router.use(protect); // All routes below require authentication
-router.use(subscribed); // All routes below also require an active subscription
+const { protect, optionalProtect } = require('../middlewares/auth');
 
-router.get('/:id', userContentController.getContent);
-router.get('/:id/stream', userContentController.streamContent);
-router.post('/:id/download', userContentController.createDownloadLicense);
-router.post('/validate-download', userContentController.validateDownload);
-router.get('/user/downloads', userContentController.getUserDownloads);
-router.delete('/user/downloads/:licenseKey', userContentController.revokeDownload);
+router.get('/:id', optionalProtect, userContentController.getContent);
+router.get('/:id/stream', protect, userContentController.streamContent);
+router.post('/:id/download', protect, userContentController.createDownloadLicense);
+router.post('/validate-download', protect, userContentController.validateDownload);
+router.get('/user/downloads', protect, userContentController.getUserDownloads);
+router.delete('/user/downloads/:licenseKey', protect, userContentController.revokeDownload);
 
 module.exports = router;
+

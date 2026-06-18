@@ -10,10 +10,10 @@ router.get('/:id/comments', forYouController.getComments);
 router.post('/:id/view', forYouController.incrementViews);
 
 // Protected User routes
-router.post('/:id/like', protect, subscribed, userAuthController.toggleLike);
-router.post('/:id/comments', protect, subscribed, forYouController.addComment);
-router.delete('/comments/:id', protect, subscribed, forYouController.deleteComment);
-router.post('/comments/:id/like', protect, subscribed, forYouController.toggleCommentLike);
+router.post('/:id/like', protect, userAuthController.toggleLike);
+router.post('/:id/comments', protect, forYouController.addComment);
+router.delete('/comments/:id', protect, forYouController.deleteComment);
+router.post('/comments/:id/like', protect, forYouController.toggleCommentLike);
 
 // Protected Admin routes
 router.post('/', protect, authorize('admin', 'superadmin'), forYouController.createForYou);

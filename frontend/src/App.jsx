@@ -328,12 +328,8 @@ function App() {
         const isSubscribed = currentUser.subscription?.isActive;
         const isTrialUsed = currentUser.subscription?.isTrialUsed;
 
-        // STRICT REDIRECT: If user is NOT active, send to plan page.
-        // We use !isSubscribed to catch false, null, and undefined.
-        // Skip for dev testing numbers
-        if (!isSubscribed && currentUser.phone !== '6268204871' && currentUser.phone !== '6268455485' && currentUser.phone !== '7566331922') {
-          navigate('/plan', { replace: true });
-        }
+        // Selective subscription check: do not redirect automatically at boot/browse time.
+        // Users will only be prompted to subscribe when attempting to play locked episodes (6+).
       }
     };
 

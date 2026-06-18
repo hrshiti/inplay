@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone, Lock } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
 import { SpeedSheet, QualitySheet } from './PlayerSheets';
@@ -8,6 +9,7 @@ import HlsPlayer from './components/HlsPlayer';
 import { trackVideoView, trackWatchTime, trackVideoCompleted, trackShareContent } from './utils/analytics';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
+    const navigate = useNavigate();
     // User request: Play all content (Movies, Series, Reels) in the immersive Reels-style player.
     const isVertical = movie.isVertical || movie.type === 'quick_byte' || movie.type === 'reel' || movie.category === 'Quick Bites';
     // 3 Modes: 'contain' (FIT), 'cover' (FILL - Zoom), 'fill' (STRETCH - All sides touch)
@@ -44,6 +46,13 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const lastSyncTime = useRef(0);
 
     const currentItem = playlist[currentIndex];
+
+    useEffect(() => {
+        if (currentItem?.isLocked) {
+            navigate('/plan');
+            onClose();
+        }
+    }, [currentIndex, playlist, currentItem, navigate, onClose]);
 
     // Helper to get URL dynamically
     const getVideoUrl = (item) => {
@@ -828,14 +837,21 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => { e.target.src = 'https://placehold.co/120x68/333/FFF?text=Ep+' + (index + 1); }}
                                         />
-                                        {currentIndex === index && (
+                                        {ep.isLocked ? (
+                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Lock size={16} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
+                                            </div>
+                                        ) : currentIndex === index && (
                                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <div style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', boxShadow: '0 0 8px var(--accent)' }}></div>
                                             </div>
                                         )}
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ color: ep.isLocked ? '#aaa' : 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
+                                            {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
+                                        </div>
                                         <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
                                         {ep.duration && <span style={{ color: '#666', fontSize: '0.75rem', marginTop: '4px' }}>{Math.floor(ep.duration / 60)}m</span>}
                                     </div>
@@ -1107,14 +1123,21 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => { e.target.src = 'https://placehold.co/120x68/333/FFF?text=Ep+' + (index + 1); }}
                                         />
-                                        {currentIndex === index && (
+                                        {ep.isLocked ? (
+                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Lock size={16} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
+                                            </div>
+                                        ) : currentIndex === index && (
                                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <div style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', boxShadow: '0 0 8px var(--accent)' }}></div>
                                             </div>
                                         )}
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ color: ep.isLocked ? '#aaa' : 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
+                                            {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
+                                        </div>
                                         <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
                                         {ep.duration && <span style={{ color: '#666', fontSize: '0.75rem', marginTop: '4px' }}>{Math.floor(ep.duration / 60)}m</span>}
                                     </div>
@@ -1296,12 +1319,19 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => { e.target.src = 'https://placehold.co/130x74/333/FFF?text=Ep+' + (index + 1); }}
                                         />
-                                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Play size={20} fill="white" stroke="none" />
+                                        <div style={{ position: 'absolute', inset: 0, background: ep.isLocked ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {ep.isLocked ? (
+                                                <Lock size={20} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
+                                            ) : (
+                                                <Play size={20} fill="white" stroke="none" />
+                                            )}
                                         </div>
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>{index + 1}. {ep.title}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ color: ep.isLocked ? '#aaa' : 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>{index + 1}. {ep.title}</span>
+                                            {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
+                                        </div>
                                         <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>{ep.duration ? `${Math.floor(ep.duration / 60)}m` : '0m'}</span>
                                         <p style={{ color: '#666', fontSize: '0.8rem', margin: '4px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                             {ep.description || movie.description}
