@@ -23,6 +23,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     isMovie: content?.isMovie || false,
     isTV: content?.isTV || false,
     isBhojpuriHero: content?.isBhojpuriHero || false,
+    isCinemaHero: content?.isCinemaHero || false,
 
     isPopular: content?.isPopular || false,
     isBroadcast: content?.isBroadcast || false,
@@ -137,6 +138,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
         isMovie: content.isMovie || false,
         isTV: content.isTV || false,
         isBhojpuriHero: content.isBhojpuriHero || false,
+        isCinemaHero: content.isCinemaHero || false,
         isPopular: content.isPopular || false,
         isBroadcast: content.isBroadcast || false,
         isAudioSeries: content.isAudioSeries || false,
@@ -500,6 +502,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
               }}
             >
               <option value="">None / Dynamic Only</option>
+              <option value="movie">Movie</option>
               <option value="bhojpuri">Bhojpuri World</option>
               <option value="trending_song">Trending Song</option>
               <option value="trending_now">Trending Now</option>
@@ -839,6 +842,19 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
                   style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#e11d48' }}
                 />
                 <span style={{ color: '#e11d48', fontWeight: 'bold' }}>Set as Bhojpuri Banner</span>
+              </label>
+            )}
+
+            {(formData.type === 'movie' || formData.type === 'action' || formData.type === 'new_release' || formData.type === 'trending_now') && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#4b5563', cursor: 'pointer', background: '#e0e7ff', padding: '4px 8px', borderRadius: '4px' }}>
+                <input
+                  type="checkbox"
+                  name="isCinemaHero"
+                  checked={formData.isCinemaHero}
+                  onChange={handleInputChange}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4f46e5' }}
+                />
+                <span style={{ color: '#4f46e5', fontWeight: 'bold' }}>Set as Cinema Banner</span>
               </label>
             )}
 

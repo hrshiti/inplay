@@ -34,9 +34,13 @@ export default function CinemaSectionsPage() {
 
     const fetchCinemaVideos = async () => {
         try {
-            // Fetch all Cinema type contents
-            const data = await contentService.getAllContent({ type: 'Cinema' });
-            setCinemaVideos(data || []);
+            // Fetch all content to allow admins to pick any standard content for Cinema
+            const data = await contentService.getAllContent({ limit: 500 });
+            // Filter out bhojpuri and reels as they belong to other sections
+            const cinemaContents = (data || []).filter(c => 
+                c.type !== 'bhojpuri' && c.type !== 'reel' && !c.dynamicTabId
+            );
+            setCinemaVideos(cinemaContents);
         } catch (error) {
             console.error("Failed to fetch Cinema videos:", error);
         }

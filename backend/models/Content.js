@@ -190,6 +190,10 @@ const contentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isCinemaHero: {
+    type: Boolean,
+    default: false
+  },
   isMms: {
     type: Boolean,
     default: false

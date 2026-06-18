@@ -165,6 +165,18 @@ const contentService = {
             console.error('Failed to fetch Bhojpuri sections:', error);
             return [];
         }
+    },
+
+    async getCinemaSections() {
+        try {
+            const response = await fetch(`${API_URL}/public/cinema-sections`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            return data.data || [];
+        } catch (error) {
+            console.error('Failed to fetch Cinema sections:', error);
+            return [];
+        }
     }
 };
 

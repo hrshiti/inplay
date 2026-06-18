@@ -21,6 +21,7 @@ import adminTabService from '../../services/api/adminTabService';
 import AdminNotifications from './AdminNotifications';
 import DarmaaSectionsPage from './pages/DarmaaSectionsPage';
 import BhojpuriSectionsPage from './pages/BhojpuriSectionsPage';
+import CinemaSectionsPage from './pages/CinemaSectionsPage';
 const getImageUrl = (path) => {
   if (!path) return "https://placehold.co/300x450/111/FFF?text=No+Image";
   // Fallback to the utility if available, or just use the same logic
@@ -2319,6 +2320,7 @@ export default function AdminRoutes() {
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="darmaa-sections" element={<DarmaaSectionsPage />} />
         <Route path="bhojpuri-sections" element={<BhojpuriSectionsPage />} />
+        <Route path="cinema-sections" element={<CinemaSectionsPage />} />
         <Route path="settings/app" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

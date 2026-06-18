@@ -357,9 +357,11 @@ function App() {
     ...contentSections.bhojpuri.filter(item => item.isBhojpuriHero),
     ...quickBites.filter(qb => qb.isBhojpuriHero && (qb.targetCategory === 'Bhojpuri' || qb.targetCategory === 'Both'))
   ];
+  const cinemaHeroMovies = allContent.filter(item => item.isCinemaHero);
   const bhojpuriQuickBites = quickBites.filter(qb => qb.targetCategory === 'Bhojpuri' || qb.targetCategory === 'Both');
   const [darmaaSections, setDarmaaSections] = useState([]);
   const [bhojpuriSections, setBhojpuriSections] = useState([]);
+  const [cinemaSections, setCinemaSections] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -372,7 +374,8 @@ function App() {
           newReleases,
           foryou,
           darmaaSecs,
-          bhojpuriSecs
+          bhojpuriSecs,
+          cinemaSecs
         ] = await Promise.all([
           contentService.getDynamicStructure().catch(e => { console.error(e); return []; }),
           contentService.getQuickBytes(20).catch(e => { console.error(e); return []; }),
@@ -381,7 +384,8 @@ function App() {
           contentService.getNewReleases().catch(e => { console.error(e); return []; }),
           contentService.getForYouReels().catch(e => { console.error(e); return []; }),
           contentService.getDarmaaSections().catch(e => { console.error(e); return []; }),
-          contentService.getBhojpuriSections().catch(e => { console.error(e); return []; })
+          contentService.getBhojpuriSections().catch(e => { console.error(e); return []; }),
+          contentService.getCinemaSections().catch(e => { console.error(e); return []; })
         ]);
 
         setDynamicStructure(structure || []);
@@ -389,6 +393,7 @@ function App() {
         setForYouReels(foryou || []);
         setDarmaaSections(darmaaSecs || []);
         setBhojpuriSections(bhojpuriSecs || []);
+        setCinemaSections(cinemaSecs || []);
 
         const sections = {
           bhojpuri: [],
@@ -1020,6 +1025,28 @@ function App() {
                       </>
                     ) : activeFilter === 'Audio Series' ? (
                       <AudioSeriesUserPage onBack={() => setActiveFilter('Popular')} />
+                    ) : activeFilter === 'InPlay Cinema' && cinemaSections && cinemaSections.length > 0 ? (
+                      <CategoryGridView
+                        activeFilter={activeFilter}
+                        setSelectedMovie={handleContentSelect}
+                        originalsData={contentSections.originals}
+                        trendingData={contentSections.trending_now}
+                        newReleaseData={contentSections.new_release}
+                        promotions={promotions}
+                        darmaaHeroMovies={darmaaHeroMovies}
+                        bhojpuriHeroMovies={bhojpuriHeroMovies}
+                        cinemaHeroMovies={cinemaHeroMovies}
+                        darmaaSections={darmaaSections}
+                        bhojpuriSections={bhojpuriSections}
+                        cinemaSections={cinemaSections}
+                        heroRef={heroRef}
+                        currentHeroIndex={currentHeroIndex}
+                        setCurrentHeroIndex={setCurrentHeroIndex}
+                        continueWatching={continueWatching}
+                        qbContinueWatching={qbContinueWatching}
+                        bhojpuriQuickBites={bhojpuriQuickBites}
+                        handleResumeQuickByte={handleResumeQuickByte}
+                      />
                     ) : activeFilter === 'InPlay Cinema' || activeFilter === 'Popular' || activeFilter === 'All' ? (
                       /* Standard Home View */
                       <>
@@ -1731,6 +1758,7 @@ function App() {
                           promotions={promotions}
                           darmaaHeroMovies={darmaaHeroMovies}
                           bhojpuriHeroMovies={bhojpuriHeroMovies}
+                          cinemaHeroMovies={cinemaHeroMovies}
                           darmaaSections={darmaaSections}
                           bhojpuriSections={bhojpuriSections}
                           heroRef={heroRef}
@@ -2264,7 +2292,7 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, darmaaSections, bhojpuriSections, heroRef, currentHeroIndex, setCurrentHeroIndex, continueWatching, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, cinemaHeroMovies, darmaaSections, bhojpuriSections, cinemaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, continueWatching, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites }) {
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2363,6 +2391,76 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Hero Section for InPlay Cinema */}
+      {activeFilter === 'InPlay Cinema' && cinemaHeroMovies && cinemaHeroMovies.length > 0 && (
+        <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', height: '160px', marginBottom: '0' }}>
+          <div
+            style={{
+              display: 'flex',
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {cinemaHeroMovies.slice(0, 5).map((movie, index) => {
+              const total = Math.min(cinemaHeroMovies.length, 5);
+              const isActive = index === currentHeroIndex % total;
+
+              let visualOffset = 100;
+              if (index === currentHeroIndex % total) visualOffset = 0;
+              else if (index === ((currentHeroIndex % total) - 1 + total) % total) visualOffset = -1;
+              else if (index === ((currentHeroIndex % total) + 1) % total) visualOffset = 1;
+
+              return (
+                <motion.div
+                  key={movie._id || movie.id}
+                  initial={false}
+                  animate={{
+                    x: visualOffset === 0 ? "0%" : (visualOffset < 0 ? "-105%" : "105%"),
+                    scale: visualOffset === 0 ? 1 : 0.85,
+                    opacity: 1,
+                    zIndex: visualOffset === 0 ? 10 : 5
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  style={{
+                    position: 'absolute',
+                    width: '90%',
+                    height: '100%',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: visualOffset === 0 ? '0 15px 30px rgba(0,0,0,0.5)' : 'none',
+                    filter: visualOffset === 0 ? 'brightness(1)' : 'brightness(0.4)',
+                    left: '5%',
+                    top: '0'
+                  }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  onDragEnd={(e, { offset }) => {
+                    if (offset.x > 50) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                    else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
+                  }}
+                  onClick={() => {
+                    if (isActive) setSelectedMovie(movie);
+                    else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
+                    else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
+                  }}
+                >
+                  <img src={getImageUrl(movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                </motion.div>
+              )
+            })}
+            <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
+              {cinemaHeroMovies.slice(0, 5).map((_, i) => (
+                <div key={i} style={{ width: i === currentHeroIndex % Math.min(cinemaHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(cinemaHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hero Section for InPlay Bhojpuri */}
       {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && bhojpuriHeroMovies && bhojpuriHeroMovies.length > 0 && (
         <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -2768,14 +2866,116 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
         </div>
       )}
 
-      {/* Flutter AdMob Placeholder for InPlay Cinema */}
+      {/* Dynamic Cinema Sections */}
       {activeFilter === 'InPlay Cinema' && (
-        <div style={{ marginTop: '16px' }}>
-          <AdPlaceholder pageName="inplay-cinema" height={60} />
+        <div style={{ marginTop: '10px' }}>
+
+          {/* Continue Watching (Cinema) Section */}
+          {continueWatching && continueWatching.filter(show => 
+            (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
+          ).length > 0 && (
+            <section className="section" style={{
+              marginBottom: '24px',
+              background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
+              paddingTop: '20px',
+              paddingBottom: '20px',
+              margin: '0 -16px',
+              paddingLeft: '16px',
+              paddingRight: '16px'
+            }}>
+              <div className="section-header" style={{ marginBottom: '10px' }}>
+                <h2 className="section-title">Continue Watching</h2>
+                <span style={{ fontSize: '18px', color: '#888' }}>›</span>
+              </div>
+              <div className="horizontal-list hide-scrollbar">
+                {continueWatching.filter(show => 
+                  (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
+                ).map(show => (
+                  <motion.div
+                    key={`cinema-cw-${show.id}`}
+                    className="continue-card"
+                    whileTap={{ scale: 0.95 }}
+                    style={{ minWidth: '140px', marginRight: '16px', position: 'relative', cursor: 'pointer' }}
+                    onClick={() => setSelectedMovie(show)}
+                  >
+                    <div className="poster-container" style={{ borderRadius: '8px', overflow: 'hidden', height: '180px', width: '100%', position: 'relative' }}>
+                      <img
+                        src={getImageUrl(show.image)}
+                        alt={show.title}
+                        className="poster-img"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                        onError={(e) => { e.target.src = 'https://placehold.co/200x300/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
+                      />
+                      <div className="progress-bar-container">
+                        <div className="progress-bar" style={{ width: `${show.progress}%` }}></div>
+                      </div>
+                      <div className="play-icon-overlay">
+                        <div className="play-circle">
+                          <Play size={20} fill="white" stroke="none" />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Flutter AdMob Placeholder for InPlay Cinema */}
+          {activeFilter === 'InPlay Cinema' && (
+            <div style={{ marginTop: '16px', marginBottom: '24px' }}>
+              <AdPlaceholder pageName="inplay-cinema" height={60} />
+            </div>
+          )}
+
+
+          {cinemaSections && cinemaSections.length > 0 && cinemaSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
+            <section key={section._id} className="section" style={{ marginBottom: '24px' }}>
+              <div className="section-header">
+                <h2 className="section-title">{section.title}</h2>
+              </div>
+              <div className="horizontal-list hide-scrollbar">
+                {section.videos.map((movie, index) => {
+                  const isUpcoming = section.title?.toLowerCase().includes('upcoming') || section.title?.toLowerCase().includes('coming soon');
+                  return (
+                    <motion.div
+                      key={`${movie._id || movie.id}-${index}`}
+                      className="movie-card"
+                      whileTap={!isUpcoming ? { scale: 0.95 } : {}}
+                      onClick={() => {
+                        if (!isUpcoming) {
+                          setSelectedMovie(movie);
+                        } else {
+                          alert("Releasing Soon! Stay Tuned.");
+                        }
+                      }}
+                      style={{ cursor: isUpcoming ? 'default' : 'pointer', position: 'relative' }}
+                    >
+                      <div className="poster-container" style={{ position: 'relative', opacity: isUpcoming ? 0.8 : 1 }}>
+                        <img
+                          src={getImageUrl(movie.poster?.url || movie.poster || movie.thumbnail?.url || movie.thumbnail || movie.image)}
+                          onError={(e) => { e.target.src = `https://placehold.co/300x450/111/FFF?text=${movie.title}` }}
+                          alt={movie.title}
+                          className="poster-img"
+                        />
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                        {!isUpcoming ? (
+                          <>{movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
+                        ) : (
+                          <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
+                        )}
+                      </span>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
-      {activeFilter !== 'InPlay Shorts' && activeFilter !== 'InPlay Bhojpuri' && activeFilter !== 'Bhojpuri' && (
+      {activeFilter !== 'InPlay Cinema' && activeFilter !== 'InPlay Shorts' && activeFilter !== 'InPlay Bhojpuri' && activeFilter !== 'Bhojpuri' && (
         <>
           {/* Section Title */}
           <div className="section-header" style={{ marginBottom: '16px', marginTop: '16px' }}>

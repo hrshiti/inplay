@@ -12,7 +12,7 @@ const getAuthHeaders = () => {
 
 const CinemaSectionService = {
     getAllSections: async () => {
-        const response = await fetch(`${API_URL}/admin/Cinema-sections`, {
+        const response = await fetch(`${API_URL}/admin/cinema-sections`, {
             headers: getAuthHeaders()
         });
         const data = await response.json();
@@ -21,7 +21,7 @@ const CinemaSectionService = {
     },
 
     createSection: async (sectionData) => {
-        const response = await fetch(`${API_URL}/admin/Cinema-sections`, {
+        const response = await fetch(`${API_URL}/admin/cinema-sections`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(sectionData)
@@ -32,7 +32,7 @@ const CinemaSectionService = {
     },
 
     updateSection: async (id, sectionData) => {
-        const response = await fetch(`${API_URL}/admin/Cinema-sections/${id}`, {
+        const response = await fetch(`${API_URL}/admin/cinema-sections/${id}`, {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify(sectionData)
@@ -43,7 +43,7 @@ const CinemaSectionService = {
     },
 
     deleteSection: async (id) => {
-        const response = await fetch(`${API_URL}/admin/Cinema-sections/${id}`, {
+        const response = await fetch(`${API_URL}/admin/cinema-sections/${id}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
@@ -56,7 +56,7 @@ const CinemaSectionService = {
     getActiveSections: async () => {
         // Not all services have public endpoints here, but we will add one for convenience
         // Wait, Darmaa sections didn't have this in the admin service, it was probably fetched separately.
-        const response = await fetch(`${API_URL}/public/Cinema-sections`);
+        const response = await fetch(`${API_URL}/public/cinema-sections`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Failed to fetch active Cinema sections');
         return data.data;
