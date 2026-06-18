@@ -627,11 +627,13 @@ function App() {
   const heroRef = useRef(null);
 
   useEffect(() => {
+    const hasNotificationApi = typeof window !== 'undefined' && 'Notification' in window;
+
     // Initialize push notifications
     const initNotifications = async () => {
       try {
         // console.log('🔔 [FCM] Initializing notifications...');
-        const permissionStatus = Notification.permission;
+        const permissionStatus = hasNotificationApi ? Notification.permission : 'denied';
         // console.log('🔔 [FCM] Notification permission status:', permissionStatus);
 
         if (currentUser) {
@@ -662,7 +664,7 @@ function App() {
 
     // Trigger permission request on first user interaction (required for mobile browsers)
     const handleFirstInteraction = async () => {
-      if (Notification.permission === 'default') {
+      if (hasNotificationApi && Notification.permission === 'default') {
         // console.log('👆 [FCM] User interaction detected, requesting notification permission...');
         await requestNotificationPermission();
         // After permission is granted, re-run init to get token
@@ -1129,10 +1131,9 @@ function App() {
                           </div>
                         </div>
 
-
-
-
-
+                        {activeFilter === 'InPlay Cinema' && (
+                          <AdPlaceholder pageName="inplay-cinema" height={60} />
+                        )}
 
                         {/* Continue Watching Section */}
                         {continueWatching.filter(show => {
@@ -2865,6 +2866,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
           ))}
         </div>
       )}
+
 
       {/* Dynamic Cinema Sections */}
       {activeFilter === 'InPlay Cinema' && (
