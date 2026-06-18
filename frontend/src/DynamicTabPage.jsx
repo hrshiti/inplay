@@ -12,6 +12,11 @@ const formatViews = (views) => {
 };
 
 export default function DynamicTabPage({ tab, onMovieClick }) {
+    const isBhojpuriOrCinema = tab?.name?.toLowerCase().includes('bhojpuri') || 
+                               tab?.name?.toLowerCase().includes('cinema') || 
+                               tab?.slug?.toLowerCase().includes('bhojpuri') || 
+                               tab?.slug?.toLowerCase().includes('cinema');
+
     const [allContent, setAllContent] = useState([]);
     const [categoriesContent, setCategoriesContent] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -112,7 +117,7 @@ export default function DynamicTabPage({ tab, onMovieClick }) {
                                         </div>
                                         <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                                             {!isUpcoming ? (
-                                                <>{movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
+                                                <>{!isBhojpuriOrCinema && movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
                                             ) : (
                                                 <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
                                             )}
@@ -167,7 +172,7 @@ export default function DynamicTabPage({ tab, onMovieClick }) {
                                     )}
                                 </div>
                                 <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                                    {movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}
+                                    {!isBhojpuriOrCinema && movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}
                                 </span>
                             </motion.div>
                         ))}

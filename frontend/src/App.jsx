@@ -1296,7 +1296,7 @@ function App() {
                                           {verticalItem.title}
                                         </span>
                                         <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                          {verticalItem.views > 0 && (
+                                          {!(verticalItem.targetCategory === 'Bhojpuri' || verticalItem.category === 'Bhojpuri' || verticalItem.isBhojpuriHero) && verticalItem.views > 0 && (
                                             <><Eye size={10} /> {formatViews(verticalItem.views)} Views</>
                                           )}
                                         </span>
@@ -1430,7 +1430,7 @@ function App() {
                                           {item.title}
                                         </span>
                                         <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                          {item.views > 0 ? (
+                                          {!(item.category === 'Bhojpuri' || item.category === 'Cinema' || item.type === 'bhojpuri' || item.type === 'movie' || item.type === 'action' || item.type === 'new_release' || item.isMovie || item.isBhojpuriHero || item.isCinemaHero) && item.views > 0 ? (
                                             <><Eye size={10} /> {formatViews(item.views)} Views • {formatDuration(episodeDuration)}</>
                                           ) : (
                                             <>{formatDuration(episodeDuration)}</>
@@ -2263,11 +2263,15 @@ function HeroSlide({ movie, onClick }) {
           </motion.div>
 
           <motion.div variants={itemVariants} className="hero-meta">
-            <div className="rating-badge">
-              <Eye size={14} color="#fff" strokeWidth={2.5} />
-              {movie.views > 0 && formatViews(movie.views)}
-            </div>
-            <span>|</span>
+            {!(movie.category === 'Bhojpuri' || movie.category === 'Cinema' || movie.type === 'bhojpuri' || movie.type === 'movie' || movie.type === 'action' || movie.type === 'new_release' || movie.isMovie || movie.isBhojpuriHero || movie.isCinemaHero) && movie.views > 0 && (
+              <>
+                <div className="rating-badge">
+                  <Eye size={14} color="#fff" strokeWidth={2.5} />
+                  {formatViews(movie.views)}
+                </div>
+                <span>|</span>
+              </>
+            )}
             <span>{movie.genre}</span>
             <span>|</span>
             <span>{movie.year}</span>
@@ -2668,7 +2672,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {item.views > 0 && <><Eye size={10} /> {formatViews(item.views)} Views • </>}
+                        {!(item.targetCategory === 'Bhojpuri' || item.category === 'Bhojpuri' || item.isBhojpuriHero) && item.views > 0 && <><Eye size={10} /> {formatViews(item.views)} Views • </>}
                         {formatDuration(episodeDuration)}
                       </span>
                     </div>
@@ -2806,7 +2810,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                       />
                     </div>
                     <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                      {movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}
+                      {/* Views hidden for Bhojpuri category */}
                     </span>
                   </motion.div>
                 ))}
@@ -2852,9 +2856,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                         />
                       </div>
                       <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                        {!isUpcoming ? (
-                          <>{movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
-                        ) : (
+                        {isUpcoming && (
                           <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
                         )}
                       </span>
@@ -2925,7 +2927,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {show.views > 0 && <><Eye size={10} /> {formatViews(show.views)} Views • </>}
                         {formatDuration(show.totalDuration || show.duration)}
                       </span>
                     </div>
@@ -2974,9 +2975,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                         />
                       </div>
                       <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                        {!isUpcoming ? (
-                          <>{movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}</>
-                        ) : (
+                        {isUpcoming && (
                           <div style={{ background: '#ff0a16', color: 'white', fontSize: '9px', padding: '3px 8px', fontWeight: 'bold', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block' }}>Coming Soon</div>
                         )}
                       </span>

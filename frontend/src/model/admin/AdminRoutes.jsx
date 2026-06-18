@@ -790,7 +790,7 @@ const Users = () => {
         totalWatchTime: ((user.watchHistory?.reduce((acc, entry) => acc + (entry.watchedSeconds || 0), 0) || 0) / 3600).toFixed(1),
         fullData: user,
         favoriteGenre: user.preferences?.favoriteGenres?.[0] || 'N/A',
-        joinDate: new Date(user.createdAt).toLocaleDateString(),
+        joinDate: user.createdAt || new Date(),
         lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'
       }));
 

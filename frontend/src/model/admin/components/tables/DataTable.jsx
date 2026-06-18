@@ -116,15 +116,17 @@ export default function DataTable({
                   </div>
                 </th>
               ))}
-              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: '0.75rem', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>
-                Actions
-              </th>
+              {(onEdit || onDelete || onView) && (
+                <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: '0.75rem', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {sortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 1} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
+                <td colSpan={columns.length + (onEdit || onDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
                   {emptyMessage}
                 </td>
               </tr>
@@ -153,9 +155,10 @@ export default function DataTable({
                       )}
                     </td>
                   ))}
-                  <td style={{ padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      {onView && (
+                  {(onEdit || onDelete || onView) && (
+                    <td style={{ padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        {onView && (
                         <button
                           onClick={() => onView(item)}
                           style={{
@@ -209,9 +212,10 @@ export default function DataTable({
                         >
                           <Trash2 size={16} />
                         </button>
-                      )}
-                    </div>
-                  </td>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
