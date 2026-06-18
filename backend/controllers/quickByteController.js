@@ -149,7 +149,7 @@ const createQuickByteHandler = async (req, res) => {
     try {
         const {
             title, status, audioTitle, description,
-            genre, year, rating, views,
+            genre, year, rating, fakeViews,
             isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero,
             isBhojpuriHero, targetCategory
         } = req.body;
@@ -167,7 +167,8 @@ const createQuickByteHandler = async (req, res) => {
             genre: genre || 'Entertainment',
             year: year || new Date().getFullYear(),
             rating: rating || 0,
-            views: views || 0,
+            fakeViews: fakeViews || 0,
+            views: fakeViews || 0,
             isNewAndHot: isNewAndHot === 'true' || isNewAndHot === true,
             isOriginal: isOriginal === 'true' || isOriginal === true,
             isRanking: isRanking === 'true' || isRanking === true,
@@ -319,7 +320,7 @@ const updateQuickByteHandler = async (req, res) => {
     try {
         const {
             title, status, audioTitle, description,
-            genre, year, rating, views,
+            genre, year, rating, fakeViews,
             isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero,
             isBhojpuriHero, targetCategory
         } = req.body;
@@ -335,7 +336,7 @@ const updateQuickByteHandler = async (req, res) => {
         if (genre !== undefined) quickByte.genre = genre;
         if (year !== undefined) quickByte.year = year;
         if (rating !== undefined) quickByte.rating = rating;
-        if (views !== undefined) quickByte.views = views;
+        if (fakeViews !== undefined) quickByte.fakeViews = fakeViews;
         if (isNewAndHot !== undefined) quickByte.isNewAndHot = isNewAndHot === 'true' || isNewAndHot === true;
         if (isOriginal !== undefined) quickByte.isOriginal = isOriginal === 'true' || isOriginal === true;
         if (isRanking !== undefined) quickByte.isRanking = isRanking === 'true' || isRanking === true;
@@ -632,7 +633,7 @@ const incrementViews = async (req, res) => {
     try {
         const quickByte = await QuickByte.findByIdAndUpdate(
             req.params.id,
-            { $inc: { views: 1 } },
+            { $inc: { views: 1, realViews: 1 } },
             { new: true }
         );
 

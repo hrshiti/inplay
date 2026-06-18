@@ -238,24 +238,39 @@ const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = 
 
             const isAlreadyWatched = watchedMap[contentIdStr] && watchedMap[contentIdStr].has(epIdx);
             
-            if (isAlreadyWatched) {
-              return { ...ep, isLocked: false };
+            if (freeEpisodesWatched.length >= 5) {
+              // Trial is completely over. Lock everything.
+              return {
+                ...ep,
+                isLocked: true,
+                isPremium: true,
+                video: ep.video ? {
+                  ...ep.video,
+                  url: '',
+                  secure_url: '',
+                  hls_url: ''
+                } : null
+              };
             } else {
-              if (remainingPasses > 0) {
-                remainingPasses--;
+              if (isAlreadyWatched) {
                 return { ...ep, isLocked: false };
               } else {
-                return {
-                  ...ep,
-                  isLocked: true,
-                  isPremium: true,
-                  video: ep.video ? {
-                    ...ep.video,
-                    url: '',
-                    secure_url: '',
-                    hls_url: ''
-                  } : null
-                };
+                if (remainingPasses > 0) {
+                  remainingPasses--;
+                  return { ...ep, isLocked: false };
+                } else {
+                  return {
+                    ...ep,
+                    isLocked: true,
+                    isPremium: true,
+                    video: ep.video ? {
+                      ...ep.video,
+                      url: '',
+                      secure_url: '',
+                      hls_url: ''
+                    } : null
+                  };
+                }
               }
             }
           });
@@ -269,24 +284,39 @@ const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = 
       result.episodes = result.episodes.map((ep, idx) => {
         const isAlreadyWatched = watchedMap[contentIdStr] && watchedMap[contentIdStr].has(idx);
 
-        if (isAlreadyWatched) {
-          return { ...ep, isLocked: false };
+        if (freeEpisodesWatched.length >= 5) {
+          // Trial is completely over. Lock everything.
+          return {
+            ...ep,
+            isLocked: true,
+            isPremium: true,
+            video: ep.video ? {
+              ...ep.video,
+              url: '',
+              secure_url: '',
+              hls_url: ''
+            } : null
+          };
         } else {
-          if (remainingPasses > 0) {
-            remainingPasses--;
+          if (isAlreadyWatched) {
             return { ...ep, isLocked: false };
           } else {
-            return {
-              ...ep,
-              isLocked: true,
-              isPremium: true,
-              video: ep.video ? {
-                ...ep.video,
-                url: '',
-                secure_url: '',
-                hls_url: ''
-              } : null
-            };
+            if (remainingPasses > 0) {
+              remainingPasses--;
+              return { ...ep, isLocked: false };
+            } else {
+              return {
+                ...ep,
+                isLocked: true,
+                isPremium: true,
+                video: ep.video ? {
+                  ...ep.video,
+                  url: '',
+                  secure_url: '',
+                  hls_url: ''
+                } : null
+              };
+            }
           }
         }
       });
@@ -521,21 +551,21 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
   if (isDrama && !isSubscribed) {
     const epIdx = (episodeIndex !== undefined && episodeIndex !== null) ? parseInt(episodeIndex, 10) : 0;
     
-    // Check if this episode is already watched
-    const alreadyWatched = user.freeEpisodesWatched.some(
-      item => item.contentId.toString() === contentId.toString() && item.episodeIndex === epIdx
-    );
+    if (user.freeEpisodesWatched.length >= 5) {
+      // Trial is completely exhausted, block everything
+      throw new Error('Subscription required to watch this content.');
+    } else {
+      // Check if this episode is already watched
+      const alreadyWatched = user.freeEpisodesWatched.some(
+        item => item.contentId.toString() === contentId.toString() && item.episodeIndex === epIdx
+      );
 
-    if (!alreadyWatched) {
-      // If not watched, check if they have remaining free passes
-      if (user.freeEpisodesWatched.length < 5) {
+      if (!alreadyWatched) {
         user.freeEpisodesWatched.push({
           contentId,
           episodeIndex: epIdx,
           watchedAt: new Date()
         });
-      } else {
-        throw new Error('Subscription required to watch this content.');
       }
     }
   }

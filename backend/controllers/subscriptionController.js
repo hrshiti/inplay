@@ -303,7 +303,8 @@ exports.getActiveSubscriptions = async (req, res) => {
     const users = await User.find({ 'subscription.isActive': true })
       .populate('subscription.plan')
       .select('name email subscription phone createdAt')
-      .sort({ 'subscription.startDate': -1 });
+      .sort({ 'subscription.startDate': -1 })
+      .limit(2000);
 
     res.status(200).json({ success: true, count: users.length, data: users });
   } catch (err) {

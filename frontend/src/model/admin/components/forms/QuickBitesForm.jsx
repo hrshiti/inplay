@@ -19,6 +19,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         targetCategory: content?.targetCategory || 'Darmaa',
         status: content?.status || 'published',
         views: content?.views || 0,
+        fakeViews: content?.fakeViews || 0,
         type: 'reel'
     });
 
@@ -96,6 +97,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                 submissionData.append('type', 'reel');
                 submissionData.append('status', formData.status);
                 submissionData.append('views', formData.views);
+                submissionData.append('fakeViews', formData.fakeViews);
 
                 if (files.videos && files.videos.length > 0) {
                     files.videos.forEach(file => {

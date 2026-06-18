@@ -83,6 +83,14 @@ const quickByteSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    fakeViews: {
+        type: Number,
+        default: 0
+    },
+    realViews: {
+        type: Number,
+        default: 0
+    },
     likes: {
         type: Number,
         default: 0
@@ -93,6 +101,13 @@ const quickByteSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true
+});
+
+quickByteSchema.pre('save', function (next) {
+  if (this.isModified('fakeViews') || this.isModified('realViews')) {
+    this.views = (this.fakeViews || 0) + (this.realViews || 0);
+  }
+  next();
 });
 
 quickByteSchema.index({ status: 1 });

@@ -1653,6 +1653,8 @@ const QuickBites = () => {
     { key: 'year', label: 'Year', sortable: true },
     { key: 'rating', label: 'Rating', sortable: true, render: (r) => `★ ${r || 0}` },
     { key: 'views', label: 'Views', sortable: true, render: (v) => v?.toLocaleString() || 0 },
+    { key: 'realViews', label: 'Real Views', sortable: true, render: (v, row) => row.realViews?.toLocaleString() || 0 },
+    { key: 'fakeViews', label: 'Fake Views', sortable: true, render: (v, row) => row.fakeViews?.toLocaleString() || 0 },
     {
       key: 'status',
       label: 'Status',
