@@ -295,7 +295,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
 
         try {
-            await contentService.updateWatchHistory({
+            const res = await contentService.updateWatchHistory({
                 contentId,
                 progress,
                 watchedSeconds: currentTime,
@@ -306,13 +306,20 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             });
             trackWatchTime({ contentId, durationWatched: currentTime });
             lastSyncTime.current = currentTime;
+            
+            if (res && res.data && res.data.passesExhausted) {
+                return true;
+            }
+            return false;
         } catch (e) {
             console.error("Failed to sync progress", e);
             if (e.message && e.message.toLowerCase().includes('subscription')) {
                 if (videoRef.current) videoRef.current.pause();
                 onClose();
                 navigate('/plan');
+                return true;
             }
+            return false;
         }
     };
 
@@ -330,17 +337,34 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         };
     }, []);
 
-    const handleVideoEnd = () => {
+    const handleVideoEnd = async () => {
         const contentId = movie._id || movie.id;
         trackVideoCompleted({ contentId, title: movie.title });
-        syncProgress(true);
+        
+        const isExhausted = await syncProgress(true);
+        if (isExhausted) {
+            if (videoRef.current) videoRef.current.pause();
+            onClose();
+            navigate('/plan');
+            return;
+        }
+
         if (currentIndex < playlist.length - 1) {
             setCurrentIndex(prev => prev + 1);
         }
     };
 
-    const handleNext = (e) => {
-        e.stopPropagation();
+    const handleNext = async (e) => {
+        if (e) e.stopPropagation();
+        
+        const isExhausted = await syncProgress(true);
+        if (isExhausted) {
+            if (videoRef.current) videoRef.current.pause();
+            onClose();
+            navigate('/plan');
+            return;
+        }
+
         if (currentIndex < playlist.length - 1) {
             setCurrentIndex(prev => prev + 1);
         }
@@ -387,9 +411,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY)) {
             if (deltaX > 0) {
                 // Swipe Left -> Next
-                if (currentIndex < playlist.length - 1) {
-                    setCurrentIndex(prev => prev + 1);
-                }
+                handleNext(null);
             } else {
                 // Swipe Right -> Prev
                 if (currentIndex > 0) {
@@ -402,9 +424,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         if (Math.abs(deltaY) > threshold && Math.abs(deltaY) > Math.abs(deltaX)) {
             if (deltaY > 0) {
                 // Swipe Up -> Next
-                if (currentIndex < playlist.length - 1) {
-                    setCurrentIndex(prev => prev + 1);
-                }
+                handleNext(null);
             } else {
                 // Swipe Down -> Prev
                 if (currentIndex > 0) {

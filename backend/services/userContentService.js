@@ -603,7 +603,9 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
 
   await user.save();
 
-  return { message: 'Watch history updated', progress, completed };
+  const passesExhausted = Boolean(isDrama && !isSubscribed && user.freeEpisodesWatched.length >= 5);
+
+  return { message: 'Watch history updated', progress, completed, passesExhausted };
 };
 
 // Get trending content
