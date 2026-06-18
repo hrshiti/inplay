@@ -177,10 +177,55 @@ const subscribed = (req, res, next) => {
   next();
 };
 
+// Optional protect - populate req.user if token exists but do not block if missing/invalid
+const optionalProtect = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    }
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select('-password') ||
+          await (require('../models/Admin')).findById(decoded.id).select('-password');
+
+        if (user && user.isActive) {
+          let tokenValid = true;
+          if (user.tokenVersion !== undefined && decoded.tokenVersion !== undefined) {
+            if (user.tokenVersion !== decoded.tokenVersion) {
+              tokenValid = false;
+            }
+          }
+          if (user.forceLogoutAt && decoded.iat) {
+            if (decoded.iat * 1000 < user.forceLogoutAt.getTime()) {
+              tokenValid = false;
+            }
+          }
+          if (tokenValid) {
+            req.user = user;
+          }
+        }
+      } catch (err) {
+        // Token verification failed, continue as guest
+      }
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 module.exports = {
   protect,
   authorize,
   subscribed,
+  optionalProtect,
   generateToken,
   sendTokenResponse
 };
+

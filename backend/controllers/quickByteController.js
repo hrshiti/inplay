@@ -1,4 +1,5 @@
 const QuickByte = require('../models/QuickByte');
+const User = require('../models/User');
 const Comment = require('../models/Comment');
 const mediaService = require('../services/mediaService');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
@@ -49,9 +50,88 @@ const getAllQuickBytes = async (req, res) => {
 
         const hydratedBytes = quickBytes.map(qb => hydrateQuickByte(qb));
 
+        let isSubscribed = false;
+        let freeEpisodesWatched = [];
+        const userId = req.user?._id;
+        if (userId) {
+            const user = await User.findById(userId);
+            if (user) {
+                freeEpisodesWatched = user.freeEpisodesWatched || [];
+                if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485') {
+                    isSubscribed = true;
+                } else if (user.subscription && user.subscription.isActive) {
+                    if (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()) {
+                        isSubscribed = true;
+                    }
+                }
+            }
+        }
+
+        const watchedMap = {};
+        freeEpisodesWatched.forEach(item => {
+            const cId = item.contentId?.toString();
+            if (cId) {
+                if (!watchedMap[cId]) {
+                    watchedMap[cId] = new Set();
+                }
+                watchedMap[cId].add(item.episodeIndex);
+            }
+        });
+
+        let remainingPasses = Math.max(0, 5 - freeEpisodesWatched.length);
+
+        const processedBytes = hydratedBytes.map(qb => {
+            const isDarmaa = qb.targetCategory === 'Darmaa' || qb.targetCategory === 'Both';
+            if (isDarmaa && !isSubscribed) {
+                const qbIdStr = qb._id?.toString();
+                if (qb.episodes && Array.isArray(qb.episodes)) {
+                    qb.episodes = qb.episodes.map((ep, idx) => {
+                        const isAlreadyWatched = watchedMap[qbIdStr] && watchedMap[qbIdStr].has(idx);
+
+                        if (isAlreadyWatched) {
+                            return { ...ep, isLocked: false };
+                        } else {
+                            if (remainingPasses > 0) {
+                                remainingPasses--;
+                                return { ...ep, isLocked: false };
+                            } else {
+                                return {
+                                    ...ep,
+                                    isLocked: true,
+                                    isPremium: true,
+                                    url: '',
+                                    secure_url: '',
+                                    hls_url: '',
+                                    video: ep.video ? {
+                                        ...ep.video,
+                                        url: '',
+                                        secure_url: '',
+                                        hls_url: ''
+                                    } : null
+                                };
+                            }
+                        }
+                    });
+
+                    // Lock/redact primary video of the QuickByte if the first episode is locked
+                    if (qb.episodes[0] && qb.episodes[0].isLocked) {
+                        qb.isLocked = true;
+                        qb.isPremium = true;
+                        qb.video = qb.video ? {
+                            ...qb.video,
+                            url: '',
+                            secure_url: '',
+                            hls_url: ''
+                        } : null;
+                    }
+                }
+            }
+            return qb;
+        });
+
         res.status(200).json({
             success: true,
-            data: hydratedBytes
+            data: processedBytes
         });
     } catch (error) {
         res.status(500).json({

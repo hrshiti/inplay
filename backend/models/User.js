@@ -82,6 +82,20 @@ const userSchema = new mongoose.Schema({
       default: false
     }
   }],
+  freeEpisodesWatched: [{
+    contentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Content'
+    },
+    episodeIndex: {
+      type: Number,
+      required: true
+    },
+    watchedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   myList: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Content'

@@ -166,7 +166,7 @@ const getMyList = async (req, res) => {
 // @access  Private
 const updateWatchHistory = async (req, res) => {
   try {
-    const { contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0, contentType = '' } = req.body;
+    const { contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0, contentType = '', episodeIndex } = req.body;
 
     if (!contentId || progress === undefined) {
       return res.status(400).json({
@@ -182,7 +182,8 @@ const updateWatchHistory = async (req, res) => {
       completed,
       watchedSeconds,
       totalDuration,
-      contentType
+      contentType,
+      episodeIndex
     );
 
     res.status(200).json({
@@ -270,7 +271,7 @@ const streamContent = async (req, res) => {
 // @access  Private
 const createDownloadLicense = async (req, res) => {
   try {
-    const { deviceId } = req.body;
+    const { deviceId, episodeIndex = null } = req.body;
 
     if (!deviceId) {
       return res.status(400).json({
@@ -282,7 +283,8 @@ const createDownloadLicense = async (req, res) => {
     const licenseData = await downloadService.generateDownloadLicense(
       req.params.id,
       req.user._id,
-      deviceId
+      deviceId,
+      episodeIndex
     );
 
     res.status(200).json({
