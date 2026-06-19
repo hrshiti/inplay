@@ -102,7 +102,11 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             if (!isFull) {
                 setIsOrientationLockFailed(false);
                 if (window.screen && screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock().catch(() => {});
+                    try {
+                        screen.orientation.unlock();
+                    } catch (e) {
+                        console.error("Unlock failed", e);
+                    }
                 }
             }
         };
