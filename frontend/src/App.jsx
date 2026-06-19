@@ -774,7 +774,7 @@ function App() {
         setMyList(prev => [...prev, movie]);
         showToast("Added (Local)");
       }
-    }
+    } 
   };
 
   const handleToggleLike = async (movie, showNotification = true) => {
@@ -1166,7 +1166,7 @@ function App() {
                         </div>
 
                         {activeFilter === 'InPlay Cinema' && (
-                          <AdPlaceholder pageName="inplay-cinema" height={60} />
+                          <AdPlaceholder pageName="inplay-cinema" />
                         )}
 
                         {/* Continue Watching Section */}
@@ -2918,9 +2918,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
 
           {/* Flutter AdMob Placeholder for InPlay Bhojpuri */}
           {activeFilter === 'InPlay Bhojpuri' && (
-            <div style={{ marginTop: '16px' }}>
-              <AdPlaceholder pageName="inplay-bhojpuri" height={60} />
-            </div>
+            <AdPlaceholder pageName="inplay-bhojpuri" />
           )}
 
           {bhojpuriSections && bhojpuriSections.length > 0 && bhojpuriSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
@@ -3033,14 +3031,6 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               </div>
             </section>
           )}
-
-          {/* Flutter AdMob Placeholder for InPlay Cinema */}
-          {activeFilter === 'InPlay Cinema' && (
-            <div style={{ marginTop: '16px', marginBottom: '24px' }}>
-              <AdPlaceholder pageName="inplay-cinema" height={60} />
-            </div>
-          )}
-
 
           {cinemaSections && cinemaSections.length > 0 && cinemaSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
             <section key={section._id} className="section" style={{ marginBottom: '24px' }}>
