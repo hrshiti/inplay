@@ -84,13 +84,26 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     // Track Fullscreen State
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
+    const [isOrientationLockFailed, setIsOrientationLockFailed] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsPortrait(window.innerHeight > window.innerWidth);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const handleFullScreenChange = () => {
             const isFull = !!document.fullscreenElement || !!document.webkitFullscreenElement;
             setIsFullScreen(isFull);
-            if (!isFull && window.screen && screen.orientation && screen.orientation.unlock) {
-                screen.orientation.unlock();
+            if (!isFull) {
+                setIsOrientationLockFailed(false);
+                if (window.screen && screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock().catch(() => {});
+                }
             }
         };
         document.addEventListener('fullscreenchange', handleFullScreenChange);
@@ -100,6 +113,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             document.removeEventListener('webkitfullscreenchange', handleFullScreenChange);
         };
     }, []);
+
+    const isCssRotated = isFullScreen && !isVertical && isPortrait && isOrientationLockFailed;
 
     // Define Icon Sizes based on mode
     const playIconSize = isFullScreen ? 48 : 48; // Kept scaled down to prevent oversized icons on PC fullscreen
@@ -540,11 +555,17 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 videoEl.webkitEnterFullscreen(); // iOS Safari
             }
 
-            if (!isVertical && window.screen && screen.orientation && screen.orientation.lock) {
-                try {
-                    await screen.orientation.lock('landscape');
-                } catch (err) {
-                    console.warn("Screen orientation lock failed:", err);
+            if (!isVertical) {
+                if (window.screen && screen.orientation && screen.orientation.lock) {
+                    try {
+                        await screen.orientation.lock('landscape');
+                        setIsOrientationLockFailed(false);
+                    } catch (err) {
+                        console.warn("Screen orientation lock failed:", err);
+                        setIsOrientationLockFailed(true);
+                    }
+                } else {
+                    setIsOrientationLockFailed(true);
                 }
             }
         } else {
@@ -554,8 +575,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 document.webkitExitFullscreen();
             }
 
+            setIsOrientationLockFailed(false);
             if (window.screen && screen.orientation && screen.orientation.unlock) {
-                screen.orientation.unlock();
+                screen.orientation.unlock().catch(() => {});
             }
         }
     };
@@ -578,13 +600,20 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             if (screen.orientation && screen.orientation.lock) {
                 const type = screen.orientation.type;
                 if (type.startsWith('portrait')) {
-                    await screen.orientation.lock('landscape').catch(() => {});
+                    await screen.orientation.lock('landscape').catch(() => {
+                        setIsOrientationLockFailed(true);
+                    });
+                    setIsOrientationLockFailed(false);
                 } else {
                     await screen.orientation.unlock().catch(() => {});
+                    setIsOrientationLockFailed(false);
                 }
+            } else {
+                setIsOrientationLockFailed(true);
             }
         } catch (error) {
             // console.log("Rotation failed:", error);
+            setIsOrientationLockFailed(true);
         }
     };
 
@@ -1027,7 +1056,19 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{
+                style={isCssRotated ? {
+                    width: '100dvh',
+                    height: '100dvw',
+                    background: 'black',
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%) rotate(90deg)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    touchAction: 'none'
+                } : {
                     width: '100%',
                     // Adjust aspect ratio based on content type and screen mode
                     aspectRatio: isFullScreen ? 'unset' : (isVertical ? '9/16' : '16/9'),
