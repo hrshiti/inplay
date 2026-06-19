@@ -10,7 +10,7 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="admin-layout" style={{
-      minHeight: '100vh',
+      height: '100vh',
       backgroundColor: '#f8f9fa',
       display: 'flex'
     }}>
@@ -28,7 +28,7 @@ export default function AdminLayout({ children }) {
       }}>
         <Topbar onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-        <main className="admin-content custom-scrollbar" style={{
+        <main className="admin-content custom-scrollbar" data-lenis-prevent="true" style={{
           flex: 1,
           padding: '0',
           overflowY: 'auto'

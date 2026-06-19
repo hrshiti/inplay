@@ -22,6 +22,7 @@ const UPLOAD_DIRS = {
     posters: path.join(UPLOAD_BASE, 'images', 'posters'),
     backdrops: path.join(UPLOAD_BASE, 'images', 'backdrops'),
     avatars: path.join(UPLOAD_BASE, 'images', 'avatars'),
+    banners: path.join(UPLOAD_BASE, 'images', 'banners'),
 };
 
 // Initialize all directories
@@ -65,6 +66,8 @@ const imageStorage = multer.diskStorage({
             uploadPath = UPLOAD_DIRS.avatars;
         } else if (req.body.type === 'thumbnail' || file.fieldname === 'thumbnail') {
             uploadPath = UPLOAD_DIRS.thumbnails;
+        } else if (req.body.type === 'banner' || file.fieldname === 'banner') {
+            uploadPath = UPLOAD_DIRS.banners;
         }
 
         ensureDirectoryExists(uploadPath);
@@ -179,6 +182,8 @@ const uploadMixed = multer({
                     uploadPath = UPLOAD_DIRS.posters;
                 } else if (file.fieldname === 'backdrop') {
                     uploadPath = UPLOAD_DIRS.backdrops;
+                } else if (file.fieldname === 'banner') {
+                    uploadPath = UPLOAD_DIRS.banners;
                 } else {
                     uploadPath = UPLOAD_DIRS.images;
                 }

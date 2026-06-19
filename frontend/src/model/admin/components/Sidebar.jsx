@@ -19,6 +19,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Content', href: '/admin/content/library', icon: Film },
   { name: 'Promotions', href: '/admin/promotions', icon: Megaphone },
+  { name: 'Banner Management', href: '/admin/banners', icon: Layout },
   { name: 'Quick Bites', href: '/admin/quick-bytes', icon: Zap },
   { name: 'For You', href: '/admin/for-you', icon: Smartphone },
   { name: 'Darmaa Sections', href: '/admin/darmaa-sections', icon: Film },
@@ -83,7 +84,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '20px 0' }}>
+      <nav className="custom-scrollbar" data-lenis-prevent="true" style={{ flex: 1, padding: '20px 0', overflowY: 'auto', overflowX: 'hidden' }}>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {navigation.map((item) => {
             const isActive = location.pathname.startsWith(item.href);

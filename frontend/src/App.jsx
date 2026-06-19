@@ -43,6 +43,7 @@ import contentService from './services/api/contentService';
 import AdPromotionPage from './model/admin/pages/AdPromotionPage';
 import AdCarousel from './model/components/AdCarousel';
 import promotionService from './services/api/promotionService';
+import bannerService from './services/api/bannerService';
 import { getImageUrl } from './utils/imageUtils';
 import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, requestNotificationPermission, markNotificationAsSeen } from './services/pushNotificationService';
 
@@ -362,6 +363,7 @@ function App() {
   const [darmaaSections, setDarmaaSections] = useState([]);
   const [bhojpuriSections, setBhojpuriSections] = useState([]);
   const [cinemaSections, setCinemaSections] = useState([]);
+  const [banners, setBanners] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -375,7 +377,8 @@ function App() {
           foryou,
           darmaaSecs,
           bhojpuriSecs,
-          cinemaSecs
+          cinemaSecs,
+          publicBanners
         ] = await Promise.all([
           contentService.getDynamicStructure().catch(e => { console.error(e); return []; }),
           contentService.getQuickBytes(20).catch(e => { console.error(e); return []; }),
@@ -385,7 +388,8 @@ function App() {
           contentService.getForYouReels().catch(e => { console.error(e); return []; }),
           contentService.getDarmaaSections().catch(e => { console.error(e); return []; }),
           contentService.getBhojpuriSections().catch(e => { console.error(e); return []; }),
-          contentService.getCinemaSections().catch(e => { console.error(e); return []; })
+          contentService.getCinemaSections().catch(e => { console.error(e); return []; }),
+          bannerService.getPublicBanners().catch(e => { console.error(e); return []; })
         ]);
 
         setDynamicStructure(structure || []);
@@ -394,6 +398,7 @@ function App() {
         setDarmaaSections(darmaaSecs || []);
         setBhojpuriSections(bhojpuriSecs || []);
         setCinemaSections(cinemaSecs || []);
+        setBanners(publicBanners || []);
 
         const sections = {
           bhojpuri: [],
@@ -866,13 +871,13 @@ function App() {
   // Watch for activeTab changes to toggle lenis
   useEffect(() => {
     if (lenisRef.current) {
-      if (activeTab === 'For You') {
+      if (activeTab === 'For You' || location.pathname.startsWith('/admin')) {
         lenisRef.current.stop();
       } else {
         lenisRef.current.start();
       }
     }
-  }, [activeTab]);
+  }, [activeTab, location.pathname]);
 
   // GSAP Animations
   useEffect(() => {
@@ -896,16 +901,45 @@ function App() {
     return () => ctx.revert();
   }, []);
 
+  const getAppBannersByCategory = (cat) => {
+    if (!banners) return [];
+    if (!Array.isArray(banners)) {
+        const catBanners = banners[cat.toLowerCase()] || [];
+        return catBanners.filter(b => b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
+    }
+    return banners.filter(b => b.category.toLowerCase() === cat.toLowerCase() && b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
+  };
+
   // Hero Slider Autoplay
   useEffect(() => {
+    let currentHeroArray = [];
+    if (activeFilter === 'Home' || activeFilter === 'For You') {
+      currentHeroArray = heroMovies;
+    } else if (activeFilter === 'InPlay Cinema' || activeFilter === 'Cinema') {
+      const b = getAppBannersByCategory('cinema'); currentHeroArray = b.length > 0 ? b : cinemaHeroMovies;
+    } else if (activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') {
+      const b = getAppBannersByCategory('bhojpuri'); currentHeroArray = b.length > 0 ? b : bhojpuriHeroMovies;
+    } else if (activeFilter === 'InPlay Shorts' || activeFilter === 'Darmaa') {
+      const b = getAppBannersByCategory('drama'); currentHeroArray = b.length > 0 ? b : darmaaHeroMovies;
+    } else {
+      currentHeroArray = heroMovies;
+    }
+
+    if (!currentHeroArray || currentHeroArray.length === 0) return;
+
+    const currentHero = currentHeroArray[currentHeroIndex % currentHeroArray.length];
+    
+    // Pause auto-scroll if the current slide is a video. The video's onEnded event will trigger the next slide.
+    if (currentHero && currentHero.mediaType === 'video') {
+       return; 
+    }
+
     const timer = setInterval(() => {
-      if (heroMovies && heroMovies.length > 0) {
-        setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length);
-      }
+      setCurrentHeroIndex((prev) => (prev + 1));
     }, 5000); // Change slide every 5 seconds
 
     return () => clearInterval(timer);
-  }, [heroMovies]);
+  }, [heroMovies, activeFilter, banners, cinemaHeroMovies, bhojpuriHeroMovies, darmaaHeroMovies, currentHeroIndex]);
 
   const [showSearch, setShowSearch] = useState(false);
 
@@ -1769,6 +1803,7 @@ function App() {
                           qbContinueWatching={qbContinueWatching}
                           bhojpuriQuickBites={bhojpuriQuickBites}
                           handleResumeQuickByte={handleResumeQuickByte}
+                          banners={banners}
                         />
                       )
                     )}
@@ -2298,7 +2333,25 @@ function HeroSlide({ movie, onClick }) {
 
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
-function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, cinemaHeroMovies, darmaaSections, bhojpuriSections, cinemaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, continueWatching, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites }) {
+function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, cinemaHeroMovies, darmaaSections, bhojpuriSections, cinemaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, continueWatching, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites, banners }) {
+  
+  const getBannersByCategory = (cat) => {
+    if (!banners) return [];
+    
+    // If banners is an object (from the grouped API response)
+    if (!Array.isArray(banners)) {
+        const catBanners = banners[cat.toLowerCase()] || [];
+        return catBanners.filter(b => b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
+    }
+
+    // Fallback if banners is an array
+    return banners.filter(b => b.category.toLowerCase() === cat.toLowerCase() && b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
+  };
+
+  const displayCinemaHeroMovies = getBannersByCategory('cinema').length > 0 ? getBannersByCategory('cinema') : cinemaHeroMovies;
+  const displayBhojpuriHeroMovies = getBannersByCategory('bhojpuri').length > 0 ? getBannersByCategory('bhojpuri') : bhojpuriHeroMovies;
+  const displayDarmaaHeroMovies = getBannersByCategory('drama').length > 0 ? getBannersByCategory('drama') : darmaaHeroMovies;
+
 
   // --------------------------------------------------------
   // LAYOUT 1: ORIGINALS (Large Vertical Cards, 2 Columns)
@@ -2398,7 +2451,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       transition={{ duration: 0.3 }}
     >
       {/* Hero Section for InPlay Cinema */}
-      {activeFilter === 'InPlay Cinema' && cinemaHeroMovies && cinemaHeroMovies.length > 0 && (
+      {activeFilter === 'InPlay Cinema' && displayCinemaHeroMovies && displayCinemaHeroMovies.length > 0 && (
         <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', height: '160px', marginBottom: '0' }}>
           <div
             style={{
@@ -2412,8 +2465,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               justifyContent: 'center'
             }}
           >
-            {cinemaHeroMovies.slice(0, 5).map((movie, index) => {
-              const total = Math.min(cinemaHeroMovies.length, 5);
+            {displayCinemaHeroMovies.slice(0, 5).map((movie, index) => {
+              const total = Math.min(displayCinemaHeroMovies.length, 5);
               const isActive = index === currentHeroIndex % total;
 
               let visualOffset = 100;
@@ -2450,25 +2503,42 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                     else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
                   }}
                   onClick={() => {
-                    if (isActive) setSelectedMovie(movie);
+                    if (isActive) {
+                      if (movie.isBanner) {
+                         if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                      } else {
+                         setSelectedMovie(movie);
+                      }
+                    }
                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
                     else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
                   }}
                 >
-                  <img src={getImageUrl(movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                  {movie.mediaType === 'video' ? (
+                    <video 
+                      src={getImageUrl(movie.mediaUrl)} 
+                      autoPlay 
+                      muted 
+                      playsInline 
+                      onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                    />
+                  ) : (
+                    <img src={getImageUrl(movie.mediaUrl || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} />
+                  )}
                 </motion.div>
               )
             })}
             <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
-              {cinemaHeroMovies.slice(0, 5).map((_, i) => (
-                <div key={i} style={{ width: i === currentHeroIndex % Math.min(cinemaHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(cinemaHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+              {displayCinemaHeroMovies.slice(0, 5).map((_, i) => (
+                <div key={i} style={{ width: i === currentHeroIndex % Math.min(displayCinemaHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(displayCinemaHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
               ))}
             </div>
           </div>
         </div>
       )}
       {/* Hero Section for InPlay Bhojpuri */}
-      {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && bhojpuriHeroMovies && bhojpuriHeroMovies.length > 0 && (
+      {(activeFilter === 'InPlay Bhojpuri' || activeFilter === 'Bhojpuri') && displayBhojpuriHeroMovies && displayBhojpuriHeroMovies.length > 0 && (
         <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
           <div
             style={{
@@ -2482,8 +2552,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               justifyContent: 'center'
             }}
           >
-            {bhojpuriHeroMovies.slice(0, 5).map((movie, index) => {
-              const total = Math.min(bhojpuriHeroMovies.length, 5);
+            {displayBhojpuriHeroMovies.slice(0, 5).map((movie, index) => {
+              const total = Math.min(displayBhojpuriHeroMovies.length, 5);
               const isActive = index === currentHeroIndex % total;
 
               let visualOffset = 100;
@@ -2520,27 +2590,44 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                     else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
                   }}
                   onClick={() => {
-                    if (isActive) setSelectedMovie({ ...movie, isVertical: false, type: 'bhojpuri', category: 'Bhojpuri' });
+                    if (isActive) {
+                      if (movie.isBanner) {
+                         if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                      } else {
+                         setSelectedMovie({ ...movie, isVertical: false, type: 'bhojpuri', category: 'Bhojpuri' });
+                      }
+                    }
                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
                     else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
                   }}
                 >
-                  <img src={getImageUrl(movie.poster?.url || movie.poster || movie.thumbnail?.url || movie.thumbnail || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                  {movie.mediaType === 'video' ? (
+                    <video 
+                      src={getImageUrl(movie.mediaUrl)} 
+                      autoPlay 
+                      muted 
+                      playsInline 
+                      onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                    />
+                  ) : (
+                    <img src={getImageUrl(movie.mediaUrl || movie.poster?.url || movie.poster || movie.thumbnail?.url || movie.thumbnail || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} />
+                  )}
                 </motion.div>
               )
             })}
           </div>
 
           <div style={{ position: 'absolute', bottom: '15px', left: '0', right: '0', display: 'flex', justifyContent: 'center', gap: '6px', zIndex: 10 }}>
-            {bhojpuriHeroMovies.slice(0, 5).map((_, i) => (
-              <div key={i} style={{ width: i === currentHeroIndex % Math.min(bhojpuriHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(bhojpuriHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+            {displayBhojpuriHeroMovies.slice(0, 5).map((_, i) => (
+              <div key={i} style={{ width: i === currentHeroIndex % Math.min(displayBhojpuriHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(displayBhojpuriHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
             ))}
           </div>
         </div>
       )}
 
       {/* Hero Section for InPlay Shorts (Darmaa) */}
-      {activeFilter === 'InPlay Shorts' && darmaaHeroMovies && darmaaHeroMovies.length > 0 && (
+      {activeFilter === 'InPlay Shorts' && displayDarmaaHeroMovies && displayDarmaaHeroMovies.length > 0 && (
         <div className="hero" ref={heroRef} style={{ overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center' }}>
           <div
             style={{
@@ -2554,8 +2641,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               justifyContent: 'center'
             }}
           >
-            {darmaaHeroMovies.slice(0, 5).map((movie, index) => {
-              const total = Math.min(darmaaHeroMovies.length, 5);
+            {displayDarmaaHeroMovies.slice(0, 5).map((movie, index) => {
+              const total = Math.min(displayDarmaaHeroMovies.length, 5);
               const isActive = index === currentHeroIndex % total;
 
               let visualOffset = 100;
@@ -2592,12 +2679,29 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                     else if (offset.x < -50) setCurrentHeroIndex((prev) => (prev + 1) % total);
                   }}
                   onClick={() => {
-                    if (isActive) setSelectedMovie(movie);
+                    if (isActive) {
+                      if (movie.isBanner) {
+                         if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                      } else {
+                         setSelectedMovie(movie);
+                      }
+                    }
                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
                     else if (visualOffset === 1) setCurrentHeroIndex((prev) => (prev + 1) % total);
                   }}
                 >
-                  <img src={getImageUrl(movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                  {movie.mediaType === 'video' ? (
+                    <video 
+                      src={getImageUrl(movie.mediaUrl)} 
+                      autoPlay 
+                      muted 
+                      playsInline 
+                      onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                    />
+                  ) : (
+                    <img src={getImageUrl(movie.mediaUrl || movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} />
+                  )}
                   {isActive && (
                     <>
                     </>
@@ -2606,8 +2710,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
               )
             })}
             <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
-              {darmaaHeroMovies.slice(0, 5).map((_, i) => (
-                <div key={i} style={{ width: i === currentHeroIndex % Math.min(darmaaHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(darmaaHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+              {displayDarmaaHeroMovies.slice(0, 5).map((_, i) => (
+                <div key={i} style={{ width: i === currentHeroIndex % Math.min(displayDarmaaHeroMovies.length, 5) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(displayDarmaaHeroMovies.length, 5) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
               ))}
             </div>
           </div>
