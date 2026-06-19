@@ -199,7 +199,11 @@ const checkDownloadAccess = async (contentId, userId, episodeIndex = null) => {
       );
 
       if (!isAlreadyWatched) {
-        const remainingPasses = Math.max(0, 5 - freeEpisodesWatched.length);
+        // PER-SHOW free episode limit: count only episodes watched for THIS specific show
+        const watchedForThisShow = freeEpisodesWatched.filter(
+          item => item.contentId?.toString() === contentId.toString()
+        ).length;
+        const remainingPasses = Math.max(0, 5 - watchedForThisShow);
         if (remainingPasses <= 0) {
           return { hasAccess: false, message: 'An active subscription is required to download this episode.' };
         }

@@ -78,13 +78,20 @@ const getAllQuickBytes = async (req, res) => {
             }
         });
 
-        let remainingPasses = Math.max(0, 5 - freeEpisodesWatched.length);
+        let remainingPasses = 0; // unused after per-show refactor — kept for reference only
 
         const processedBytes = hydratedBytes.map(qb => {
             const isDarmaa = qb.targetCategory === 'Darmaa' || qb.targetCategory === 'Both';
             if (isDarmaa && !isSubscribed) {
                 const qbIdStr = qb._id?.toString();
                 if (qb.episodes && Array.isArray(qb.episodes)) {
+
+                    // PER-SHOW free episode limit: count only episodes watched for THIS specific show
+                    const watchedForThisShow = freeEpisodesWatched.filter(
+                        item => item.contentId?.toString() === qbIdStr
+                    ).length;
+                    let remainingPasses = Math.max(0, 5 - watchedForThisShow);
+
                     qb.episodes = qb.episodes.map((ep, idx) => {
                         const isAlreadyWatched = watchedMap[qbIdStr] && watchedMap[qbIdStr].has(idx);
 

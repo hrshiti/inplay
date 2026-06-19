@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from './services/api/authService';
 import { trackLogin } from './utils/analytics';
 export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
@@ -12,6 +12,9 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Populated when socketService.handleForceLogout() redirects with ?reason=...
+  const kickedReason = searchParams.get('reason');
 
   const handlePhoneChange = (e) => {
     const numericValue = e.target.value.replace(/\D/g, '');
@@ -122,6 +125,24 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
               {step === 1 ? 'Sign in with your phone number' : 'Enter the OTP to verify'}
             </p>
           </div>
+
+          {/* Device-Kick Warning Banner — shown when redirected with ?reason= from another device login */}
+          {kickedReason && (
+            <div style={{
+              background: 'rgba(234, 179, 8, 0.1)',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+              color: '#eab308',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              fontSize: '0.85rem',
+              textAlign: 'center',
+              fontWeight: '500',
+              lineHeight: '1.4'
+            }}>
+              ⚠️ {decodeURIComponent(kickedReason)}
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={step === 1 ? requestOtp : verifyOtp}>

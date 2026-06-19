@@ -225,8 +225,13 @@ const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = 
       }
     });
 
-    let remainingPasses = Math.max(0, 5 - freeEpisodesWatched.length);
     const contentIdStr = result._id?.toString();
+
+    // PER-SHOW free episode limit: count only episodes watched for THIS specific show
+    const watchedForThisShow = freeEpisodesWatched.filter(
+      item => item.contentId?.toString() === contentIdStr
+    ).length;
+    let remainingPasses = Math.max(0, 5 - watchedForThisShow);
 
     let globalEpisodeIndex = 0;
     if (result.seasons && Array.isArray(result.seasons)) {
@@ -238,39 +243,24 @@ const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = 
 
             const isAlreadyWatched = watchedMap[contentIdStr] && watchedMap[contentIdStr].has(epIdx);
             
-            if (freeEpisodesWatched.length >= 5) {
-              // Trial is completely over. Lock everything.
-              return {
-                ...ep,
-                isLocked: true,
-                isPremium: true,
-                video: ep.video ? {
-                  ...ep.video,
-                  url: '',
-                  secure_url: '',
-                  hls_url: ''
-                } : null
-              };
+            if (isAlreadyWatched) {
+              return { ...ep, isLocked: false };
             } else {
-              if (isAlreadyWatched) {
+              if (remainingPasses > 0) {
+                remainingPasses--;
                 return { ...ep, isLocked: false };
               } else {
-                if (remainingPasses > 0) {
-                  remainingPasses--;
-                  return { ...ep, isLocked: false };
-                } else {
-                  return {
-                    ...ep,
-                    isLocked: true,
-                    isPremium: true,
-                    video: ep.video ? {
-                      ...ep.video,
-                      url: '',
-                      secure_url: '',
-                      hls_url: ''
-                    } : null
-                  };
-                }
+                return {
+                  ...ep,
+                  isLocked: true,
+                  isPremium: true,
+                  video: ep.video ? {
+                    ...ep.video,
+                    url: '',
+                    secure_url: '',
+                    hls_url: ''
+                  } : null
+                };
               }
             }
           });
@@ -284,39 +274,24 @@ const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = 
       result.episodes = result.episodes.map((ep, idx) => {
         const isAlreadyWatched = watchedMap[contentIdStr] && watchedMap[contentIdStr].has(idx);
 
-        if (freeEpisodesWatched.length >= 5) {
-          // Trial is completely over. Lock everything.
-          return {
-            ...ep,
-            isLocked: true,
-            isPremium: true,
-            video: ep.video ? {
-              ...ep.video,
-              url: '',
-              secure_url: '',
-              hls_url: ''
-            } : null
-          };
+        if (isAlreadyWatched) {
+          return { ...ep, isLocked: false };
         } else {
-          if (isAlreadyWatched) {
+          if (remainingPasses > 0) {
+            remainingPasses--;
             return { ...ep, isLocked: false };
           } else {
-            if (remainingPasses > 0) {
-              remainingPasses--;
-              return { ...ep, isLocked: false };
-            } else {
-              return {
-                ...ep,
-                isLocked: true,
-                isPremium: true,
-                video: ep.video ? {
-                  ...ep.video,
-                  url: '',
-                  secure_url: '',
-                  hls_url: ''
-                } : null
-              };
-            }
+            return {
+              ...ep,
+              isLocked: true,
+              isPremium: true,
+              video: ep.video ? {
+                ...ep.video,
+                url: '',
+                secure_url: '',
+                hls_url: ''
+              } : null
+            };
           }
         }
       });
@@ -550,12 +525,22 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
 
   if (isDrama && !isSubscribed) {
     const epIdx = (episodeIndex !== undefined && episodeIndex !== null) ? parseInt(episodeIndex, 10) : 0;
-    
-    if (user.freeEpisodesWatched.length >= 5) {
-      // Trial is completely exhausted, block everything
-      throw new Error('Subscription required to watch this content.');
+
+    // PER-SHOW free episode limit: count only episodes watched for THIS specific show
+    const watchedForThisShow = user.freeEpisodesWatched.filter(
+      item => item.contentId.toString() === contentId.toString()
+    ).length;
+
+    if (watchedForThisShow >= 5) {
+      // This show's free trial is exhausted, block further new episodes
+      const alreadyWatched = user.freeEpisodesWatched.some(
+        item => item.contentId.toString() === contentId.toString() && item.episodeIndex === epIdx
+      );
+      if (!alreadyWatched) {
+        throw new Error('Subscription required to watch this content.');
+      }
     } else {
-      // Check if this episode is already watched
+      // Check if this specific episode is already watched (re-watch is always allowed)
       const alreadyWatched = user.freeEpisodesWatched.some(
         item => item.contentId.toString() === contentId.toString() && item.episodeIndex === epIdx
       );
@@ -603,7 +588,11 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
 
   await user.save();
 
-  const passesExhausted = Boolean(isDrama && !isSubscribed && user.freeEpisodesWatched.length >= 5);
+  // PER-SHOW: passesExhausted is true only if THIS show's free episodes (5) are used up
+  const watchedForThisShowFinal = user.freeEpisodesWatched.filter(
+    item => item.contentId.toString() === contentId.toString()
+  ).length;
+  const passesExhausted = Boolean(isDrama && !isSubscribed && watchedForThisShowFinal >= 5);
 
   return { message: 'Watch history updated', progress, completed, passesExhausted };
 };

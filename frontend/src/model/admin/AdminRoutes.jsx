@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap, Bell, Users as UsersIcon, LogOut } from 'lucide-react';
+import { X, Save, User as UserIcon, Shield, CheckCircle2, AlertCircle, Video, Headphones, Smartphone, Megaphone, Layers, Film, Plus, Edit, Trash2, Zap, Bell, Users as UsersIcon, LogOut, Download } from 'lucide-react';
 import adminNotificationService from '../../services/api/adminNotificationService';
 import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
@@ -898,6 +898,42 @@ const Users = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!users || users.length === 0) return alert('No users to export');
+    
+    // Create CSV headers
+    const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Plan', 'Join Date', 'Last Login'];
+    
+    // Create CSV rows
+    const csvRows = users.map(u => {
+      const fullData = u.fullData || {};
+      return [
+        `"${u.name || ''}"`,
+        `"${u.email || ''}"`,
+        `"${fullData.phone || ''}"`,
+        `"${fullData.role || 'user'}"`,
+        `"${fullData.status || 'inactive'}"`,
+        `"${u.plan || 'Free'}"`,
+        `"${u.joinDate || ''}"`,
+        `"${u.lastLogin || ''}"`
+      ].join(',');
+    });
+    
+    // Combine headers and rows
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    
+    // Create a Blob and trigger download
+    const blob = new Blob([csvString], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `InPlay_Users_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   return (
     <div style={{ padding: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
@@ -923,7 +959,25 @@ const Users = () => {
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleExportCSV}
+            style={{
+              background: '#2563eb',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Download size={18} /> Export to Excel
+          </button>
           <button
             onClick={handleForceLogoutAll}
             style={{

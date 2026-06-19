@@ -454,6 +454,11 @@ const startServer = async () => {
 
   // Make io accessible globally via app set
   app.set('io', io);
+
+  // Register io with the singleton so services (without req) can emit events
+  const { setIO } = require('./utils/socketIO');
+  setIO(io);
+
 };
 
 startServer();

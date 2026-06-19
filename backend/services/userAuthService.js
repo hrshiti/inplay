@@ -78,10 +78,31 @@ const loginUser = async (email, password) => {
     }
   }
 
+  // Single-device enforcement: bump tokenVersion to invalidate any existing JWT on another device.
+  // The protect middleware checks decoded.tokenVersion vs user.tokenVersion and returns 401 FORCE_LOGOUT
+  // if they don't match. The socket event kicks the old device in real time without waiting for a poll.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  user.forceLogoutAt = new Date();
+  await user.save({ validateBeforeSave: false });
+
+  // Emit force_logout to any socket room registered to this userId
+  try {
+    const { getIO } = require('../utils/socketIO');
+    const io = getIO();
+    if (io) {
+      io.to(user._id.toString()).emit('force_logout', {
+        message: 'Your account was signed in on another device.'
+      });
+    }
+  } catch (socketErr) {
+    // Non-fatal: tokenVersion check in protect middleware is the hard guard
+    console.error('[SingleDevice] Socket emit error on loginUser:', socketErr.message);
+  }
+
   return user;
 };
 
-// Request OTP for Login
+
 const requestOtp = async (phone) => {
   const user = await User.findOne({ phone, role: 'user' });
   if (!user) {
@@ -134,10 +155,26 @@ const verifyOtp = async (phone, otp) => {
     throw new Error('OTP expired');
   }
 
-  // Clear OTP
+  // Single-device enforcement: bump tokenVersion to invalidate any existing JWT on another device.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  user.forceLogoutAt = new Date();
+  // Clear OTP fields and save everything in one write
   user.otp = undefined;
   user.otpExpiry = undefined;
   await user.save();
+
+  // Emit force_logout to any socket rooms registered to this userId
+  try {
+    const { getIO } = require('../utils/socketIO');
+    const io = getIO();
+    if (io) {
+      io.to(user._id.toString()).emit('force_logout', {
+        message: 'Your account was signed in on another device.'
+      });
+    }
+  } catch (socketErr) {
+    console.error('[SingleDevice] Socket emit error on OTP verify:', socketErr.message);
+  }
 
   return user;
 };
