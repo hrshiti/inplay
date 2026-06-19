@@ -1082,6 +1082,7 @@ function App() {
                         qbContinueWatching={qbContinueWatching}
                         bhojpuriQuickBites={bhojpuriQuickBites}
                         handleResumeQuickByte={handleResumeQuickByte}
+                        banners={banners}
                       />
                     ) : activeFilter === 'InPlay Cinema' || activeFilter === 'Popular' || activeFilter === 'All' ? (
                       /* Standard Home View */
@@ -2515,14 +2516,18 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   }}
                 >
                   {movie.mediaType === 'video' ? (
-                    <video 
-                      src={getImageUrl(movie.mediaUrl)} 
-                      autoPlay 
-                      muted 
-                      playsInline 
-                      onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
-                    />
+                    isActive ? (
+                      <video 
+                        src={getImageUrl(movie.mediaUrl)} 
+                        autoPlay 
+                        muted 
+                        playsInline 
+                        onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#000' }} />
+                    )
                   ) : (
                     <img src={getImageUrl(movie.mediaUrl || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} />
                   )}
@@ -2602,14 +2607,18 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   }}
                 >
                   {movie.mediaType === 'video' ? (
-                    <video 
-                      src={getImageUrl(movie.mediaUrl)} 
-                      autoPlay 
-                      muted 
-                      playsInline 
-                      onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
-                    />
+                    isActive ? (
+                      <video 
+                        src={getImageUrl(movie.mediaUrl)} 
+                        autoPlay 
+                        muted 
+                        playsInline 
+                        onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#000' }} />
+                    )
                   ) : (
                     <img src={getImageUrl(movie.mediaUrl || movie.poster?.url || movie.poster || movie.thumbnail?.url || movie.thumbnail || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} />
                   )}
@@ -2691,14 +2700,18 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   }}
                 >
                   {movie.mediaType === 'video' ? (
-                    <video 
-                      src={getImageUrl(movie.mediaUrl)} 
-                      autoPlay 
-                      muted 
-                      playsInline 
-                      onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
-                    />
+                    isActive ? (
+                      <video 
+                        src={getImageUrl(movie.mediaUrl)} 
+                        autoPlay 
+                        muted 
+                        playsInline 
+                        onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#000' }} />
+                    )
                   ) : (
                     <img src={getImageUrl(movie.mediaUrl || movie.thumbnail?.url || movie.thumbnail || movie.poster?.url || movie.image || movie.backdrop?.url || movie.backdrop)} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} />
                   )}
