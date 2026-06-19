@@ -103,11 +103,10 @@ const quickByteSchema = new mongoose.Schema({
     timestamps: true
 });
 
-quickByteSchema.pre('save', function (next) {
+quickByteSchema.pre('save', function () {
   if (this.isModified('fakeViews') || this.isModified('realViews')) {
     this.views = (this.fakeViews || 0) + (this.realViews || 0);
   }
-  next();
 });
 
 quickByteSchema.index({ status: 1 });

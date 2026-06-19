@@ -79,12 +79,10 @@ downloadSchema.index({ deviceId: 1 });
 downloadSchema.index({ isActive: 1 });
 
 // Generate license key before saving
-downloadSchema.pre('save', function(next) {
+downloadSchema.pre('save', function () {
   if (!this.licenseKey) {
-    // Generate a secure license key
     this.licenseKey = crypto.randomBytes(32).toString('hex');
   }
-  next();
 });
 
 // Virtual for isExpired
