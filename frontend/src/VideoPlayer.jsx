@@ -548,7 +548,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         // iOS Safari uses webkitEnterFullscreen on the video element itself
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
             if (el && el.requestFullscreen) {
-                await el.requestFullscreen().catch(err => console.error(err));
+                const req = el.requestFullscreen();
+                if (req && req.catch) await req.catch(err => console.error(err));
             } else if (el && el.webkitRequestFullscreen) {
                 el.webkitRequestFullscreen(); // Safari desktop
             } else if (videoEl && videoEl.webkitEnterFullscreen) {
@@ -570,14 +571,19 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             }
         } else {
             if (document.exitFullscreen) {
-                document.exitFullscreen();
+                const req = document.exitFullscreen();
+                if (req && req.catch) await req.catch(err => console.error(err));
             } else if (document.webkitExitFullscreen) {
                 document.webkitExitFullscreen();
             }
 
             setIsOrientationLockFailed(false);
             if (window.screen && screen.orientation && screen.orientation.unlock) {
-                screen.orientation.unlock().catch(() => {});
+                try {
+                    screen.orientation.unlock();
+                } catch (e) {
+                    console.error("Unlock failed", e);
+                }
             }
         }
     };
@@ -589,7 +595,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             const videoEl = videoRef.current;
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 if (el && el.requestFullscreen) {
-                    await el.requestFullscreen();
+                    const req = el.requestFullscreen();
+                    if (req && req.catch) await req.catch(e => console.error(e));
                 } else if (el && el.webkitRequestFullscreen) {
                     el.webkitRequestFullscreen();
                 } else if (videoEl && videoEl.webkitEnterFullscreen) {
@@ -600,12 +607,16 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             if (screen.orientation && screen.orientation.lock) {
                 const type = screen.orientation.type;
                 if (type.startsWith('portrait')) {
-                    await screen.orientation.lock('landscape').catch(() => {
+                    try {
+                        await screen.orientation.lock('landscape');
+                        setIsOrientationLockFailed(false);
+                    } catch (err) {
                         setIsOrientationLockFailed(true);
-                    });
-                    setIsOrientationLockFailed(false);
+                    }
                 } else {
-                    await screen.orientation.unlock().catch(() => {});
+                    try {
+                        screen.orientation.unlock();
+                    } catch (e) { }
                     setIsOrientationLockFailed(false);
                 }
             } else {
