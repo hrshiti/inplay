@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { NATIVE_BANNER_HEIGHT } from '../constants/adConfig';
 
 const canCallFlutter = () =>
   window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function';
@@ -10,11 +11,10 @@ const callUpdateAdPosition = (payload) => {
 };
 
 /**
- * AdPlaceholder
- * Creates an empty space in the React DOM and continuously syncs its Y-coordinate
- * to the Flutter layer so that a Native AdMob Banner can be overlaid exactly on top of it.
+ * AdPlaceholder — empty slot synced to Flutter native AdMob overlay.
+ * Use NATIVE_BANNER_HEIGHT (50px) so the close/info button is not clipped.
  */
-const AdPlaceholder = ({ pageName, height = 60, scrollContainerRef }) => {
+const AdPlaceholder = ({ pageName, height = NATIVE_BANNER_HEIGHT, scrollContainerRef }) => {
   const adPlaceholderRef = useRef(null);
   const bridgeReadyRef = useRef(canCallFlutter());
 
@@ -26,11 +26,15 @@ const AdPlaceholder = ({ pageName, height = 60, scrollContainerRef }) => {
       if (!bridgeReadyRef.current || !adPlaceholderRef.current) return;
 
       const rect = adPlaceholderRef.current.getBoundingClientRect();
+      const inViewport = rect.top < window.innerHeight && rect.bottom > 0;
 
       callUpdateAdPosition({
         page: pageName,
+        x: rect.left,
         y: rect.top,
-        visible: rect.top < window.innerHeight && rect.bottom > 0,
+        width: rect.width,
+        height: rect.height,
+        visible: inViewport,
       });
     };
 
@@ -74,9 +78,14 @@ const AdPlaceholder = ({ pageName, height = 60, scrollContainerRef }) => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       resizeObserver?.disconnect();
 
-      callUpdateAdPosition({ page: pageName, y: -1000, visible: false });
+      callUpdateAdPosition({ page: pageName, x: 0, y: -1000, width: 0, height: 0, visible: false });
     };
   }, [pageName, scrollContainerRef]);
+
+  // No empty gap in regular browser — only reserve space inside the Flutter WebView app
+  if (!canCallFlutter()) {
+    return null;
+  }
 
   return (
     <div
@@ -84,13 +93,18 @@ const AdPlaceholder = ({ pageName, height = 60, scrollContainerRef }) => {
       className="flutter-ad-placeholder"
       style={{
         width: '100%',
+        maxWidth: '100%',
         height: `${height}px`,
-        margin: '12px 0',
+        minHeight: `${height}px`,
+        maxHeight: `${height}px`,
+        margin: '8px 0',
+        padding: 0,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        flexShrink: 0,
         background: 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
       }}
+      aria-hidden="true"
     />
   );
 };

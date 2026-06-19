@@ -322,7 +322,7 @@ export default function MovieDetailsPage({
                 </div>
 
                 {/* Flutter AdMob Placeholder */}
-                <AdPlaceholder pageName="content-details" height={60} scrollContainerRef={scrollContainerRef} />
+                <AdPlaceholder pageName="content-details" scrollContainerRef={scrollContainerRef} />
 
                 {/* Tabs */}
                 <div style={{ borderTop: '1px solid #333', paddingTop: '0px' }}>
