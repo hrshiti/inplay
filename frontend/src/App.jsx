@@ -774,7 +774,7 @@ function App() {
         setMyList(prev => [...prev, movie]);
         showToast("Added (Local)");
       }
-    }
+    } 
   };
 
   const handleToggleLike = async (movie, showNotification = true) => {
