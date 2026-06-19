@@ -770,6 +770,10 @@ const Users = () => {
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [plans, setPlans] = useState([]);
 
+  // Export Date Filters
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+
   useEffect(() => {
     fetchUsers();
     fetchPlans();
@@ -902,16 +906,42 @@ const Users = () => {
   const handleExportCSV = () => {
     if (!users || users.length === 0) return alert('No users to export');
     
+    let filteredUsers = users;
+    
+    if (exportStartDate || exportEndDate) {
+      filteredUsers = users.filter(u => {
+        const userDate = new Date(u.fullData.createdAt || Date.now());
+        userDate.setHours(0,0,0,0);
+        
+        let isValid = true;
+        if (exportStartDate) {
+          const start = new Date(exportStartDate);
+          start.setHours(0,0,0,0);
+          if (userDate < start) isValid = false;
+        }
+        if (exportEndDate) {
+          const end = new Date(exportEndDate);
+          end.setHours(0,0,0,0);
+          if (userDate > end) isValid = false;
+        }
+        return isValid;
+      });
+    }
+
+    if (filteredUsers.length === 0) {
+      return alert('No users found in the selected date range.');
+    }
+    
     // Create CSV headers
     const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Plan', 'Join Date', 'Last Login'];
     
     // Create CSV rows
-    const csvRows = users.map(u => {
+    const csvRows = filteredUsers.map(u => {
       const fullData = u.fullData || {};
       return [
         `"${u.name || ''}"`,
         `"${u.email || ''}"`,
-        `"${fullData.phone || ''}"`,
+        `="${fullData.phone || ''}"`,
         `"${fullData.role || 'user'}"`,
         `"${fullData.status || 'inactive'}"`,
         `"${u.plan || 'Free'}"`,
@@ -961,6 +991,26 @@ const Users = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Export Date Filters */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f3f4f6', padding: '4px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.85rem', color: '#4b5563', fontWeight: '600' }}>Filter Export:</span>
+            <input 
+              type="date" 
+              value={exportStartDate} 
+              onChange={(e) => setExportStartDate(e.target.value)} 
+              style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px', fontSize: '0.85rem', background: 'white' }} 
+              title="Start Date" 
+            />
+            <span style={{ color: '#9ca3af' }}>to</span>
+            <input 
+              type="date" 
+              value={exportEndDate} 
+              onChange={(e) => setExportEndDate(e.target.value)} 
+              style={{ border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px', fontSize: '0.85rem', background: 'white' }} 
+              title="End Date" 
+            />
+          </div>
+
           <button
             onClick={handleExportCSV}
             style={{
