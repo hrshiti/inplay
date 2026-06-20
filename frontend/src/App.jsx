@@ -91,12 +91,19 @@ function App() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [playingMovie, setPlayingMovie] = useState(null);
   const [playingEpisode, setPlayingEpisode] = useState(null);
-  const [myList, setMyList] = useState([]); // Fetched from backend
-  const [likedVideos, setLikedVideos] = useState([]);
-  const [continueWatching, setContinueWatching] = useState([]);
-  const [watchHistory, setWatchHistory] = useState([]);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('inplay_current_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [myList, setMyList] = useState(() => currentUser?.myList || []);
+  const [likedVideos, setLikedVideos] = useState(() => currentUser?.likedContent || []);
+  const [continueWatching, setContinueWatching] = useState(() => currentUser?.continueWatching || []);
+  const [watchHistory, setWatchHistory] = useState(() => currentUser?.history || []);
   const [toast, setToast] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
   const [promotions, setPromotions] = useState([]);
   const [contentSections, setContentSections] = useState({

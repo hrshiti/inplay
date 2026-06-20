@@ -26,9 +26,9 @@ export default function SplashScreen() {
                 src="/spashgif.gif" 
                 alt="Loading..." 
                 style={{
-                    width: '300px', // Making it a decent size
-                    height: 'auto',
-                    objectFit: 'contain'
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
                 }}
             />
         </motion.div>

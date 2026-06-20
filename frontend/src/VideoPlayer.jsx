@@ -118,7 +118,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         };
     }, []);
 
-    const isCssRotated = isFullScreen && !isVertical && isPortrait && isOrientationLockFailed;
+    const isCssRotated = isFullScreen && !isVertical && isPortrait;
 
     // Define Icon Sizes based on mode
     const playIconSize = isFullScreen ? 48 : 48; // Kept scaled down to prevent oversized icons on PC fullscreen
