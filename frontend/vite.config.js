@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(), 
+    react(),
     tailwindcss(),
     legacy({
       targets: ['defaults', 'not IE 11', 'iOS >= 12'],

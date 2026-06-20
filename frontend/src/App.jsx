@@ -781,7 +781,7 @@ function App() {
         setMyList(prev => [...prev, movie]);
         showToast("Added (Local)");
       }
-    } 
+    }
   };
 
   const handleToggleLike = async (movie, showNotification = true) => {
@@ -911,8 +911,8 @@ function App() {
   const getAppBannersByCategory = (cat) => {
     if (!banners) return [];
     if (!Array.isArray(banners)) {
-        const catBanners = banners[cat.toLowerCase()] || [];
-        return catBanners.filter(b => b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
+      const catBanners = banners[cat.toLowerCase()] || [];
+      return catBanners.filter(b => b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
     }
     return banners.filter(b => b.category.toLowerCase() === cat.toLowerCase() && b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
   };
@@ -935,10 +935,10 @@ function App() {
     if (!currentHeroArray || currentHeroArray.length === 0) return;
 
     const currentHero = currentHeroArray[currentHeroIndex % currentHeroArray.length];
-    
+
     // Pause auto-scroll if the current slide is a video. The video's onEnded event will trigger the next slide.
     if (currentHero && currentHero.mediaType === 'video') {
-       return; 
+      return;
     }
 
     const timer = setInterval(() => {
@@ -2081,7 +2081,7 @@ function ContentDetailsRoute({
           else if (!found) navigate('/', { replace: true });
         })
         .catch(() => {
-            if (!found) navigate('/', { replace: true });
+          if (!found) navigate('/', { replace: true });
         });
     }
   }, [id, allContent, navigate, movie]);
@@ -2145,7 +2145,7 @@ function WatchPageRoute({
               else if (!movie && !found) navigate('/', { replace: true });
             })
             .catch(() => {
-                if (!movie && !found) navigate('/', { replace: true });
+              if (!movie && !found) navigate('/', { replace: true });
             });
         });
     }
@@ -2342,14 +2342,14 @@ function HeroSlide({ movie, onClick }) {
 
 // Category Grid View Component handling both 'Originals' and 'New & Hot' layouts
 function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trendingData, newReleaseData, promotions, darmaaHeroMovies, bhojpuriHeroMovies, cinemaHeroMovies, darmaaSections, bhojpuriSections, cinemaSections, heroRef, currentHeroIndex, setCurrentHeroIndex, continueWatching, qbContinueWatching, handleResumeQuickByte, bhojpuriQuickBites, banners }) {
-  
+
   const getBannersByCategory = (cat) => {
     if (!banners) return [];
-    
+
     // If banners is an object (from the grouped API response)
     if (!Array.isArray(banners)) {
-        const catBanners = banners[cat.toLowerCase()] || [];
-        return catBanners.filter(b => b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
+      const catBanners = banners[cat.toLowerCase()] || [];
+      return catBanners.filter(b => b.isActive).sort((a, b) => a.order - b.order).map(b => ({ ...b, isBanner: true }));
     }
 
     // Fallback if banners is an array
@@ -2513,9 +2513,9 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   onClick={() => {
                     if (isActive) {
                       if (movie.isBanner) {
-                         if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                        if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
                       } else {
-                         setSelectedMovie(movie);
+                        setSelectedMovie(movie);
                       }
                     }
                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
@@ -2524,13 +2524,13 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 >
                   {movie.mediaType === 'video' ? (
                     isActive ? (
-                      <video 
-                        src={getImageUrl(movie.mediaUrl)} 
-                        autoPlay 
-                        muted 
-                        playsInline 
+                      <video
+                        src={getImageUrl(movie.mediaUrl)}
+                        autoPlay
+                        muted
+                        playsInline
                         onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }}
                       />
                     ) : (
                       <div style={{ width: '100%', height: '100%', backgroundColor: '#000' }} />
@@ -2604,9 +2604,9 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   onClick={() => {
                     if (isActive) {
                       if (movie.isBanner) {
-                         if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                        if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
                       } else {
-                         setSelectedMovie({ ...movie, isVertical: false, type: 'bhojpuri', category: 'Bhojpuri' });
+                        setSelectedMovie({ ...movie, isVertical: false, type: 'bhojpuri', category: 'Bhojpuri' });
                       }
                     }
                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
@@ -2615,13 +2615,13 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 >
                   {movie.mediaType === 'video' ? (
                     isActive ? (
-                      <video 
-                        src={getImageUrl(movie.mediaUrl)} 
-                        autoPlay 
-                        muted 
-                        playsInline 
+                      <video
+                        src={getImageUrl(movie.mediaUrl)}
+                        autoPlay
+                        muted
+                        playsInline
                         onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }}
                       />
                     ) : (
                       <div style={{ width: '100%', height: '100%', backgroundColor: '#000' }} />
@@ -2697,9 +2697,9 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   onClick={() => {
                     if (isActive) {
                       if (movie.isBanner) {
-                         if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                        if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
                       } else {
-                         setSelectedMovie(movie);
+                        setSelectedMovie(movie);
                       }
                     }
                     else if (visualOffset === -1) setCurrentHeroIndex((prev) => (prev - 1 + total) % total);
@@ -2708,13 +2708,13 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 >
                   {movie.mediaType === 'video' ? (
                     isActive ? (
-                      <video 
-                        src={getImageUrl(movie.mediaUrl)} 
-                        autoPlay 
-                        muted 
-                        playsInline 
+                      <video
+                        src={getImageUrl(movie.mediaUrl)}
+                        autoPlay
+                        muted
+                        playsInline
                         onEnded={() => setCurrentHeroIndex((prev) => prev + 1)}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', pointerEvents: 'none' }}
                       />
                     ) : (
                       <div style={{ width: '100%', height: '100%', backgroundColor: '#000' }} />
@@ -2991,66 +2991,67 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
         <div style={{ marginTop: '10px' }}>
 
           {/* Continue Watching (Cinema) Section */}
-          {continueWatching && continueWatching.filter(show => 
+          {continueWatching && continueWatching.filter(show =>
             (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
           ).length > 0 && (
-            <section className="section" style={{
-              marginBottom: '24px',
-              background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
-              paddingTop: '20px',
-              paddingBottom: '20px',
-              margin: '0 -16px',
-              paddingLeft: '16px',
-              paddingRight: '16px'
-            }}>
-              <div className="section-header" style={{ marginBottom: '10px' }}>
-                <h2 className="section-title">Continue Watching</h2>
-                <span style={{ fontSize: '18px', color: '#888' }}>›</span>
-              </div>
-              <div className="horizontal-list hide-scrollbar" style={{ gap: '8px', paddingBottom: '10px' }}>
-                {continueWatching.filter(show => 
-                  (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
-                ).map((show, index) => {
-                  const formatDuration = (seconds) => {
-                    if (!seconds) return '0m';
-                    const mins = Math.floor(seconds / 60);
-                    const secs = Math.floor(seconds % 60);
-                    if (mins > 0) return `${mins}m ${secs}s`;
-                    return `${secs}s`;
-                  };
-                  return (
-                  <motion.div
-                    key={`cinema-cw-${show.id || index}`}
-                    whileHover={{ scale: 1.05, y: -5 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedMovie(show)}
-                    style={{ flex: '0 0 120px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px' }}
-                  >
-                    <div style={{ width: '120px', height: '180px', borderRadius: '12px', overflow: 'hidden', position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <img
-                        src={getImageUrl(show.image || show.poster?.url)}
-                        alt={show.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
-                        onError={(e) => { e.target.src = 'https://placehold.co/120x180/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
-                      />
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
-                        {((show.totalDuration && show.watchedSeconds !== undefined) || show.progress > 0) && (
-                          <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
-                            <div style={{ width: `${show.watchedSeconds ? Math.min((show.watchedSeconds / show.totalDuration) * 100, 100) : Math.min(show.progress || 0, 100)}%`, height: '100%', background: '#e50914' }}></div>
+              <section className="section" style={{
+                marginBottom: '24px',
+                background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
+                paddingTop: '20px',
+                paddingBottom: '20px',
+                margin: '0 -16px',
+                paddingLeft: '16px',
+                paddingRight: '16px'
+              }}>
+                <div className="section-header" style={{ marginBottom: '10px' }}>
+                  <h2 className="section-title">Continue Watching</h2>
+                  <span style={{ fontSize: '18px', color: '#888' }}>›</span>
+                </div>
+                <div className="horizontal-list hide-scrollbar" style={{ gap: '8px', paddingBottom: '10px' }}>
+                  {continueWatching.filter(show =>
+                    (show.type === 'movie' || show.type === 'action' || show.type === 'new_release' || show.type === 'trending_now' || show.type === 'trending_song' || show.isMovie) && show.type !== 'bhojpuri'
+                  ).map((show, index) => {
+                    const formatDuration = (seconds) => {
+                      if (!seconds) return '0m';
+                      const mins = Math.floor(seconds / 60);
+                      const secs = Math.floor(seconds % 60);
+                      if (mins > 0) return `${mins}m ${secs}s`;
+                      return `${secs}s`;
+                    };
+                    return (
+                      <motion.div
+                        key={`cinema-cw-${show.id || index}`}
+                        whileHover={{ scale: 1.05, y: -5 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedMovie(show)}
+                        style={{ flex: '0 0 120px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                      >
+                        <div style={{ width: '120px', height: '180px', borderRadius: '12px', overflow: 'hidden', position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                          <img
+                            src={getImageUrl(show.image || show.poster?.url)}
+                            alt={show.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                            onError={(e) => { e.target.src = 'https://placehold.co/120x180/333/FFF?text=' + (show.title || 'InPlay')?.substring(0, 5) }}
+                          />
+                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
+                            {((show.totalDuration && show.watchedSeconds !== undefined) || show.progress > 0) && (
+                              <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div style={{ width: `${show.watchedSeconds ? Math.min((show.watchedSeconds / show.totalDuration) * 100, 100) : Math.min(show.progress || 0, 100)}%`, height: '100%', background: '#e50914' }}></div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {formatDuration(show.totalDuration || show.duration)}
-                      </span>
-                    </div>
-                  </motion.div>
-                )})}
-              </div>
-            </section>
-          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '10px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {formatDuration(show.totalDuration || show.duration)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
 
           {cinemaSections && cinemaSections.length > 0 && cinemaSections.filter(section => section.isActive && section.videos?.length > 0).map(section => (
             <section key={section._id} className="section" style={{ marginBottom: '24px' }}>
