@@ -2027,15 +2027,15 @@ function App() {
               {!isKeyboardOpen && (
                 <nav className="bottom-nav" style={{ justifyContent: 'space-around' }}>
                   <NavItem
-                    icon={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
+                    icon={<div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
                     label="Home"
                     active={activeTab === 'Home' && activeFilter !== 'Audio Series'}
                     onClick={() => handleTabChange('Home')}
                     isPill
                   />
-                  <NavItem icon={<Clapperboard size={24} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
-                  <NavItem icon={<Headphones size={24} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
-                  <NavItem icon={<User size={24} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
+                  <NavItem icon={<Clapperboard size={20} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
+                  <NavItem icon={<Headphones size={20} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
+                  <NavItem icon={<User size={20} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
               )}
             </>
@@ -2191,7 +2191,7 @@ function NavItem({ icon, active, onClick, isPill }) {
 
 function HomeIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
       <polyline points="9 22 9 12 15 12 15 22"></polyline>
     </svg>
