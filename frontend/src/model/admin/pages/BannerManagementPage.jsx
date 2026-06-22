@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash, GripVertical, Check, X, Image as ImageIcon, Film } from 'lucide-react';
 import bannerService from '../../../services/api/bannerService';
+import contentService from '../../../services/api/contentService';
 import { getImageUrl } from '../../../utils/imageUtils';
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
@@ -12,12 +13,25 @@ export default function BannerManagementPage() {
     const [loading, setLoading] = useState(true);
     
     const [showAddBanner, setShowAddBanner] = useState(false);
-    const [newBanner, setNewBanner] = useState({ mediaType: 'image', file: null, order: 0, isActive: true });
+    const [newBanner, setNewBanner] = useState({ mediaType: 'image', file: null, order: 0, isActive: true, contentId: '' });
     const [uploading, setUploading] = useState(false);
+    
+    const [allContent, setAllContent] = useState([]);
 
     useEffect(() => {
         fetchBanners();
+        fetchAllContent();
     }, [activeTab]);
+
+    const fetchAllContent = async () => {
+        try {
+            const data = await contentService.getAllContent();
+            setAllContent(data || []);
+        } catch (error) {
+            console.error("Failed to fetch content", error);
+            setAllContent([]);
+        }
+    };
 
     const fetchBanners = async () => {
         setLoading(true);
@@ -60,10 +74,11 @@ export default function BannerManagementPage() {
                 mediaType: newBanner.mediaType,
                 mediaUrl,
                 isActive: newBanner.isActive,
-                order: newBanner.order
+                order: newBanner.order,
+                contentId: newBanner.contentId || null
             });
             setShowAddBanner(false);
-            setNewBanner({ mediaType: 'image', file: null, order: banners.length, isActive: true });
+            setNewBanner({ mediaType: 'image', file: null, order: banners.length, isActive: true, contentId: '' });
             fetchBanners();
         } catch (error) {
             alert("Failed to create banner: " + error.message);
@@ -165,6 +180,19 @@ export default function BannerManagementPage() {
                                 style={{ width: '100%', padding: '6px', border: '1px solid #d1d5db', borderRadius: '6px', background: 'white' }}
                             />
                         </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Link to Content (Optional)</label>
+                            <select 
+                                value={newBanner.contentId}
+                                onChange={e => setNewBanner({...newBanner, contentId: e.target.value})}
+                                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                            >
+                                <option value="">-- None --</option>
+                                {(allContent || []).map(c => (
+                                    <option key={c._id || c.id} value={c._id || c.id}>{c.title}</option>
+                                ))}
+                            </select>
+                        </div>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Order</label>
                             <input
@@ -241,6 +269,11 @@ export default function BannerManagementPage() {
                                 <div style={{ fontSize: '0.85rem', color: '#64748b', wordBreak: 'break-all' }}>
                                     {banner.mediaUrl}
                                 </div>
+                                {banner.contentId && (
+                                    <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#46d369', fontWeight: '500' }}>
+                                        Linked to: {banner.contentId.title}
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

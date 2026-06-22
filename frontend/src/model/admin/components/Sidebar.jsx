@@ -32,7 +32,7 @@ const navigation = [
   { name: 'Legal Pages', href: '/admin/legal', icon: Shield },
   { name: 'Tab Management', href: '/admin/tabs', icon: Layout },
   { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },
-  { name: 'Settings', href: '/admin/settings/app', icon: Settings }
+  { name: 'Settings', href: '/admin/settings', icon: Settings }
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {

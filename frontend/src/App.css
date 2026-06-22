@@ -562,52 +562,73 @@ html, body {
 /* Bottom Nav */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  padding-top: 4px;
-  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
-  background: #000;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  padding: 10px 16px;
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 100px;
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
   z-index: 1000;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .nav-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  width: 60px;
+  height: auto;
+  color: #888;
+  background: transparent;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-item.active {
-  background: var(--accent);
-  color: white;
-  width: auto;
-  padding: 0 16px;
-  border-radius: 100px;
-  gap: 8px;
-  box-shadow: 0 4px 15px var(--accent-glow);
+  color: #fff;
 }
 
-.nav-item.active span {
-  display: block;
-  font-size: 0.85rem;
+.nav-item.active .nav-icon-container {
+  transform: translateY(-4px);
+  color: var(--accent);
+  filter: drop-shadow(0 0 8px rgba(229, 9, 20, 0.4));
+}
+
+.nav-label {
+  font-size: 0.65rem;
   font-weight: 600;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  bottom: -10px;
 }
 
-.nav-item span {
-  display: none;
+.nav-item.active .nav-label {
+  opacity: 1;
+  transform: translateY(0);
+  bottom: -6px;
+  color: #fff;
 }
 
 /* =========================================
@@ -831,7 +852,8 @@ html, body {
 
   .bottom-nav {
     max-width: none;
-    width: 100vw;
+    width: calc(100vw - 32px);
+    bottom: 24px;
   }
 
   .section {

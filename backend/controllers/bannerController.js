@@ -14,7 +14,7 @@ const getPublicBanners = async (req, res) => {
       query.category = category;
     }
     
-    const banners = await Banner.find(query).sort({ order: 1, createdAt: -1 }).lean();
+    const banners = await Banner.find(query).populate('contentId', 'title type _id').sort({ order: 1, createdAt: -1 }).lean();
     
     // Group by category if returning all
     if (!category) {
@@ -39,7 +39,7 @@ const getAllBanners = async (req, res) => {
   try {
     const { category } = req.query;
     const query = category ? { category } : {};
-    const banners = await Banner.find(query).sort({ category: 1, order: 1, createdAt: -1 });
+    const banners = await Banner.find(query).populate('contentId', 'title type _id').sort({ category: 1, order: 1, createdAt: -1 });
     
     res.status(200).json({ success: true, data: banners });
   } catch (error) {
@@ -53,12 +53,13 @@ const getAllBanners = async (req, res) => {
 // @access  Private/Admin
 const createBanner = async (req, res) => {
   try {
-    const { category, mediaType, mediaUrl, isActive, order } = req.body;
+    const { category, mediaType, mediaUrl, isActive, order, contentId } = req.body;
 
     const banner = new Banner({
       category,
       mediaType,
       mediaUrl,
+      contentId: contentId || null,
       isActive: isActive !== undefined ? isActive : true,
       order: order || 0
     });
@@ -98,7 +99,7 @@ const updateBanner = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Banner not found' });
     }
 
-    const { category, mediaType, mediaUrl, isActive, order } = req.body;
+    const { category, mediaType, mediaUrl, isActive, order, contentId } = req.body;
     
     // Check if media changed and needs new HLS processing
     const needNewHls = mediaType === 'video' && mediaUrl && mediaUrl !== banner.mediaUrl;
@@ -108,6 +109,7 @@ const updateBanner = async (req, res) => {
     if (mediaUrl !== undefined) banner.mediaUrl = mediaUrl;
     if (isActive !== undefined) banner.isActive = isActive;
     if (order !== undefined) banner.order = order;
+    if (contentId !== undefined) banner.contentId = contentId || null;
 
     if (needNewHls) {
        banner.hlsUrl = null; // reset while processing

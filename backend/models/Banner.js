@@ -19,6 +19,11 @@ const bannerSchema = new mongoose.Schema({
   hlsUrl: {
     type: String, // Only populated for video banners
   },
+  contentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Content',
+    default: null
+  },
   isActive: { 
     type: Boolean, 
     default: true 

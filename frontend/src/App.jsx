@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye, Bookmark, VolumeX } from 'lucide-react';
+import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye, Bookmark, VolumeX, Compass, Music, UserCircle, Home } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -1976,6 +1976,7 @@ function App() {
               <AnimatePresence>
                 {selectedMovie && (
                   <MovieDetailsPage
+                    key={selectedMovie._id || selectedMovie.id}
                     movie={selectedMovie}
                     onClose={() => setSelectedMovie(null)}
                     onPlay={handlePlay}
@@ -2025,17 +2026,11 @@ function App() {
 
               {/* Bottom Navigation */}
               {!isKeyboardOpen && (
-                <nav className="bottom-nav" style={{ justifyContent: 'space-around' }}>
-                  <NavItem
-                    icon={<div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
-                    label="Home"
-                    active={activeTab === 'Home' && activeFilter !== 'Audio Series'}
-                    onClick={() => handleTabChange('Home')}
-                    isPill
-                  />
-                  <NavItem icon={<Clapperboard size={20} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
-                  <NavItem icon={<Headphones size={20} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
-                  <NavItem icon={<User size={20} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
+                <nav className="bottom-nav">
+                  <NavItem icon={<Home size={22} strokeWidth={activeTab === 'Home' && activeFilter !== 'Audio Series' ? 2.5 : 2} />} label="Home" active={activeTab === 'Home' && activeFilter !== 'Audio Series'} onClick={() => handleTabChange('Home')} />
+                  <NavItem icon={<Compass size={22} strokeWidth={activeTab === 'For You' ? 2.5 : 2} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
+                  <NavItem icon={<Music size={22} strokeWidth={activeFilter === 'Audio Series' ? 2.5 : 2} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
+                  <NavItem icon={<UserCircle size={22} strokeWidth={location.pathname === '/my-space' ? 2.5 : 2} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
               )}
             </>
@@ -2091,6 +2086,7 @@ function ContentDetailsRoute({
   return (
     <AnimatePresence>
       <MovieDetailsPage
+        key={movie._id || movie.id}
         movie={movie}
         onClose={() => navigate(-1)} // Standard Back
         onPlay={handlePlay}
@@ -2169,33 +2165,13 @@ function WatchPageRoute({
 }
 
 // Custom Nav Item Component
-function NavItem({ icon, active, onClick, isPill }) {
-  // If it's the specific "Home" pill style from the image
-  if (isPill) {
-    return (
-      <button
-        className={`nav-item ${active ? 'active' : ''}`}
-        onClick={onClick}
-      >
-        {active ? icon : <HomeIcon />}
-      </button>
-    )
-  }
-
+function NavItem({ icon, active, onClick, label }) {
   return (
     <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>
-      {icon}
+      <div className="nav-icon-container">{icon}</div>
+      <span className="nav-label">{label}</span>
     </button>
   );
-}
-
-function HomeIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-      <polyline points="9 22 9 12 15 12 15 22"></polyline>
-    </svg>
-  )
 }
 
 
@@ -2513,7 +2489,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   onClick={() => {
                     if (isActive) {
                       if (movie.isBanner) {
-                        if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                        if (movie.contentId) setSelectedMovie(movie.contentId);
+                        else if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
                       } else {
                         setSelectedMovie(movie);
                       }
@@ -2604,7 +2581,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   onClick={() => {
                     if (isActive) {
                       if (movie.isBanner) {
-                        if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                        if (movie.contentId) setSelectedMovie(movie.contentId);
+                        else if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
                       } else {
                         setSelectedMovie({ ...movie, isVertical: false, type: 'bhojpuri', category: 'Bhojpuri' });
                       }
@@ -2697,7 +2675,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                   onClick={() => {
                     if (isActive) {
                       if (movie.isBanner) {
-                        if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
+                        if (movie.contentId) setSelectedMovie(movie.contentId);
+                        else if (movie.targetUrl) window.open(movie.targetUrl, '_blank');
                       } else {
                         setSelectedMovie(movie);
                       }
