@@ -9,9 +9,8 @@ const callUpdateAdPosition = (payload) => {
     window.flutter_inappwebview.callHandler('updateAdPosition', payload);
   }
 };
-
 /**
- * AdPlaceholder — empty slot synced to Flutter native AdMob overlay.
+ * AdPlaceholder — empty slot synced to Flutter native AdMob overlay.dcjsnjnjl
  * Use NATIVE_BANNER_HEIGHT (50px) so the close/info button is not clipped.
  */
 const AdPlaceholder = ({ pageName, height = NATIVE_BANNER_HEIGHT, scrollContainerRef }) => {
