@@ -160,12 +160,12 @@ const AudioSeriesPage = () => {
                                     background: 'rgba(0,0,0,0.7)', color: 'white',
                                     padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem'
                                 }}>
-                                    {series.episodes?.length || 0} Episodes
+                                    {series.episodes?.length || 0} Tracks
                                 </div>
                                 {series.language && (
                                     <div style={{
                                         position: 'absolute', top: '10px', left: '10px',
-                                        background: series.language === 'Bhojpuri' ? '#eab308' : '#3b82f6', color: 'white',
+                                        background: series.language === 'Audiobook' ? '#10b981' : series.language === 'Bhojpuri' ? '#eab308' : '#3b82f6', color: 'white',
                                         padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold'
                                     }}>
                                         {series.language}
@@ -400,6 +400,7 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
                         >
                             <option value="Hindi">Hindi</option>
                             <option value="Bhojpuri">Bhojpuri</option>
+                            <option value="Audiobook">Audiobook</option>
                         </select>
                     </div>
 

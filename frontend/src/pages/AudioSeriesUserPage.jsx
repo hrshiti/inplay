@@ -95,7 +95,7 @@ export default function AudioSeriesUserPage({ onBack }) {
                     
                     {/* Language Tabs */}
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
-                        {['Hindi', 'Bhojpuri'].map(lang => (
+                        {['Hindi', 'Bhojpuri', 'Audiobook'].map(lang => (
                             <button
                                 key={lang}
                                 onClick={() => setActiveLanguageTab(lang)}
@@ -127,7 +127,6 @@ export default function AudioSeriesUserPage({ onBack }) {
                                     </div>
                                 </div>
                                 <div style={{ fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{series.title}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{series.episodes?.length || 0} Episodes</div>
                             </div>
                         ))}
                     </div>
@@ -158,10 +157,9 @@ export default function AudioSeriesUserPage({ onBack }) {
                     </div>
 
                     <div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '12px' }}>Episodes</h3>
                         {(!selectedSeries.episodes || selectedSeries.episodes.length === 0) ? (
                             <div style={{ color: '#aaa', fontStyle: 'italic', padding: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', textAlign: 'center' }}>
-                                No episodes available for this series yet.
+                                No tracks available for this series yet.
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

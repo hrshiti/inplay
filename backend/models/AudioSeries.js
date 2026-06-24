@@ -47,7 +47,7 @@ const audioSeriesSchema = new mongoose.Schema({
     },
     language: {
         type: String,
-        enum: ['Hindi', 'Bhojpuri'],
+        enum: ['Hindi', 'Bhojpuri', 'Audiobook'],
         default: 'Hindi',
         required: [true, 'Please select a language']
     },
