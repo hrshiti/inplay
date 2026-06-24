@@ -366,12 +366,12 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                            Views
+                            Fake Views
                         </label>
                         <input
                             type="number"
-                            name="views"
-                            value={formData.views}
+                            name="fakeViews"
+                            value={formData.fakeViews}
                             onChange={handleInputChange}
                             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
                         />

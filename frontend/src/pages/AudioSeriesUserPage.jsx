@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Play, Pause, SkipBack, SkipForward, X, Clock, ChevronLeft } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUtils';
@@ -13,6 +13,7 @@ export default function AudioSeriesUserPage({ onBack }) {
     const [seriesList, setSeriesList] = useState([]);
     const [selectedSeries, setSelectedSeries] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeLanguageTab, setActiveLanguageTab] = useState('Hindi');
 
     // Use global audio player context
     const {
@@ -24,7 +25,8 @@ export default function AudioSeriesUserPage({ onBack }) {
         togglePlay,
         seekTo,
         skipForward,
-        skipBackward
+        skipBackward,
+        setAllAudioSeries
     } = useAudioPlayer();
 
     useEffect(() => {
@@ -66,6 +68,14 @@ export default function AudioSeriesUserPage({ onBack }) {
         }
     };
 
+    const filteredSeriesList = seriesList.filter(series => (series.language || 'Hindi') === activeLanguageTab);
+
+    useEffect(() => {
+        if (setAllAudioSeries) {
+            setAllAudioSeries(filteredSeriesList);
+        }
+    }, [activeLanguageTab, seriesList]);
+
     const playEpisode = (episode, series) => {
         // Update local selected series for context
         setSelectedSeries(series);
@@ -82,8 +92,33 @@ export default function AudioSeriesUserPage({ onBack }) {
             {!selectedSeries ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Audio Series</h2>
+                    
+                    {/* Language Tabs */}
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
+                        {['Hindi', 'Bhojpuri'].map(lang => (
+                            <button
+                                key={lang}
+                                onClick={() => setActiveLanguageTab(lang)}
+                                style={{
+                                    padding: '8px 20px',
+                                    borderRadius: '20px',
+                                    border: 'none',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.95rem',
+                                    cursor: 'pointer',
+                                    background: activeLanguageTab === lang ? 'white' : '#333',
+                                    color: activeLanguageTab === lang ? 'black' : 'white',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {lang}
+                            </button>
+                        ))}
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
-                        {seriesList.map(series => (
+                        {filteredSeriesList.map(series => (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
                                 <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
                                     <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />

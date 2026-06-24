@@ -45,6 +45,12 @@ const audioSeriesSchema = new mongoose.Schema({
         type: String,
         default: 'Podcast'
     },
+    language: {
+        type: String,
+        enum: ['Hindi', 'Bhojpuri'],
+        default: 'Hindi',
+        required: [true, 'Please select a language']
+    },
     episodes: [audioEpisodeSchema],
     totalViews: {
         type: Number,

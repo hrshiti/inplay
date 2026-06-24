@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye, Bookmark, VolumeX, Compass, Music, UserCircle, Home } from 'lucide-react';
 import Lenis from 'lenis';
@@ -2028,15 +2028,14 @@ function App() {
               {!isKeyboardOpen && (
                 <nav className="bottom-nav" style={{ justifyContent: 'space-around' }}>
                   <NavItem
-                    icon={<div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><HomeIcon /> <span style={{ fontWeight: 800, letterSpacing: '0.5px' }}>InPlay</span></div>}
-                    label="Home"
+                    icon={<HomeIcon />}
+                    label="InPlay"
                     active={activeTab === 'Home' && activeFilter !== 'Audio Series'}
                     onClick={() => handleTabChange('Home')}
-                    isPill
                   />
                   <NavItem icon={<Clapperboard size={20} />} label="For You" active={activeTab === 'For You'} onClick={() => handleTabChange('For You')} />
-                  <NavItem icon={<Headphones size={20} />} label="Audio" active={activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
-                  <NavItem icon={<User size={20} />} label="My Space" active={location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
+                  <NavItem icon={<Headphones size={20} />} label="Audio" active={activeTab === 'Home' && activeFilter === 'Audio Series'} onClick={() => handleTabChange('Audio')} />
+                  <NavItem icon={<User size={20} />} label="My Space" active={activeTab === 'My Space' || location.pathname === '/my-space'} onClick={() => handleTabChange('My Space')} />
                 </nav>
               )}
             </>
@@ -2123,16 +2122,33 @@ function WatchPageRoute({
   const [episode, setEpisode] = useState(location.state?.episode || null);
   const hasFetched = useRef(false);
 
+  const nextShow = useMemo(() => {
+    if (!movie || !allContent) return null;
+    const sameCategory = allContent.filter(item => 
+      item.type === movie.type && 
+      (item._id || item.id) !== (movie._id || movie.id) && 
+      !item.isLocked
+    );
+    if (sameCategory.length > 0) return sameCategory[0];
+    
+    const anyShow = allContent.filter(item => 
+      (item._id || item.id) !== (movie._id || movie.id) && 
+      !item.isLocked &&
+      item.type !== 'quick_byte' &&
+      item.type !== 'bhojpuri'
+    );
+    return anyShow[0] || null;
+  }, [movie, allContent]);
+
   useEffect(() => {
+    // If current movie already matches the URL id, do nothing
+    if (movie && (movie._id === id || movie.id === id)) return;
+
     // Always fetch fresh data to ensure subscription/lock states are accurate.
     let found = allContent.find(i => (i._id === id || i.id === id));
-    if (found && !movie) {
+    if (found) {
       setMovie(found);
-    }
-
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-
+    } else {
       // Try fetching as standard content first
       contentService.getContentById(id)
         .then(data => {
@@ -2144,10 +2160,10 @@ function WatchPageRoute({
           contentService.getQuickByteById(id)
             .then(qbData => {
               if (qbData) setMovie(qbData);
-              else if (!movie && !found) navigate('/', { replace: true });
+              else navigate('/', { replace: true });
             })
             .catch(() => {
-              if (!movie && !found) navigate('/', { replace: true });
+              navigate('/', { replace: true });
             });
         });
     }
@@ -2156,10 +2172,12 @@ function WatchPageRoute({
   if (!movie) return <div style={{ background: 'black', height: '100vh' }} />;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <VideoPlayer
+        key={movie._id || movie.id}
         movie={movie}
         episode={episode}
+        nextShow={nextShow}
         onClose={() => navigate(-1)}
         onToggleMyList={handleToggleMyList}
         onToggleLike={handleToggleLike}

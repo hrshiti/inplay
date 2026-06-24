@@ -8,7 +8,7 @@ import { SpeedSheet, QualitySheet } from './PlayerSheets';
 import HlsPlayer from './components/HlsPlayer';
 import { trackVideoView, trackWatchTime, trackVideoCompleted, trackShareContent } from './utils/analytics';
 
-export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [] }) {
+export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [], nextShow }) {
     const navigate = useNavigate();
     // User request: Play all content (Movies, Series, Reels) in the immersive Reels-style player.
     const isVertical = movie.isVertical || movie.type === 'quick_byte' || movie.type === 'reel' || movie.category === 'Quick Bites';
@@ -145,6 +145,26 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const [showIntro, setShowIntro] = useState(!isQuickBite);
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
+
+    // Up Next Feature States
+    const [showUpNext, setShowUpNext] = useState(false);
+    const [upNextCountdown, setUpNextCountdown] = useState(5);
+
+    useEffect(() => {
+        if (!showUpNext) return;
+        
+        if (upNextCountdown <= 0) {
+            setShowUpNext(false);
+            if (nextShow) navigate(`/watch/${nextShow._id || nextShow.id}`, { replace: true });
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setUpNextCountdown(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [showUpNext, upNextCountdown, nextShow, navigate]);
 
     // Pause main video while intro is playing, play after
     useEffect(() => {
@@ -368,6 +388,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
         if (currentIndex < playlist.length - 1) {
             setCurrentIndex(prev => prev + 1);
+        } else if (nextShow && !isQuickBite) {
+            setShowUpNext(true);
+            setUpNextCountdown(5);
         }
     };
 
@@ -383,6 +406,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
         if (currentIndex < playlist.length - 1) {
             setCurrentIndex(prev => prev + 1);
+        } else if (nextShow && !isQuickBite) {
+            setShowUpNext(false);
+            navigate(`/watch/${nextShow._id || nextShow.id}`, { replace: true });
         }
     };
 
@@ -1142,6 +1168,54 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         pointerEvents: showIntro ? 'none' : 'auto'
                     }}
                 />
+
+                {/* Up Next Overlay */}
+                {showUpNext && nextShow && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '80px',
+                        right: '40px',
+                        background: 'rgba(0,0,0,0.85)',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '20px',
+                        zIndex: 1000,
+                        border: '1px solid #333'
+                    }}>
+                        <img 
+                            src={getImageUrl(nextShow.thumbnail?.url || nextShow.thumbnail || nextShow.poster?.url || nextShow.image)} 
+                            alt={nextShow.title}
+                            style={{ width: '120px', height: '68px', objectFit: 'cover', borderRadius: '8px' }}
+                        />
+                        <div>
+                            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '4px' }}>Up Next in {upNextCountdown}s</p>
+                            <h4 style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem', margin: '0 0 12px 0' }}>{nextShow.title}</h4>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowUpNext(false);
+                                        navigate(`/watch/${nextShow._id || nextShow.id}`, { replace: true });
+                                    }}
+                                    style={{ background: 'white', color: 'black', border: 'none', padding: '6px 16px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <Play size={16} fill="black" /> Play Now
+                                </button>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowUpNext(false);
+                                    }}
+                                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '6px 16px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Background Preloader for Next Episode (Standard Player) */}
                 {currentIndex < playlist.length - 1 && (() => {

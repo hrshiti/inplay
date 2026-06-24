@@ -162,6 +162,15 @@ const AudioSeriesPage = () => {
                                 }}>
                                     {series.episodes?.length || 0} Episodes
                                 </div>
+                                {series.language && (
+                                    <div style={{
+                                        position: 'absolute', top: '10px', left: '10px',
+                                        background: series.language === 'Bhojpuri' ? '#eab308' : '#3b82f6', color: 'white',
+                                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold'
+                                    }}>
+                                        {series.language}
+                                    </div>
+                                )}
                             </div>
                             <div style={{ padding: '16px' }}>
                                 <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '6px' }}>{series.title}</h3>
@@ -206,6 +215,7 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
         title: seriesData?.title || '',
         description: seriesData?.description || '',
         coverImage: seriesData?.coverImage || '',
+        language: seriesData?.language || 'Hindi',
         episodes: seriesData?.episodes || []
     });
 
@@ -215,6 +225,7 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
             title: seriesData?.title || '',
             description: seriesData?.description || '',
             coverImage: seriesData?.coverImage || '',
+            language: seriesData?.language || 'Hindi',
             episodes: seriesData?.episodes || []
         });
     }, [seriesData]);
@@ -376,6 +387,20 @@ const AudioSeriesForm = ({ seriesData, onSave, onCancel }) => {
                             required
                             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
                         />
+                    </div>
+
+                    {/* Language */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Language</label>
+                        <select
+                            name="language"
+                            value={formData.language || 'Hindi'}
+                            onChange={handleChange}
+                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', background: 'white' }}
+                        >
+                            <option value="Hindi">Hindi</option>
+                            <option value="Bhojpuri">Bhojpuri</option>
+                        </select>
                     </div>
 
                     {/* Description */}

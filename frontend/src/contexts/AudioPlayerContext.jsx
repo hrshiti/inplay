@@ -15,6 +15,7 @@ export const useAudioPlayer = () => {
 export const AudioPlayerProvider = ({ children }) => {
     const [currentEpisode, setCurrentEpisode] = useState(null);
     const [selectedSeries, setSelectedSeries] = useState(null);
+    const [allAudioSeries, setAllAudioSeries] = useState([]);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -117,6 +118,16 @@ export const AudioPlayerProvider = ({ children }) => {
                     const nextEpisode = selectedSeries.episodes[currentIndex + 1];
                     // console.log('Playing next episode:', nextEpisode.title);
                     playEpisode(nextEpisode, selectedSeries);
+                } else if (allAudioSeries && allAudioSeries.length > 0) {
+                    const currentSeriesIndex = allAudioSeries.findIndex(s => s._id === selectedSeries._id);
+                    if (currentSeriesIndex !== -1 && currentSeriesIndex < allAudioSeries.length - 1) {
+                        const nextSeries = allAudioSeries[currentSeriesIndex + 1];
+                        if (nextSeries && nextSeries.episodes && nextSeries.episodes.length > 0 && !nextSeries.isLocked) {
+                            setTimeout(() => {
+                                playEpisode(nextSeries.episodes[0], nextSeries);
+                            }, 2000); // 2-second delay before playing next series
+                        }
+                    }
                 }
             }
         };
@@ -128,7 +139,7 @@ export const AudioPlayerProvider = ({ children }) => {
                 audioRef.current.removeEventListener('ended', handleEnded);
             }
         };
-    }, [selectedSeries, currentEpisode]);
+    }, [selectedSeries, currentEpisode, allAudioSeries]);
 
     const playEpisode = async (episode, series) => {
         if (!audioRef.current) {
@@ -295,7 +306,9 @@ export const AudioPlayerProvider = ({ children }) => {
         skipBackward,
         playNext,
         playPrevious,
-        stopAudio
+        stopAudio,
+        allAudioSeries,
+        setAllAudioSeries
     };
 
     return (
