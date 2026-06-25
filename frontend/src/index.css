@@ -126,7 +126,7 @@ img {
   max-width: 100%;
   display: block;
   user-select: none;
-  pointer-events: none;
+  /* pointer-events: none removed — it was blocking clicks on Razorpay payment option icons (GPay, PhonePe logos) */
 }
 
 .icon {
@@ -148,10 +148,11 @@ html.lenis {
   overscroll-behavior: contain;
 }
 
-.lenis.lenis-stopped {
+/* Apply overflow:hidden only to body, NOT to html — applying to html blocks Razorpay iframe scroll entirely */
+.lenis.lenis-stopped body {
   overflow: hidden;
 }
 
-.lenis.lenis-scrolling iframe {
-  pointer-events: none;
-}
+/* Removed: .lenis.lenis-scrolling iframe { pointer-events: none } 
+   This was blocking ALL clicks inside Razorpay checkout (which renders as an iframe).
+   Razorpay GPay/PhonePe/Continue button were all unclickable because of this rule. */

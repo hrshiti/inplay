@@ -8,7 +8,6 @@ import appSettingsService from './services/api/appSettingsService';
 import { getImageUrl } from './utils/imageUtils';
 import subscriptionService from './services/api/subscriptionService';
 import { trackProfileUpdated, trackSubscriptionCancelled } from './utils/analytics';
-import { initRazorpayPayment } from './lib/utils/razorpay';
 
 export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embedded = false }) {
     const navigate = useNavigate();
@@ -67,25 +66,25 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
 
     const handleCancelSub = async () => {
         if (!confirm("Are you sure? Your subscription will be cancelled IMMEDIATELY and you will lose access to all premium content. You will need to subscribe again to watch videos.")) return;
-        
+
         setIsSaving(true);
         try {
             await subscriptionService.cancelSubscription();
             trackSubscriptionCancelled();
             setMessage({ text: 'Subscription cancelled! Access revoked.', type: 'success' });
-            
+
             // Refresh detailed sub status for the modal
             fetchSubStatus();
-            
+
             // CRITICAL: Refresh the full user profile to update the main settings list and global app state
             const updatedUser = await authService.getProfile();
-            
+
             // Force local state to inactive so App.jsx redirects immediately
             if (updatedUser && updatedUser.subscription) {
-              updatedUser.subscription.isActive = false;
-              updatedUser.subscription.status = 'cancelled';
+                updatedUser.subscription.isActive = false;
+                updatedUser.subscription.status = 'cancelled';
             }
-            
+
             if (onUpdateUser) onUpdateUser(updatedUser);
 
             // Close modal after a short delay
@@ -93,7 +92,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
                 setActiveModal(null);
                 navigate('/plan'); // Redirect to plans since they no longer have access
             }, 2000);
-            
+
         } catch (err) {
             setMessage({ text: err.message || 'Failed to cancel subscription', type: 'error' });
         } finally {
@@ -166,11 +165,11 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
     const userName = currentUser?.name || MY_SPACE_DATA.user.name;
     const userEmail = currentUser?.email || 'john.doe@example.com';
     const userAvatar = currentUser?.avatar; // No fallback to mock
-    
+
     // Improved plan display logic
-    const userPlan = currentUser?.subscription?.isActive 
-        ? (currentUser.subscription.status === 'cancelled' 
-            ? `${currentUser.subscription.plan?.name || 'Premium'} (Cancelled)` 
+    const userPlan = currentUser?.subscription?.isActive
+        ? (currentUser.subscription.status === 'cancelled'
+            ? `${currentUser.subscription.plan?.name || 'Premium'} (Cancelled)`
             : (currentUser.subscription.plan?.name || 'Premium Plan'))
         : 'No Active Plan';
 
@@ -217,27 +216,6 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
             setMessage({ text: err.message || 'Failed to upload photo', type: 'error' });
         } finally {
             setIsUploading(false);
-        }
-    };
-
-    const handleTestPayment = async () => {
-        try {
-            await initRazorpayPayment({
-                key: 'rzp_test_YOUR_KEY_HERE', // Optional fallback key if not set in utils
-                amount: 100, // ₹1
-                currency: 'INR',
-                name: 'Test Payment',
-                description: 'Testing Razorpay Intents',
-                handler: function(response) {
-                    alert('Payment Success! ID: ' + response.razorpay_payment_id);
-                },
-                onError: function(error) {
-                    alert('Payment Failed! Check console.');
-                    console.error(error);
-                }
-            });
-        } catch(err) {
-            console.error("Razorpay Init Error:", err);
         }
     };
 
@@ -303,68 +281,68 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
         }}>
             {/* Header */}
             {!embedded && (
-            <header style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '20px',
-                position: 'sticky',
-                top: 0,
-                background: 'rgba(0,0,0,0.8)',
-                backdropFilter: 'blur(10px)',
-                zIndex: 10
-            }}>
-                <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => navigate(-1)}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
-                >
-                    <ArrowLeft size={24} />
-                </motion.button>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Settings</h2>
-            </header>
+                <header style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '20px',
+                    position: 'sticky',
+                    top: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    backdropFilter: 'blur(10px)',
+                    zIndex: 10
+                }}>
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => navigate(-1)}
+                        style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
+                    >
+                        <ArrowLeft size={24} />
+                    </motion.button>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Settings</h2>
+                </header>
             )}
 
             {/* Profile Brief */}
             {!embedded && (
-            <div style={{ padding: '0 20px 20px' }}>
-                <div style={{
-                    background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
-                    borderRadius: '24px',
-                    padding: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '20px',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    marginBottom: '32px'
-                }}>
-                    {userAvatar && !avatarError ? (
-                        <img
-                            src={getImageUrl(userAvatar)}
-                            alt="Profile"
-                            onError={() => setAvatarError(true)}
-                            style={{ width: '70px', height: '70px', borderRadius: '50%', border: '2px solid #ff0000', objectFit: 'cover' }}
-                        />
-                    ) : (
-                        <div style={{
-                            width: '70px',
-                            height: '70px',
-                            borderRadius: '50%',
-                            border: '2px solid #ff0000',
-                            background: '#ff0a16',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <User size={34} color="white" />
+                <div style={{ padding: '0 20px 20px' }}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
+                        borderRadius: '24px',
+                        padding: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '20px',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        marginBottom: '32px'
+                    }}>
+                        {userAvatar && !avatarError ? (
+                            <img
+                                src={getImageUrl(userAvatar)}
+                                alt="Profile"
+                                onError={() => setAvatarError(true)}
+                                style={{ width: '70px', height: '70px', borderRadius: '50%', border: '2px solid #ff0000', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div style={{
+                                width: '70px',
+                                height: '70px',
+                                borderRadius: '50%',
+                                border: '2px solid #ff0000',
+                                background: '#ff0a16',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                <User size={34} color="white" />
+                            </div>
+                        )}
+                        <div>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{userName}</h3>
+                            <span style={{ fontSize: '0.9rem', color: '#888' }}>{userEmail}</span>
                         </div>
-                    )}
-                    <div>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '4px' }}>{userName}</h3>
-                        <span style={{ fontSize: '0.9rem', color: '#888' }}>{userEmail}</span>
                     </div>
                 </div>
-            </div>
             )}
 
             <div style={{ padding: embedded ? '0' : '0 20px 20px' }}>
@@ -421,54 +399,54 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
                     </div>
                 ))}
 
-            <div style={{ padding: embedded ? '20px 0 0' : '0 24px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button
-                    onClick={onLogout}
-                    style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        padding: '18px',
-                        background: '#ff4d4d',
-                        border: 'none',
-                        borderRadius: '16px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        boxShadow: '0 8px 16px rgba(255, 77, 77, 0.2)'
-                    }}
-                >
-                    <LogOut size={20} />
-                    Log Out
-                </button>
+                <div style={{ padding: embedded ? '20px 0 0' : '0 24px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <button
+                        onClick={onLogout}
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            padding: '18px',
+                            background: '#ff4d4d',
+                            border: 'none',
+                            borderRadius: '16px',
+                            color: 'white',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 8px 16px rgba(255, 77, 77, 0.2)'
+                        }}
+                    >
+                        <LogOut size={20} />
+                        Log Out
+                    </button>
 
-                <button
-                    onClick={handleDeleteAccount}
-                    disabled={isSaving}
-                    style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        padding: '16px',
-                        background: 'rgba(255, 77, 77, 0.05)',
-                        border: '1px solid rgba(255, 77, 77, 0.3)',
-                        borderRadius: '16px',
-                        color: '#ff4d4d',
-                        fontSize: '0.95rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        marginTop: '12px'
-                    }}
-                >
-                    Delete Account Permanently
-                </button>
+                    <button
+                        onClick={handleDeleteAccount}
+                        disabled={isSaving}
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            background: 'rgba(255, 77, 77, 0.05)',
+                            border: '1px solid rgba(255, 77, 77, 0.3)',
+                            borderRadius: '16px',
+                            color: '#ff4d4d',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            marginTop: '12px'
+                        }}
+                    >
+                        Delete Account Permanently
+                    </button>
+                </div>
             </div>
-        </div>
 
             {/* Modal Components */}
             <AnimatePresence>
@@ -622,28 +600,6 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
                                         </div>
                                     </div>
 
-                                    <button 
-                                        onClick={handleTestPayment}
-                                        style={{
-                                            marginTop: '8px',
-                                            padding: '12px 20px',
-                                            backgroundColor: '#7c3aed',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            cursor: 'pointer',
-                                            fontWeight: '600',
-                                            width: '100%',
-                                            marginBottom: '24px',
-                                            fontSize: '1rem',
-                                            transition: 'opacity 0.2s'
-                                        }}
-                                        onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
-                                        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-                                    >
-                                        Test Razorpay Payment (₹1)
-                                    </button>
-
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                         <div>
                                             <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase' }}>Full Name</label>
@@ -711,132 +667,132 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
                                 </>
                             )}
 
-                             {/* PLAN CONTENT */}
-                             {activeModal === 'plan' && (
-                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                     {isLoadingSub ? (
-                                         <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                                             <motion.div
-                                                 animate={{ rotate: 360 }}
-                                                 transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                                                 style={{ width: '30px', height: '30px', border: '3px solid #ff4d4d', borderTopColor: 'transparent', borderRadius: '50%' }}
-                                             />
-                                         </div>
-                                     ) : (subDetails?.isActive && subDetails?.status !== 'cancelled') ? (
-                                         <div style={{
-                                             background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
-                                             borderRadius: '24px',
-                                             padding: '24px',
-                                             border: '1px solid rgba(255,255,255,0.1)',
-                                             textAlign: 'center'
-                                         }}>
-                                             <div style={{
-                                                 width: '60px',
-                                                 height: '60px',
-                                                 borderRadius: '50%',
-                                                 background: 'rgba(255, 215, 0, 0.1)',
-                                                 display: 'flex',
-                                                 alignItems: 'center',
-                                                 justifyContent: 'center',
-                                                 margin: '0 auto 16px',
-                                                 color: '#ffd700'
-                                             }}>
-                                                 <Crown size={30} />
-                                             </div>
-                                             <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '4px' }}>{subDetails.planName}</h3>
-                                             <p style={{ color: '#888', marginBottom: '20px' }}>
-                                                 {subDetails.isTrial ? 'Trial active' : 'Subscription active'} • ₹{subDetails.price}
-                                             </p>
+                            {/* PLAN CONTENT */}
+                            {activeModal === 'plan' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    {isLoadingSub ? (
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                                                style={{ width: '30px', height: '30px', border: '3px solid #ff4d4d', borderTopColor: 'transparent', borderRadius: '50%' }}
+                                            />
+                                        </div>
+                                    ) : (subDetails?.isActive && subDetails?.status !== 'cancelled') ? (
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
+                                            borderRadius: '24px',
+                                            padding: '24px',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '50%',
+                                                background: 'rgba(255, 215, 0, 0.1)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                margin: '0 auto 16px',
+                                                color: '#ffd700'
+                                            }}>
+                                                <Crown size={30} />
+                                            </div>
+                                            <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '4px' }}>{subDetails.planName}</h3>
+                                            <p style={{ color: '#888', marginBottom: '20px' }}>
+                                                {subDetails.isTrial ? 'Trial active' : 'Subscription active'} • ₹{subDetails.price}
+                                            </p>
 
-                                             <div style={{
-                                                 display: 'grid',
-                                                 gridTemplateColumns: '1fr 1fr',
-                                                 gap: '12px',
-                                                 textAlign: 'left',
-                                                 background: 'rgba(255,255,255,0.02)',
-                                                 padding: '20px',
-                                                 borderRadius: '16px',
-                                                 marginBottom: '20px'
-                                             }}>
-                                                 <div style={{ color: '#666', fontSize: '0.8rem' }}>Started on</div>
-                                                 <div style={{ fontSize: '0.9rem', textAlign: 'right' }}>{new Date(subDetails.startDate).toLocaleDateString()}</div>
-                                                 <div style={{ color: '#666', fontSize: '0.8rem' }}>Next Billing / Expiry</div>
-                                                 <div style={{ fontSize: '0.9rem', textAlign: 'right', color: '#ff4d4d', fontWeight: 'bold' }}>{new Date(subDetails.endDate).toLocaleDateString()}</div>
-                                             </div>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr 1fr',
+                                                gap: '12px',
+                                                textAlign: 'left',
+                                                background: 'rgba(255,255,255,0.02)',
+                                                padding: '20px',
+                                                borderRadius: '16px',
+                                                marginBottom: '20px'
+                                            }}>
+                                                <div style={{ color: '#666', fontSize: '0.8rem' }}>Started on</div>
+                                                <div style={{ fontSize: '0.9rem', textAlign: 'right' }}>{new Date(subDetails.startDate).toLocaleDateString()}</div>
+                                                <div style={{ color: '#666', fontSize: '0.8rem' }}>Next Billing / Expiry</div>
+                                                <div style={{ fontSize: '0.9rem', textAlign: 'right', color: '#ff4d4d', fontWeight: 'bold' }}>{new Date(subDetails.endDate).toLocaleDateString()}</div>
+                                            </div>
 
-                                             <p style={{ fontSize: '0.75rem', color: '#555', marginBottom: '16px' }}>ID: {subDetails.razorpaySubscriptionId}</p>
-                                             
-                                             {subDetails.status === 'cancelled' ? (
-                                                 <div style={{
-                                                     padding: '12px',
-                                                     borderRadius: '12px',
-                                                     background: 'rgba(255, 77, 77, 0.1)',
-                                                     color: '#ff4d4d',
-                                                     border: '1px solid rgba(255, 77, 77, 0.2)',
-                                                     fontSize: '0.9rem',
-                                                     fontWeight: '600',
-                                                     textAlign: 'center'
-                                                 }}>
-                                                     Subscription Cancelled
-                                                 </div>
-                                             ) : (
-                                                 <motion.button
-                                                     whileTap={{ scale: 0.95 }}
-                                                     onClick={handleCancelSub}
-                                                     style={{
-                                                         width: '100%',
-                                                         padding: '12px',
-                                                         borderRadius: '12px',
-                                                         background: 'transparent',
-                                                         color: '#ff4d4d',
-                                                         border: '1px solid rgba(255, 77, 77, 0.3)',
-                                                         fontSize: '0.9rem',
-                                                         fontWeight: '600',
-                                                         cursor: 'pointer'
-                                                     }}
-                                                 >
-                                                     Cancel Subscription
-                                                 </motion.button>
-                                             )}
-                                         </div>
-                                     ) : (
-                                         <div style={{
-                                             background: '#111',
-                                             borderRadius: '24px',
-                                             padding: '40px 24px',
-                                             textAlign: 'center',
-                                             border: '1px dashed #333'
-                                         }}>
-                                             <div style={{ color: '#444', marginBottom: '16px' }}>
-                                                 <Crown size={48} opacity={0.2} />
-                                             </div>
-                                             <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '8px' }}>No Active Plan</h3>
-                                             <p style={{ color: '#666', marginBottom: '24px', fontSize: '0.9rem' }}>Subscribe to access premium content and offline downloads.</p>
-                                             
-                                             <motion.button
-                                                 whileTap={{ scale: 0.95 }}
-                                                 onClick={() => {
+                                            <p style={{ fontSize: '0.75rem', color: '#555', marginBottom: '16px' }}>ID: {subDetails.razorpaySubscriptionId}</p>
+
+                                            {subDetails.status === 'cancelled' ? (
+                                                <div style={{
+                                                    padding: '12px',
+                                                    borderRadius: '12px',
+                                                    background: 'rgba(255, 77, 77, 0.1)',
+                                                    color: '#ff4d4d',
+                                                    border: '1px solid rgba(255, 77, 77, 0.2)',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '600',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    Subscription Cancelled
+                                                </div>
+                                            ) : (
+                                                <motion.button
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={handleCancelSub}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px',
+                                                        borderRadius: '12px',
+                                                        background: 'transparent',
+                                                        color: '#ff4d4d',
+                                                        border: '1px solid rgba(255, 77, 77, 0.3)',
+                                                        fontSize: '0.9rem',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    Cancel Subscription
+                                                </motion.button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            background: '#111',
+                                            borderRadius: '24px',
+                                            padding: '40px 24px',
+                                            textAlign: 'center',
+                                            border: '1px dashed #333'
+                                        }}>
+                                            <div style={{ color: '#444', marginBottom: '16px' }}>
+                                                <Crown size={48} opacity={0.2} />
+                                            </div>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '8px' }}>No Active Plan</h3>
+                                            <p style={{ color: '#666', marginBottom: '24px', fontSize: '0.9rem' }}>Subscribe to access premium content and offline downloads.</p>
+
+                                            <motion.button
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => {
                                                     setActiveModal(null);
                                                     navigate('/plan');
-                                                 }}
-                                                 style={{
-                                                     padding: '12px 32px',
-                                                     borderRadius: '30px',
-                                                     background: '#ff4d4d',
-                                                     color: 'white',
-                                                     border: 'none',
-                                                     fontSize: '0.9rem',
-                                                     fontWeight: '700',
-                                                     cursor: 'pointer'
-                                                 }}
-                                             >
-                                                 View Plans
-                                             </motion.button>
-                                         </div>
-                                     )}
-                                  
-                                 </div>
-                             )}
+                                                }}
+                                                style={{
+                                                    padding: '12px 32px',
+                                                    borderRadius: '30px',
+                                                    background: '#ff4d4d',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '700',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                View Plans
+                                            </motion.button>
+                                        </div>
+                                    )}
+
+                                </div>
+                            )}
 
                             {/* NOTIFICATIONS CONTENT */}
                             {activeModal === 'notifications' && (
