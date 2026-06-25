@@ -8,6 +8,7 @@ import appSettingsService from './services/api/appSettingsService';
 import { getImageUrl } from './utils/imageUtils';
 import subscriptionService from './services/api/subscriptionService';
 import { trackProfileUpdated, trackSubscriptionCancelled } from './utils/analytics';
+import { initRazorpayPayment } from './lib/utils/razorpay';
 
 export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embedded = false }) {
     const navigate = useNavigate();
@@ -216,6 +217,27 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
             setMessage({ text: err.message || 'Failed to upload photo', type: 'error' });
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleTestPayment = async () => {
+        try {
+            await initRazorpayPayment({
+                key: 'rzp_test_YOUR_KEY_HERE', // Optional fallback key if not set in utils
+                amount: 100, // ₹1
+                currency: 'INR',
+                name: 'Test Payment',
+                description: 'Testing Razorpay Intents',
+                handler: function(response) {
+                    alert('Payment Success! ID: ' + response.razorpay_payment_id);
+                },
+                onError: function(error) {
+                    alert('Payment Failed! Check console.');
+                    console.error(error);
+                }
+            });
+        } catch(err) {
+            console.error("Razorpay Init Error:", err);
         }
     };
 
@@ -599,6 +621,28 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
                                             </label>
                                         </div>
                                     </div>
+
+                                    <button 
+                                        onClick={handleTestPayment}
+                                        style={{
+                                            marginTop: '8px',
+                                            padding: '12px 20px',
+                                            backgroundColor: '#7c3aed',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            width: '100%',
+                                            marginBottom: '24px',
+                                            fontSize: '1rem',
+                                            transition: 'opacity 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
+                                        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+                                    >
+                                        Test Razorpay Payment (₹1)
+                                    </button>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                         <div>
