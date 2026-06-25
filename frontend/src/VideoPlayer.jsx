@@ -658,6 +658,33 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
     };
 
+    // Auto-fullscreen for standard player (Movies/Series) on mount
+    useEffect(() => {
+        if (!isQuickBite) {
+            const attemptFullscreen = async () => {
+                try {
+                    const el = mainContainerRef.current;
+                    const videoEl = videoRef.current;
+                    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                        if (el && el.requestFullscreen) {
+                            const req = el.requestFullscreen();
+                            if (req && req.catch) await req.catch(e => console.warn("Auto-fullscreen blocked:", e));
+                        } else if (el && el.webkitRequestFullscreen) {
+                            el.webkitRequestFullscreen();
+                        } else if (videoEl && videoEl.webkitEnterFullscreen) {
+                            videoEl.webkitEnterFullscreen();
+                        }
+                    }
+                } catch (error) {
+                    console.warn("Auto-fullscreen failed:", error);
+                }
+            };
+            // Small timeout allows the DOM to render the standard player container before requesting fullscreen
+            const timer = setTimeout(attemptFullscreen, 200);
+            return () => clearTimeout(timer);
+        }
+    }, [isQuickBite]);
+
     if (isQuickBite) {
         return (
             <div

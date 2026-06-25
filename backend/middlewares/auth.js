@@ -59,7 +59,8 @@ const protect = async (req, res, next) => {
       // Check force logout timestamp
       if (user.forceLogoutAt && decoded.iat) {
         // decoded.iat is in seconds, user.forceLogoutAt is a Date object
-        if (decoded.iat * 1000 < user.forceLogoutAt.getTime()) {
+        // Add a 5000ms buffer to prevent false logouts due to JWT iat truncation
+        if (decoded.iat * 1000 < user.forceLogoutAt.getTime() - 5000) {
           return res.status(401).json({
             success: false,
             message: 'FORCE_LOGOUT',
@@ -202,7 +203,7 @@ const optionalProtect = async (req, res, next) => {
             }
           }
           if (user.forceLogoutAt && decoded.iat) {
-            if (decoded.iat * 1000 < user.forceLogoutAt.getTime()) {
+            if (decoded.iat * 1000 < user.forceLogoutAt.getTime() - 5000) {
               tokenValid = false;
             }
           }

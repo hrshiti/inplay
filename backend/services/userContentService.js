@@ -212,7 +212,8 @@ const checkIsSubscribed = async (userId) => {
 const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = []) => {
   if (!result) return result;
   
-  const isDarmaa = result.category && /inplay\s*dhar?maa?/i.test(result.category);
+  // Match 'Darmaa', 'Dharmaa', 'Inplay Darmaa', 'InPlay Dharmaa', etc. (prefix optional)
+  const isDarmaa = result.category && /(?:inplay\s*)?dhar?maa?/i.test(result.category);
   if (isDarmaa && !isSubscribed) {
     const watchedMap = {};
     freeEpisodesWatched.forEach(item => {
@@ -515,7 +516,8 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
   let isDrama = false;
   let content = await Content.findById(contentId);
   if (content) {
-    isDrama = content.category && /inplay\s*dhar?maa?/i.test(content.category);
+    // Match 'Darmaa', 'Dharmaa', 'Inplay Darmaa', 'InPlay Dharmaa', etc. (prefix optional)
+    isDrama = content.category && /(?:inplay\s*)?dhar?maa?/i.test(content.category);
   } else {
     const quickByte = await QuickByte.findById(contentId);
     if (quickByte) {

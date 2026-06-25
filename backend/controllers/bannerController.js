@@ -1,7 +1,24 @@
 const Banner = require('../models/Banner');
+const Content = require('../models/Content');
+const QuickByte = require('../models/QuickByte');
+const AudioSeries = require('../models/AudioSeries');
 const mediaService = require('../services/mediaService');
 const { getFilePathFromUrl } = require('../config/multerStorage');
 const fs = require('fs');
+
+const populateBannerContent = async (banners) => {
+  const isArray = Array.isArray(banners);
+  const bannersArray = isArray ? banners : [banners];
+  for (let b of bannersArray) {
+    if (b.contentId) {
+      let content = await Content.findById(b.contentId, 'title type _id').lean();
+      if (!content) content = await QuickByte.findById(b.contentId, 'title type _id').lean();
+      if (!content) content = await AudioSeries.findById(b.contentId, 'title type _id').lean();
+      b.contentId = content || null;
+    }
+  }
+  return isArray ? bannersArray : bannersArray[0];
+};
 
 // @desc    Get all active banners grouped by category
 // @route   GET /api/public/banners
@@ -14,7 +31,8 @@ const getPublicBanners = async (req, res) => {
       query.category = category;
     }
     
-    const banners = await Banner.find(query).populate('contentId', 'title type _id').sort({ order: 1, createdAt: -1 }).lean();
+    let banners = await Banner.find(query).sort({ order: 1, createdAt: -1 }).lean();
+    banners = await populateBannerContent(banners);
     
     // Group by category if returning all
     if (!category) {
@@ -39,7 +57,8 @@ const getAllBanners = async (req, res) => {
   try {
     const { category } = req.query;
     const query = category ? { category } : {};
-    const banners = await Banner.find(query).populate('contentId', 'title type _id').sort({ category: 1, order: 1, createdAt: -1 });
+    let banners = await Banner.find(query).sort({ category: 1, order: 1, createdAt: -1 }).lean();
+    banners = await populateBannerContent(banners);
     
     res.status(200).json({ success: true, data: banners });
   } catch (error) {

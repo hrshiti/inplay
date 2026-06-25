@@ -25,8 +25,17 @@ export default function BannerManagementPage() {
 
     const fetchAllContent = async () => {
         try {
-            const data = await contentService.getAllContent();
-            setAllContent(data || []);
+            const [data, quickBites] = await Promise.all([
+                contentService.getAllContent(),
+                contentService.getQuickBytes(500)
+            ]);
+            
+            const formattedQuickBites = (quickBites || []).map(qb => ({
+                ...qb,
+                title: `[Quick Bite] ${qb.title}`
+            }));
+            
+            setAllContent([...(data || []), ...formattedQuickBites]);
         } catch (error) {
             console.error("Failed to fetch content", error);
             setAllContent([]);
