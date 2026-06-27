@@ -188,6 +188,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/content', contentRoutes);
 
 app.use('/api/quickbytes', quickByteRoutes);
+app.use('/api/hls-proxy', require('./routes/hlsProxyRoutes'));
 app.use('/api/foryou', forYouRoutes);
 app.use('/api/audio-series', audioSeriesRoutes);
 app.use('/api/upload', uploadRoutes);

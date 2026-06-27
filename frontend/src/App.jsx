@@ -999,6 +999,7 @@ function App() {
       <Route path="/watch/:id" element={
         <WatchPageRoute
           allContent={allContent}
+          quickBites={quickBites}
           handleToggleMyList={handleToggleMyList}
           handleToggleLike={handleToggleLike}
           myList={myList}
@@ -2110,6 +2111,7 @@ function ContentDetailsRoute({
 
 function WatchPageRoute({
   allContent,
+  quickBites,
   handleToggleMyList,
   handleToggleLike,
   myList,
@@ -2145,7 +2147,8 @@ function WatchPageRoute({
     if (movie && (movie._id === id || movie.id === id)) return;
 
     // Always fetch fresh data to ensure subscription/lock states are accurate.
-    let found = allContent.find(i => (i._id === id || i.id === id));
+    let found = allContent.find(i => (i._id === id || i.id === id))
+      || quickBites.find(i => (i._id === id || i.id === id));
     if (found) {
       setMovie(found);
     } else {
@@ -2167,7 +2170,7 @@ function WatchPageRoute({
             });
         });
     }
-  }, [id, allContent, navigate, movie]);
+  }, [id, allContent, quickBites, navigate, movie]);
 
   if (!movie) return <div style={{ background: 'black', height: '100vh' }} />;
 

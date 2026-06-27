@@ -5,6 +5,7 @@ const { protect, authorize, subscribed, optionalProtect } = require('../middlewa
 
 // Public routes (for user side)
 router.get('/', optionalProtect, quickByteController.getAllQuickBytes);
+router.get('/:id', optionalProtect, quickByteController.getQuickByteById);
 router.get('/:id/comments', quickByteController.getComments);
 router.post('/:id/view', quickByteController.incrementViews);
 
@@ -16,7 +17,6 @@ router.post('/comments/:id/like', protect, quickByteController.toggleCommentLike
 
 // Protected Admin routes
 router.post('/', protect, authorize('admin', 'superadmin'), quickByteController.createQuickByte);
-router.get('/:id', protect, authorize('admin', 'superadmin'), quickByteController.getQuickByteById);
 router.put('/:id', protect, authorize('admin', 'superadmin'), quickByteController.updateQuickByte);
 router.delete('/:id', protect, authorize('admin', 'superadmin'), quickByteController.deleteQuickByte);
 

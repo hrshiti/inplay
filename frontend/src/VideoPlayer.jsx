@@ -4,6 +4,7 @@ import Hls from 'hls.js';
 import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone, Lock } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
+import { getProxiedHlsUrl } from './utils/hlsUrl';
 import { SpeedSheet, QualitySheet } from './PlayerSheets';
 import HlsPlayer from './components/HlsPlayer';
 import { trackVideoView, trackWatchTime, trackVideoCompleted, trackShareContent } from './utils/analytics';
@@ -58,9 +59,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const getVideoUrl = (item) => {
         if (!item) return '';
 
-        // Prioritize HLS Streaming URL if available
-        if (item.hls_url) return item.hls_url;
-        if (item.video?.hls_url) return item.video.hls_url;
+        // Prioritize HLS Streaming URL if available (proxied to avoid CDN CORS issues)
+        if (item.hls_url) return getProxiedHlsUrl(item.hls_url);
+        if (item.video?.hls_url) return getProxiedHlsUrl(item.video.hls_url);
 
         let url = '';
         // QuickByte episode (direct url field)

@@ -1,6 +1,7 @@
 const ForYou = require('../models/ForYou');
 const Comment = require('../models/Comment');
 const mediaService = require('../services/mediaService');
+const { hydrateHlsUrl } = require('../utils/hlsUrl');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 
 // NOTE: Multer configuration is now in config/multerStorage.js
@@ -19,7 +20,7 @@ const hydrateForYou = (doc) => {
         if (!media) return media;
         if (media.url) media.url = getFullUrl(media.url);
         if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
-        if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
+        if (media.hls_url) media.hls_url = hydrateHlsUrl(media.hls_url);
         return media;
     };
 

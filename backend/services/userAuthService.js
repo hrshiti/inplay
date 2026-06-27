@@ -3,6 +3,7 @@ const Content = require('../models/Content');
 const QuickByte = require('../models/QuickByte');
 const ForYou = require('../models/ForYou');
 const { sendTokenResponse } = require('../middlewares/auth');
+const { hydrateHlsUrl } = require('../utils/hlsUrl');
 
 // Helper to send SMS via SMS India Hub
 const sendSMS = async (phone, text) => {
@@ -190,7 +191,7 @@ const hydrateContentItem = (item) => {
     if (!media) return media;
     if (media.url) media.url = getFullUrl(media.url);
     if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
-    if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
+    if (media.hls_url) media.hls_url = hydrateHlsUrl(media.hls_url);
     return media;
   };
 

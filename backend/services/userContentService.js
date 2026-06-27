@@ -3,6 +3,7 @@ const User = require('../models/User');
 const QuickByte = require('../models/QuickByte');
 const { generateSignedUrl, generateHLSUrl } = require('../config/cloudinary');
 const { DOWNLOAD_EXPIRY_DAYS } = require('../constants');
+const { hydrateHlsUrl } = require('../utils/hlsUrl');
 
 // Import Audio Series model
 const AudioSeries = require('../models/AudioSeries');
@@ -153,7 +154,7 @@ const hydrateContentItem = (item) => {
     if (!media) return media;
     if (media.url) media.url = getFullUrl(media.url);
     if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
-    if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
+    if (media.hls_url) media.hls_url = hydrateHlsUrl(media.hls_url);
     return media;
   };
 

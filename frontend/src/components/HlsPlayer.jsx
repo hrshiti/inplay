@@ -1,5 +1,6 @@
 ﻿import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Hls from 'hls.js';
+import { getProxiedHlsUrl } from '../utils/hlsUrl';
 
 const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, style = {}, onTimeUpdate, onPause, onEnded, startTime, ...props }, ref) => {
     const videoRef = useRef(null);
@@ -19,7 +20,7 @@ const HlsPlayer = forwardRef(({ src, hlsUrl, isMuted = true, isLoop = true, styl
             hlsRef.current = null;
         }
 
-        const effectiveSrc = hlsUrl || src;
+        const effectiveSrc = getProxiedHlsUrl(hlsUrl || src);
         // console.log(`[HlsPlayer] Initializing with source: ${effectiveSrc}`);
 
         if (effectiveSrc && (effectiveSrc.includes('.m3u8') || hlsUrl)) {
