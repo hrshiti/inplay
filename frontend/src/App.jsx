@@ -33,6 +33,7 @@ import PlanPage from './PlanPage';
 import LegalPage from './LegalPage';
 
 import VideoPlayer from './VideoPlayer';
+import { sendUserPremiumStatus } from './utils/adBridge';
 import { AdminRoutes } from './model/admin';
 import AdminLogin from './model/admin/components/AdminLogin';
 import ProtectedRoute from './model/admin/components/ProtectedRoute';
@@ -343,6 +344,12 @@ function App() {
 
     checkAccess();
   }, [currentUser?._id, location.pathname, navigate]);
+
+  // Tell the Flutter shell whether this user is premium, so it can skip
+  // loading/showing interstitial ads entirely for active subscribers.
+  useEffect(() => {
+    sendUserPremiumStatus(!!currentUser?.subscription?.isActive);
+  }, [currentUser?.subscription?.isActive]);
 
   const handleAuthSuccess = () => {
     let savedUser = null;

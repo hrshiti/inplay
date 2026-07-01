@@ -5,6 +5,7 @@ import { getImageUrl } from './utils/imageUtils';
 import socketService from './services/socketService';
 import contentService from './services/api/contentService';
 import HlsPlayer from './components/HlsPlayer';
+import { sendAdTriggerEvent } from './utils/adBridge';
 
 // Initialize Socket URL for fallback API calls
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
@@ -262,6 +263,7 @@ function ReelItem({
                     setIsPlaying(true);
                     setActiveReelId(reel._id);
                     setActiveIndex(index);
+                    sendAdTriggerEvent('shorts', 'swipe', { contentId: reel._id, index });
                     // Join Reel Room for Socket events
                     const socket = socketService.getSocket();
                     if (socket) {

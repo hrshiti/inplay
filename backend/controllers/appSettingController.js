@@ -64,6 +64,10 @@ const updateAppSettings = async (req, res) => {
                 settings.subscriptionSettings = req.body.subscriptionSettings;
                 settings.markModified('subscriptionSettings'); // Required for Mongoose to detect nested object changes
             }
+            if (req.body.adSettings) {
+                settings.adSettings = { ...settings.adSettings?.toObject?.() ?? settings.adSettings, ...req.body.adSettings };
+                settings.markModified('adSettings');
+            }
         }
 
         await settings.save();
