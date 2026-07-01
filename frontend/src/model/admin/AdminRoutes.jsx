@@ -2056,6 +2056,25 @@ const Settings = () => {
   const [adminProfile, setAdminProfile] = useState({ name: '', email: '' });
   const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [trialSettings, setTrialSettings] = useState({ trialPrice: 9, trialDurationDays: 4, isTrialActive: true });
+  const [adSettings, setAdSettings] = useState({
+    interstitialEnabled: true,
+    skipAdsForPremium: true,
+    androidAdUnitId: '',
+    iosAdUnitId: '',
+    cooldownMinutes: 3,
+    maxAdsPerSession: 6,
+    maxAdsPerDay: 15,
+    watchIntervalMinutes: 12,
+    shortsSwipeInterval: 10,
+    midRoll: {
+      enabled: false,
+      adsPerVideo: 2,
+      minVideoDurationSeconds: 300,
+      preRollEnabled: false,
+      postRollEnabled: false,
+      vastTagUrl: ''
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -2079,6 +2098,13 @@ const Settings = () => {
       setAdminProfile({ name: profile.name, email: profile.email });
       if (appSettings?.subscriptionSettings) {
         setTrialSettings(appSettings.subscriptionSettings);
+      }
+      if (appSettings?.adSettings) {
+        setAdSettings((prev) => ({
+          ...prev,
+          ...appSettings.adSettings,
+          midRoll: { ...prev.midRoll, ...(appSettings.adSettings?.midRoll || {}) }
+        }));
       }
       setUsersList(allUsers);
       setError(null);
@@ -2162,6 +2188,23 @@ const Settings = () => {
     } catch (err) {
       console.error('Update failed', err);
       setError(err.message || 'Failed to update trial settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateAdSettings = async (e) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      await adminUserService.updateAppSettings({ adSettings });
+      setSuccess('Ad settings updated successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Update failed', err);
+      setError(err.message || 'Failed to update ad settings');
     } finally {
       setSaving(false);
     }
@@ -2274,6 +2317,256 @@ const Settings = () => {
                 }}
               >
                 {saving ? 'Saving...' : <><Save size={18} /> Update Trial Settings</>}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Interstitial Ad Settings Section (consumed by the Flutter app's native interstitial ads) */}
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '32px' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Smartphone size={20} color="#46d369" /> Interstitial Ad Settings (Flutter App)
+          </h2>
+          <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#6b7280' }}>
+            Controls the native AdMob interstitial ("in-between") ads shown by the Flutter app. Read from GET /api/app-settings.
+          </p>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <form onSubmit={handleUpdateAdSettings}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Interstitial Ads
+                </label>
+                <select
+                  value={adSettings.interstitialEnabled ? 'true' : 'false'}
+                  onChange={(e) => setAdSettings({ ...adSettings, interstitialEnabled: e.target.value === 'true' })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                >
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Skip Ads For Premium Users
+                </label>
+                <select
+                  value={adSettings.skipAdsForPremium ? 'true' : 'false'}
+                  onChange={(e) => setAdSettings({ ...adSettings, skipAdsForPremium: e.target.value === 'true' })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                >
+                  <option value="true">Yes, ad-free for subscribers</option>
+                  <option value="false">No, show ads to everyone</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Android Interstitial Ad Unit ID
+                </label>
+                <input
+                  type="text"
+                  value={adSettings.androidAdUnitId}
+                  onChange={(e) => setAdSettings({ ...adSettings, androidAdUnitId: e.target.value })}
+                  placeholder="ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  iOS Interstitial Ad Unit ID
+                </label>
+                <input
+                  type="text"
+                  value={adSettings.iosAdUnitId}
+                  onChange={(e) => setAdSettings({ ...adSettings, iosAdUnitId: e.target.value })}
+                  placeholder="ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Cooldown Between Ads (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={adSettings.cooldownMinutes}
+                  onChange={(e) => setAdSettings({ ...adSettings, cooldownMinutes: parseInt(e.target.value) || 0 })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Max Ads Per Session
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={adSettings.maxAdsPerSession}
+                  onChange={(e) => setAdSettings({ ...adSettings, maxAdsPerSession: parseInt(e.target.value) || 0 })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Max Ads Per Day
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={adSettings.maxAdsPerDay}
+                  onChange={(e) => setAdSettings({ ...adSettings, maxAdsPerDay: parseInt(e.target.value) || 0 })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Long-form Video Ad Interval (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={adSettings.watchIntervalMinutes}
+                  onChange={(e) => setAdSettings({ ...adSettings, watchIntervalMinutes: parseInt(e.target.value) || 1 })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Shorts/Reels Ad Interval (swipes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={adSettings.shortsSwipeInterval}
+                  onChange={(e) => setAdSettings({ ...adSettings, shortsSwipeInterval: parseInt(e.target.value) || 1 })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  background: '#46d369', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                {saving ? 'Saving...' : <><Save size={18} /> Update Ad Settings</>}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Mid-Roll Video Ad Settings Section (custom VMAP served at GET /api/vmap, consumed by IMA SDK in the web player) */}
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '32px' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Video size={20} color="#46d369" /> Mid-Roll Video Ad Settings
+          </h2>
+          <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#6b7280' }}>
+            Controls in-video ad breaks (like YouTube) shown by the IMA SDK inside the video player. Applies to long-form movies/series only.
+          </p>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <form onSubmit={handleUpdateAdSettings}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Mid-Roll Ads
+                </label>
+                <select
+                  value={adSettings.midRoll.enabled ? 'true' : 'false'}
+                  onChange={(e) => setAdSettings({ ...adSettings, midRoll: { ...adSettings.midRoll, enabled: e.target.value === 'true' } })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                >
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Ads Per Video (mid-roll breaks)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={adSettings.midRoll.adsPerVideo}
+                  onChange={(e) => setAdSettings({ ...adSettings, midRoll: { ...adSettings.midRoll, adsPerVideo: parseInt(e.target.value) || 0 } })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Minimum Video Duration (seconds)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={adSettings.midRoll.minVideoDurationSeconds}
+                  onChange={(e) => setAdSettings({ ...adSettings, midRoll: { ...adSettings.midRoll, minVideoDurationSeconds: parseInt(e.target.value) || 0 } })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>Videos shorter than this get no mid-roll ads at all.</p>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Pre-Roll (ad before video starts)
+                </label>
+                <select
+                  value={adSettings.midRoll.preRollEnabled ? 'true' : 'false'}
+                  onChange={(e) => setAdSettings({ ...adSettings, midRoll: { ...adSettings.midRoll, preRollEnabled: e.target.value === 'true' } })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                >
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Post-Roll (ad after video ends)
+                </label>
+                <select
+                  value={adSettings.midRoll.postRollEnabled ? 'true' : 'false'}
+                  onChange={(e) => setAdSettings({ ...adSettings, midRoll: { ...adSettings.midRoll, postRollEnabled: e.target.value === 'true' } })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                >
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  VAST Ad Tag URL
+                </label>
+                <input
+                  type="text"
+                  value={adSettings.midRoll.vastTagUrl}
+                  onChange={(e) => setAdSettings({ ...adSettings, midRoll: { ...adSettings.midRoll, vastTagUrl: e.target.value } })}
+                  placeholder="Leave blank to use Google's public test tag (backend default)"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+                  Get this from Google Ad Manager: Inventory → your video ad unit → generate tag. Leave blank to keep serving Google's public test ads.
+                </p>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  background: '#46d369', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                {saving ? 'Saving...' : <><Save size={18} /> Update Mid-Roll Settings</>}
               </button>
             </div>
           </form>
