@@ -133,7 +133,7 @@ const requestOtp = async (phone) => {
   }
 
   // Send SMS using the explicitly registered template
-  const text = `Welcome to the inplay powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
+  const text = ``;
   await sendSMS(phone, text);
 
   return { message: 'OTP sent successfully' };
