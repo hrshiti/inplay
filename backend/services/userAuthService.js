@@ -8,8 +8,8 @@ const { hydrateHlsUrl } = require('../utils/hlsUrl');
 // Helper to send SMS via SMS India Hub
 const sendSMS = async (phone, text) => {
   try {
-    const apiKey = process.env.SMSINDIAHUB_API_KEY ? process.env.SMSINDIAHUB_API_KEY.trim() : null;
-    const senderId = process.env.SMSINDIAHUB_SENDER_ID ? process.env.SMSINDIAHUB_SENDER_ID.trim() : null;
+    const apiKey = process.env.SMSINDIAHUB_API_KEY;
+    const senderId = process.env.SMSINDIAHUB_SENDER_ID;
 
     // Fallback if SMS credentials are not set purely for development
     if (!apiKey || !senderId) {
@@ -17,7 +17,7 @@ const sendSMS = async (phone, text) => {
       return true;
     }
 
-    const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone.trim())}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2`;
+    const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone)}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2`;
 
     // Add timeout and robust parsing
     const response = await fetch(url);
@@ -144,7 +144,7 @@ const requestOtp = async (phone) => {
   }
 
   // Send SMS using the explicitly registered template
-  const text = ``;
+  const text = `Welcome to the inplay powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
   await sendSMS(phone, text);
 
   return { message: 'OTP sent successfully' };
