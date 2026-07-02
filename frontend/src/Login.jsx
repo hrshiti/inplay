@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Lock } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -15,6 +15,18 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
   const [searchParams] = useSearchParams();
   // Populated when socketService.handleForceLogout() redirects with ?reason=...
   const kickedReason = searchParams.get('reason');
+  
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handlePhoneChange = (e) => {
     const numericValue = e.target.value.replace(/\D/g, '');
@@ -42,9 +54,26 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
       await authService.requestOtp(phone);
       setSuccess('OTP sent successfully!');
       setStep(2);
+      setResendTimer(15);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || 'Failed to request OTP. Please try again or create an account.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || isLoading) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      await authService.requestOtp(phone);
+      setSuccess('OTP resent successfully!');
+      setResendTimer(15);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to resend OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -277,25 +306,47 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
               {isLoading ? 'Please wait...' : (step === 1 ? 'Request OTP' : 'Verify & Login')}
             </motion.button>
 
-            {/* Navigation options */}
+             {/* Navigation options */}
             <div style={{ textAlign: 'center' }}>
               {step === 2 && (
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  style={{
-                    color: '#9ca3af',
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '0.95rem',
-                    cursor: 'pointer',
-                    marginBottom: '16px',
-                    display: 'block',
-                    width: '100%'
-                  }}
-                >
-                  Change Phone Number
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={resendTimer > 0 || isLoading}
+                    onClick={handleResendOtp}
+                    style={{
+                      color: resendTimer > 0 ? '#6b7280' : '#ff0a16',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '0.95rem',
+                      fontWeight: '700',
+                      cursor: resendTimer > 0 ? 'not-allowed' : 'pointer',
+                      marginBottom: '16px',
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'center',
+                      transition: 'color 0.3s ease'
+                    }}
+                  >
+                    {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    style={{
+                      color: '#9ca3af',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '0.95rem',
+                      cursor: 'pointer',
+                      marginBottom: '16px',
+                      display: 'block',
+                      width: '100%'
+                    }}
+                  >
+                    Change Phone Number
+                  </button>
+                </>
               )}
               <p style={{ color: '#9ca3af', fontSize: '0.95rem' }}>
                 Don't have an account?{' '}

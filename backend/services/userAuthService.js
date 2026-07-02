@@ -104,11 +104,22 @@ const loginUser = async (email, password) => {
 
 
 const requestOtp = async (phone) => {
-  const user = await User.findOne({ phone, role: 'user' });
-  if (!user) {
-    throw new Error('No account found with this phone number. Please sign up first.');
+  // Validate phone number format first
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    throw new Error('Please enter a valid 10-digit Indian phone number.');
   }
-  if (!user.isActive) {
+
+  let user = await User.findOne({ phone, role: 'user' });
+  if (!user) {
+    // Auto-create user for first-time login
+    user = await User.create({
+      name: `User_${phone.slice(-4)}`,
+      email: `user_${phone}@inplay.com`,
+      phone: phone,
+      isActive: true,
+      isEmailVerified: false,
+    });
+  } else if (!user.isActive) {
     throw new Error('Account is deactivated. Please contact support.');
   }
 
