@@ -35,7 +35,7 @@ if (missingVars.length > 0) {
 const database = require('./config/database');
 
 // Debugging: Log static root path
-console.log('📂 Static files root:', path.join(__dirname, 'media'));
+console.log('📂 Static files root:', path.join(__dirname, 'uploads'));
 
 const app = express();
 
