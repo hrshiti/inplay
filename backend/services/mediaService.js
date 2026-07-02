@@ -12,7 +12,7 @@ const s3Service = require('./s3Service');
  */
 const handleVideoHLS = async (localPath, id, type = 'movie') => {
   const videoId = id.toString();
-  const outputDir = path.join(__dirname, '../uploads/temp_hls', `${type}_${videoId}`);
+  const outputDir = path.join(__dirname, '../media/temp_hls', `${type}_${videoId}`);
   const s3FolderPrefix = `videos/${type}/${videoId}`;
 
   try {

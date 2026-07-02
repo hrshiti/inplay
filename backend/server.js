@@ -35,7 +35,7 @@ if (missingVars.length > 0) {
 const database = require('./config/database');
 
 // Debugging: Log static root path
-console.log('📂 Static files root:', path.join(__dirname, 'uploads'));
+console.log('📂 Static files root:', path.join(__dirname, 'media'));
 
 const app = express();
 
@@ -70,8 +70,8 @@ const onTheFlyWebpMiddleware = async (req, res, next) => {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'];
 
     if (imageExtensions.includes(ext)) {
-      const uploadsDir = path.join(__dirname, 'uploads');
-      const requestedLocalPath = path.join(uploadsDir, urlPath);
+      const mediaDir = path.join(__dirname, 'media');
+      const requestedLocalPath = path.join(mediaDir, urlPath);
 
       // Corresponding webp local path
       const webpLocalPath = requestedLocalPath.replace(/\.[^/.]+$/, "") + ".webp";
@@ -103,7 +103,18 @@ const onTheFlyWebpMiddleware = async (req, res, next) => {
 };
 
 app.use('/uploads', onTheFlyWebpMiddleware);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+app.use('/uploads', express.static(path.join(__dirname, 'media'), {
+  maxAge: '7d',
+  immutable: true,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    // Ensure CORS headers for cross-origin media loading
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+}));
+
+app.use('/media', onTheFlyWebpMiddleware);
+app.use('/media', express.static(path.join(__dirname, 'media'), {
   maxAge: '7d',
   immutable: true,
   setHeaders: (res, filePath) => {
@@ -216,11 +227,11 @@ app.use('/api/public', require('./routes/publicTabRoutes'));
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (file.mimetype.startsWith("image"))
-      cb(null, path.join(__dirname, "uploads/images"));
+      cb(null, path.join(__dirname, "media/images"));
     else if (file.mimetype.startsWith("video"))
-      cb(null, path.join(__dirname, "uploads/videos"));
+      cb(null, path.join(__dirname, "media/videos"));
     else if (file.mimetype.startsWith("audio"))
-      cb(null, path.join(__dirname, "uploads/audio"));
+      cb(null, path.join(__dirname, "media/audio"));
     else
       cb(new Error("Unsupported file type"), null);
   },
@@ -245,8 +256,8 @@ app.post("/upload", upload.single("file"), convertImagesToWebpMiddleware, async 
     // Ensure leading slash if missing after split
     if (!relativePath.startsWith('/')) relativePath = '/' + relativePath;
   } else {
-    // Fallback relative to uploads if backend folder name differs
-    relativePath = "/uploads/" + req.file.path.split("uploads")[1].replace(/\\/g, "/");
+    // Fallback relative to media if backend folder name differs
+    relativePath = "/media/" + req.file.path.split("media")[1].replace(/\\/g, "/");
   }
 
   // Clean up relative path double slashes if any
@@ -254,7 +265,7 @@ app.post("/upload", upload.single("file"), convertImagesToWebpMiddleware, async 
 
   // Generate full URL
   // Generate full URL - Fix double slash issue
-  const fileUrl = `${BACKEND_URL}/uploads${req.file.path.split("uploads")[1].replace(/\\/g, "/")}`;
+  const fileUrl = `${BACKEND_URL}/media${req.file.path.split("media")[1].replace(/\\/g, "/")}`;
 
   // Default response data
   let responseData = {
@@ -279,7 +290,7 @@ app.post("/upload", upload.single("file"), convertImagesToWebpMiddleware, async 
 
 // Video Streaming Route (Range Requests)
 app.get('/api/stream/:filename', (req, res) => {
-  const filePath = path.join(__dirname, 'uploads', 'videos', req.params.filename);
+  const filePath = path.join(__dirname, 'media', 'videos', req.params.filename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: 'File not found' });
@@ -318,8 +329,8 @@ app.get('/api/stream/:filename', (req, res) => {
 // -------------------
 app.get("/test-upload", (req, res) => {
   res.json({
-    exampleRelative: "/uploads/images/example.jpg",
-    exampleUrl: `${BACKEND_URL}/uploads/images/example.jpg`
+    exampleRelative: "/media/images/example.jpg",
+    exampleUrl: `${BACKEND_URL}/media/images/example.jpg`
   });
 });
 
