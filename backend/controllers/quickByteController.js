@@ -4,6 +4,7 @@ const Comment = require('../models/Comment');
 const mediaService = require('../services/mediaService');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 const { notifyAllUsers } = require('../utils/notificationHelper');
+const { hydrateHlsUrl } = require('../utils/hlsUrl');
 
 // NOTE: Multer configuration is now in config/multerStorage.js
 // Files are automatically saved to disk by the uploadMixed middleware
@@ -21,7 +22,7 @@ const hydrateQuickByte = (doc) => {
         if (!media) return media;
         if (media.url) media.url = getFullUrl(media.url);
         if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
-        if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
+        if (media.hls_url) media.hls_url = hydrateHlsUrl(media.hls_url);
         return media;
     };
 
@@ -306,10 +307,14 @@ const createQuickByteHandler = async (req, res) => {
 
 // @desc    Get Quick Bite by ID
 // @route   GET /api/quickbytes/:id
-// @access  Private (Admin)
+// @access  Public (published); admin can fetch drafts
 const getQuickByteById = async (req, res) => {
     try {
-        const quickByte = await QuickByte.findById(req.params.id);
+        const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+        const query = { _id: req.params.id };
+        if (!isAdmin) query.status = 'published';
+
+        const quickByte = await QuickByte.findOne(query);
         if (!quickByte) {
             return res.status(404).json({ success: false, message: 'Quick Bite not found' });
         }

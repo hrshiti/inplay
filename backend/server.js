@@ -134,20 +134,30 @@ if (process.env.FRONTEND_URL) {
 // Debugging: Log allowed origins on startup
 console.log('✅ Allowed CORS Origins:', allowedOrigins);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+app.use(cors((req, callback) => {
+  // /api/vmap is requested directly by Google's IMA SDK from its own
+  // imasdk.googleapis.com iframe (a different origin on every load), not from
+  // our own frontend. It's public, read-only, ad-schedule data only, so allow
+  // any origin here instead of forcing it through the strict app allowlist.
+  if (req.path.startsWith('/api/vmap')) {
+    return callback(null, { origin: true, credentials: false });
+  }
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error(`❌ BLOCKED BY CORS: '${origin}'`); // Use console.error to ensure it shows in logs
-      console.error(`   - Allowed: ${JSON.stringify(allowedOrigins)}`);
-      callback(new Error(`Not allowed by CORS (Origin: ${origin})`));
-    }
-  },
-  credentials: true
+  callback(null, {
+    origin: (origin, originCallback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return originCallback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        originCallback(null, true);
+      } else {
+        console.error(`❌ BLOCKED BY CORS: '${origin}'`); // Use console.error to ensure it shows in logs
+        console.error(`   - Allowed: ${JSON.stringify(allowedOrigins)}`);
+        originCallback(new Error(`Not allowed by CORS (Origin: ${origin})`));
+      }
+    },
+    credentials: true
+  });
 }));
 
 
@@ -188,12 +198,14 @@ app.use('/api/user', userRoutes);
 app.use('/api/content', contentRoutes);
 
 app.use('/api/quickbytes', quickByteRoutes);
+app.use('/api/hls-proxy', require('./routes/hlsProxyRoutes'));
 app.use('/api/foryou', forYouRoutes);
 app.use('/api/audio-series', audioSeriesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/promotions', require('./routes/promotionRoutes'));
 app.use('/api/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/admin/app-settings', require('./routes/appSettingRoutes'));
+app.use('/api/vmap', require('./routes/vmapRoutes'));
 app.use('/api/public', require('./routes/publicTabRoutes'));
 
 // Static files middleware moved up to improve reliability and handle requests before API routing logic.

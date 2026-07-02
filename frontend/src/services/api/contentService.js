@@ -78,10 +78,15 @@ const contentService = {
         return data.data || [];
     },
 
-    // Fetch single Quick Byte details
+    // Fetch single Quick Byte details (public route)
     async getQuickByteById(id) {
+        const token = localStorage.getItem('inplay_token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const response = await fetch(`${API_URL}/quickbytes/${id}`, {
             method: 'GET',
+            headers,
         });
         if (!response.ok) {
             // If not found in quickbytes, throw error so caller can try next strategy or fail

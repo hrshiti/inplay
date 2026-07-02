@@ -4,9 +4,12 @@ import Hls from 'hls.js';
 import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone, Lock } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
+import { getProxiedHlsUrl } from './utils/hlsUrl';
 import { SpeedSheet, QualitySheet } from './PlayerSheets';
 import HlsPlayer from './components/HlsPlayer';
+import ImaAdsPlayer from './components/ImaAdsPlayer';
 import { trackVideoView, trackWatchTime, trackVideoCompleted, trackShareContent } from './utils/analytics';
+import { sendAdTriggerEvent } from './utils/adBridge';
 
 export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, onToggleLike, myList = [], likedVideos = [], nextShow }) {
     const navigate = useNavigate();
@@ -58,9 +61,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const getVideoUrl = (item) => {
         if (!item) return '';
 
-        // Prioritize HLS Streaming URL if available
-        if (item.hls_url) return item.hls_url;
-        if (item.video?.hls_url) return item.video.hls_url;
+        // Prioritize HLS Streaming URL if available (proxied to avoid CDN CORS issues)
+        if (item.hls_url) return getProxiedHlsUrl(item.hls_url);
+        if (item.video?.hls_url) return getProxiedHlsUrl(item.video.hls_url);
 
         let url = '';
         // QuickByte episode (direct url field)
@@ -361,11 +364,20 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
     };
 
-    // Auto-sync every 10 seconds
+    // Auto-sync every 10 seconds; also emit a playback_tick every 60s of active
+    // playback so Flutter's time-based interstitial cooldown can accumulate watch time.
     useEffect(() => {
+        let tickCount = 0;
         const interval = setInterval(() => {
             if (videoRef.current && !videoRef.current.paused) {
                 syncProgress();
+                tickCount += 1;
+                if (tickCount % 6 === 0) {
+                    sendAdTriggerEvent(isQuickBite ? 'shorts' : 'watch', 'playback_tick', {
+                        contentId: movie._id || movie.id,
+                        watchedSeconds: videoRef.current.currentTime,
+                    });
+                }
             }
         }, 10000);
 
@@ -378,7 +390,8 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const handleVideoEnd = async () => {
         const contentId = movie._id || movie.id;
         trackVideoCompleted({ contentId, title: movie.title });
-        
+        sendAdTriggerEvent(isQuickBite ? 'shorts' : 'watch', 'video_end', { contentId });
+
         const isExhausted = await syncProgress(true);
         if (isExhausted) {
             if (videoRef.current) videoRef.current.pause();
@@ -396,13 +409,15 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
 
     const handleNext = async (e) => {
         if (e) e.stopPropagation();
-        
+
         const isExhausted = await syncProgress(true);
         if (isExhausted) {
             if (videoRef.current) videoRef.current.pause();
             navigate('/plan');
             return;
         }
+
+        sendAdTriggerEvent(isQuickBite ? 'shorts' : 'watch', 'episode_change', { contentId: movie._id || movie.id });
 
         if (currentIndex < playlist.length - 1) {
             setCurrentIndex(prev => prev + 1);
@@ -1174,7 +1189,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                         }}
                     />
                 )}
-                <HlsPlayer
+                <ImaAdsPlayer
                     key={`hls-std-${currentIndex}`} // Added key for robust React cleanup
                     ref={videoRef}
                     src={videoSrc}

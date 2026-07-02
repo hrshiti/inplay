@@ -18,15 +18,22 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET;
  * @param {string} filePath - Local path to the file
  * @param {string} s3Key - Path in the S3 bucket
  */
+const getHlsContentType = (filePath) => {
+    if (filePath.endsWith('.m3u8')) return 'application/vnd.apple.mpegurl';
+    if (filePath.endsWith('.ts')) return 'video/mp2t';
+    return mime.lookup(filePath) || 'application/octet-stream';
+};
+
 const uploadFile = async (filePath, s3Key) => {
     const fileContent = fs.readFileSync(filePath);
-    const contentType = mime.lookup(filePath) || 'application/octet-stream';
+    const contentType = getHlsContentType(filePath);
 
     const params = {
         Bucket: BUCKET_NAME,
         Key: s3Key,
         Body: fileContent,
-        ContentType: contentType
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000, immutable'
     };
 
     try {

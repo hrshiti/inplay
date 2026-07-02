@@ -4,6 +4,7 @@ const { CONTENT_STATUS, FILE_SIZE_LIMITS } = require('../constants');
 const mediaService = require('./mediaService');
 const fs = require('fs');
 const path = require('path');
+const { hydrateHlsUrl } = require('../utils/hlsUrl');
 
 // Get all content with filters and pagination
 const getAllContent = async (filters = {}, page = 1, limit = 10) => {
@@ -61,7 +62,7 @@ const hydrateContent = (contentData) => {
     if (!media) return media;
     if (media.url) media.url = getFullUrl(media.url);
     if (media.secure_url) media.secure_url = getFullUrl(media.secure_url);
-    if (media.hls_url) media.hls_url = getFullUrl(media.hls_url);
+    if (media.hls_url) media.hls_url = hydrateHlsUrl(media.hls_url);
     return media;
   };
 

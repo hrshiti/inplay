@@ -33,6 +33,7 @@ import PlanPage from './PlanPage';
 import LegalPage from './LegalPage';
 
 import VideoPlayer from './VideoPlayer';
+import { sendUserPremiumStatus } from './utils/adBridge';
 import { AdminRoutes } from './model/admin';
 import AdminLogin from './model/admin/components/AdminLogin';
 import ProtectedRoute from './model/admin/components/ProtectedRoute';
@@ -343,6 +344,12 @@ function App() {
 
     checkAccess();
   }, [currentUser?._id, location.pathname, navigate]);
+
+  // Tell the Flutter shell whether this user is premium, so it can skip
+  // loading/showing interstitial ads entirely for active subscribers.
+  useEffect(() => {
+    sendUserPremiumStatus(!!currentUser?.subscription?.isActive);
+  }, [currentUser?.subscription?.isActive]);
 
   const handleAuthSuccess = () => {
     let savedUser = null;
@@ -999,6 +1006,7 @@ function App() {
       <Route path="/watch/:id" element={
         <WatchPageRoute
           allContent={allContent}
+          quickBites={quickBites}
           handleToggleMyList={handleToggleMyList}
           handleToggleLike={handleToggleLike}
           myList={myList}
@@ -2110,6 +2118,7 @@ function ContentDetailsRoute({
 
 function WatchPageRoute({
   allContent,
+  quickBites,
   handleToggleMyList,
   handleToggleLike,
   myList,
@@ -2145,7 +2154,8 @@ function WatchPageRoute({
     if (movie && (movie._id === id || movie.id === id)) return;
 
     // Always fetch fresh data to ensure subscription/lock states are accurate.
-    let found = allContent.find(i => (i._id === id || i.id === id));
+    let found = allContent.find(i => (i._id === id || i.id === id))
+      || quickBites.find(i => (i._id === id || i.id === id));
     if (found) {
       setMovie(found);
     } else {
@@ -2167,7 +2177,7 @@ function WatchPageRoute({
             });
         });
     }
-  }, [id, allContent, navigate, movie]);
+  }, [id, allContent, quickBites, navigate, movie]);
 
   if (!movie) return <div style={{ background: 'black', height: '100vh' }} />;
 
