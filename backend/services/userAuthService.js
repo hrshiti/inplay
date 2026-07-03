@@ -558,22 +558,27 @@ const toggleLike = async (userId, contentId) => {
 const saveFCMToken = async (userId, token, rawPlatform = 'web', userAgent = '') => {
   let platform = (rawPlatform || 'web').toLowerCase();
 
-  // Backend fallback: if frontend says 'web' but User-Agent looks like mobile, override it
+  // Backend fallback: if frontend says 'web' but User-Agent looks like a native webview/wrapper app, override to 'app'
   if (platform === 'web' && userAgent) {
-    if (/Android|iPhone|iPad|iPod|Mobile|wv|apk|app/i.test(userAgent)) {
-      console.log(`[FCM] Platform override: Frontend sent 'web' but User-Agent suggests mobile. Changing to 'mobile'.`);
-      platform = 'mobile';
+    const isAppWrapper = /; wv\)/i.test(userAgent) || 
+                         /apk|inplay-apk/i.test(userAgent) || 
+                         /(iPhone|iPad|iPod).*AppleWebKit(?!.*Safari)/i.test(userAgent);
+    if (isAppWrapper) {
+      console.log(`[FCM] Platform override: Frontend sent 'web' but User-Agent suggests native app wrapper. Changing to 'app'.`);
+      platform = 'app';
     }
   }
+
+  // Handle various mobile platform names to normalize to 'app' or 'web'
+  const isMobile = ['mobile', 'android', 'ios', 'apk', 'wv', 'tablet', 'app'].includes(platform);
+  platform = isMobile ? 'app' : 'web';
 
   console.log(`[FCM] Saving token for user ${userId}, platform: ${platform}, User-Agent: ${userAgent.substring(0, 50)}...`);
 
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
 
-  // Handle various mobile platform names
-  const isMobile = ['mobile', 'android', 'ios', 'apk', 'wv', 'tablet', 'app'].includes(platform);
-  const field = isMobile ? 'fcm_mobile' : 'fcm_web';
+  const field = (platform === 'app') ? 'fcm_mobile' : 'fcm_web';
 
   // Initialize if undefined
   if (!user[field]) {

@@ -93,22 +93,14 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
         // Comprehensive platform detection
         let platform = 'web';
         const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-        const isWebView = window.webkit && window.webkit.messageHandlers;
+        const isWebView = (window.webkit && window.webkit.messageHandlers) || window.InPlayMobile;
 
-        if (/Android/i.test(userAgent)) {
-            platform = 'android';
-        } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
-            platform = 'ios';
-            // If it's iOS but running in standalone mode (PWA) or has a native bridge
-            if (isStandalone || isWebView || window.InPlayMobile) {
-                platform = 'app';
-            }
-        } else if (/webOS|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|Tablet|Kindle|Silk/i.test(userAgent)) {
-            platform = 'mobile';
-        }
-        
-        // Check for specific APK/Native wrappers or indicators
-        if (window.InPlayMobile || userAgent.includes('inplay-apk') || userAgent.includes('wv') || (userAgent.includes('app') && !userAgent.includes('apple'))) {
+        // Standard detection for Android/iOS WebViews and Wrappers vs standard browsers
+        const isAppWrapper = /; wv\)/i.test(userAgent) || 
+                             /apk|inplay-apk/i.test(userAgent) || 
+                             /(iPhone|iPad|iPod).*AppleWebKit(?!.*Safari)/i.test(userAgent);
+
+        if (isStandalone || isWebView || isAppWrapper) {
             platform = 'app';
         }
         
@@ -214,8 +206,6 @@ function setupForegroundNotificationHandler(handler) {
             
             const userAgent = navigator.userAgent;
             let platform = 'app';
-            if (/Android/i.test(userAgent)) platform = 'app';
-            else if (/iPhone|iPad|iPod/i.test(userAgent)) platform = 'ios';
             localStorage.setItem('last_native_fcm_platform', platform);
             
             const authToken = localStorage.getItem('inplay_token');
