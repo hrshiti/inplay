@@ -5,9 +5,9 @@ export const getImageUrl = (path) => {
     const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
     let serverRoot = rawApiUrl.replace(/\/$/, '');
 
-    // If it is the production domain path (e.g. inplays.in/api), we MUST keep '/api'
+    // If it is the production domain path (e.g. inplays.in/api or api.inplays.in/api), we MUST keep '/api'
     // because '/uploads' without '/api' will route to the Vercel frontend.
-    if (serverRoot.endsWith('/api') && !serverRoot.includes('api.inplays.in')) {
+    if (serverRoot.endsWith('/api')) {
         // Keep /api
     } else {
         serverRoot = serverRoot.replace(/\/api$/, '');

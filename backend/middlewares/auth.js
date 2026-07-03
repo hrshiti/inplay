@@ -154,7 +154,7 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success') => 
 // Ensure user has an active subscription
 const subscribed = (req, res, next) => {
   // Allow admins and dev testing numbers to bypass subscription check
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.phone === '6268204871' || req.user.phone === '6268455485')) {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.phone === '6268204871' || req.user.phone === '6268455485' || req.user.phone === '6260491554')) {
     return next();
   }
 

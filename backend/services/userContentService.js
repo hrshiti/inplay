@@ -105,7 +105,7 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
 
   const user = userId ? await User.findById(userId) : null;
   const isSubscribed = user ? (
-    user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' ||
+    user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554' ||
     (user.subscription?.isActive && (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()))
   ) : false;
   const freeEpisodesWatched = user?.freeEpisodesWatched || [];
@@ -194,7 +194,7 @@ const checkIsSubscribed = async (userId) => {
     if (!user) return false;
 
     // Allow bypass for admin/superadmin role or test numbers
-    if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485') {
+    if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554') {
       return true;
     }
 
@@ -315,7 +315,7 @@ const getContentById = async (contentId, userId = null) => {
 
   const user = userId ? await User.findById(userId) : null;
   const isSubscribed = user ? (
-    user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' ||
+    user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554' ||
     (user.subscription?.isActive && (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()))
   ) : false;
   const freeEpisodesWatched = user?.freeEpisodesWatched || [];
@@ -510,7 +510,7 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
   }
 
   // Check subscription status
-  const isSubscribed = user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' ||
+  const isSubscribed = user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554' ||
     (user.subscription?.isActive && (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()));
 
   // Check if content is inplay drama

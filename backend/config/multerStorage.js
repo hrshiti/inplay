@@ -219,8 +219,11 @@ const getPublicUrl = (filePath) => {
     const relativePath = path.relative(UPLOAD_BASE, filePath);
 
     // Generate URL (works for both dev and production)
-    const baseUrl = process.env.BACKEND_URL;
-    return `${baseUrl}/uploads/${relativePath.replace(/\\/g, '/')}`;
+    const baseUrl = process.env.BACKEND_URL || '';
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const relativeUrl = `/uploads/${relativePath.replace(/\\/g, '/')}`;
+    
+    return cleanBaseUrl ? `${cleanBaseUrl}${relativeUrl}` : relativeUrl;
 };
 
 // Helper function to delete file from disk

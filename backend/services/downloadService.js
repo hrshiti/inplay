@@ -158,7 +158,7 @@ const checkIsSubscribed = async (userId) => {
   try {
     const user = await User.findById(userId);
     if (!user) return false;
-    if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485') {
+    if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554') {
       return true;
     }
     if (user.subscription && user.subscription.isActive) {

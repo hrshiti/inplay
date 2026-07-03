@@ -58,7 +58,7 @@ const getAllQuickBytes = async (req, res) => {
             const user = await User.findById(userId);
             if (user) {
                 freeEpisodesWatched = user.freeEpisodesWatched || [];
-                if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485') {
+                if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554') {
                     isSubscribed = true;
                 } else if (user.subscription && user.subscription.isActive) {
                     if (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()) {
