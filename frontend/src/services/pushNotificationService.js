@@ -10,7 +10,7 @@ const getApiUrl = () => {
     }
     return base;
 };
-
+//
 // Register service worker
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
