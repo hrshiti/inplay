@@ -563,6 +563,8 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
     entry => entry.content && entry.content.toString() === contentId.toString()
   );
 
+  const epIdx = (episodeIndex !== undefined && episodeIndex !== null) ? parseInt(episodeIndex, 10) : null;
+
   if (existingEntry) {
     existingEntry.progress = progress;
     existingEntry.watchedSeconds = watchedSeconds;
@@ -572,16 +574,49 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
     if (completed) existingEntry.completed = true;
     // Auto complete if progress is > 95%
     if (progress > 95) existingEntry.completed = true;
+
+    // Handle episode-specific progress
+    if (epIdx !== null && !isNaN(epIdx)) {
+      if (!existingEntry.episodesProgress) {
+        existingEntry.episodesProgress = [];
+      }
+      const existingEp = existingEntry.episodesProgress.find(ep => ep.episodeIndex === epIdx);
+      if (existingEp) {
+        existingEp.watchedSeconds = watchedSeconds;
+        existingEp.totalDuration = totalDuration;
+        existingEp.progress = progress;
+        existingEp.watchedAt = new Date();
+      } else {
+        existingEntry.episodesProgress.push({
+          episodeIndex: epIdx,
+          watchedSeconds,
+          totalDuration,
+          progress,
+          watchedAt: new Date()
+        });
+      }
+    }
   } else {
-    user.watchHistory.unshift({
+    const newEntry = {
       content: contentId,
       contentType: contentType || '',
       progress,
       watchedSeconds,
       totalDuration,
       completed: completed || (progress > 95),
-      watchedAt: new Date()
-    });
+      watchedAt: new Date(),
+      episodesProgress: []
+    };
+    if (epIdx !== null && !isNaN(epIdx)) {
+      newEntry.episodesProgress.push({
+        episodeIndex: epIdx,
+        watchedSeconds,
+        totalDuration,
+        progress,
+        watchedAt: new Date()
+      });
+    }
+    user.watchHistory.unshift(newEntry);
   }
 
   // Keep only last 100 entries
