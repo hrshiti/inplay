@@ -89,31 +89,39 @@ async function registerFCMTokenWithBackend(userId = null, forceUpdate = false, m
         }
 
         const userAgent = navigator.userAgent;
-        
+
         // Comprehensive platform detection
         let platform = 'web';
         const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-        const isWebView = (window.webkit && window.webkit.messageHandlers) || window.InPlayMobile;
+        const isWebView = window.webkit && window.webkit.messageHandlers;
 
-        // Standard detection for Android/iOS WebViews and Wrappers vs standard browsers
-        const isAppWrapper = /; wv\)/i.test(userAgent) || 
-                             /apk|inplay-apk/i.test(userAgent) || 
-                             /(iPhone|iPad|iPod).*AppleWebKit(?!.*Safari)/i.test(userAgent);
+        if (/Android/i.test(userAgent)) {
+            platform = 'app';
+        } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
+            platform = 'ios';
+            // If it's iOS but running in standalone mode (PWA) or has a native bridge
+            if (isStandalone || isWebView || window.InPlayMobile) {
+                platform = 'app';
+            }
+        } else if (/webOS|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|Tablet|Kindle|Silk/i.test(userAgent)) {
+            platform = 'mobile';
+        }
 
-        if (isStandalone || isWebView || isAppWrapper) {
+        // Check for specific APK/Native wrappers or indicators
+        if (window.InPlayMobile || userAgent.includes('inplay-apk') || userAgent.includes('wv') || (userAgent.includes('app') && !userAgent.includes('apple'))) {
             platform = 'app';
         }
-        
+
         // console.log(`📱 [FCM] Platform Detection Result: ${platform}`);
         // console.log(`📱 [FCM] Is Standalone (PWA): ${isStandalone}`);
         // console.log(`📱 [FCM] Is WebView: ${!!isWebView}`);
         // console.log(`📱 [FCM] Bridge Detected: ${!!window.InPlayMobile}`);
         // console.log(`📱 [FCM] User Agent: ${userAgent}`);
         // console.log(`📱 [FCM] Notification Permission: ${Notification.permission}`);
-        
+
         // Use manual token if provided (from native bridge), else get from Firebase Web SDK
         let token = manualToken || await getFCMToken();
-        
+
         // Fallback: If no token yet, check if we have a persisted native token
         if (!token) {
             token = localStorage.getItem('last_native_fcm_token');
@@ -199,15 +207,17 @@ function setupForegroundNotificationHandler(handler) {
     // Listen for tokens from native bridge (Flutter/WebView)
     window.setMobileFCMToken = async (token) => {
         // console.log('📱 [FCM] Token received from Native Bridge');
-        
+
         // Always persist the native token so it can be used after login if needed
         if (token) {
             localStorage.setItem('last_native_fcm_token', token);
-            
+
             const userAgent = navigator.userAgent;
             let platform = 'app';
+            if (/Android/i.test(userAgent)) platform = 'app';
+            else if (/iPhone|iPad|iPod/i.test(userAgent)) platform = 'ios';
             localStorage.setItem('last_native_fcm_platform', platform);
-            
+
             const authToken = localStorage.getItem('inplay_token');
             if (authToken) {
                 // console.log('📱 [FCM] User is logged in, registering native token immediately');
