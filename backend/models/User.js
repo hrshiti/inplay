@@ -77,13 +77,6 @@ const userSchema = new mongoose.Schema({
       min: 0,
       max: 100
     },
-    episodesProgress: [{
-      episodeIndex: { type: Number, required: true },
-      watchedSeconds: { type: Number, default: 0 },
-      totalDuration: { type: Number, default: 0 },
-      progress: { type: Number, default: 0, min: 0, max: 100 },
-      watchedAt: { type: Date, default: Date.now }
-    }],
     completed: {
       type: Boolean,
       default: false

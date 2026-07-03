@@ -57,26 +57,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
     }, [currentIndex, playlist, currentItem, navigate, onClose]);
 
-    // Helpers for episode watch progress tracking
-    const getEpisodeProgress = (index) => {
-        const contentId = movie._id || movie.id;
-        try {
-            const savedProgress = JSON.parse(localStorage.getItem('inplay_quickbyte_progress') || '{}');
-            const showProgress = savedProgress[contentId];
-            if (showProgress && showProgress.episodes && showProgress.episodes[index]) {
-                return showProgress.episodes[index];
-            }
-        } catch (e) {
-            console.error("Error reading episode progress", e);
-        }
-        return null;
-    };
-
-    const formatEpisodeWatchedTime = (secs) => {
-        if (isNaN(secs) || secs === undefined) return '0s';
+    // Helper for formatting episode duration
+    const formatEpisodeDuration = (secs) => {
+        if (isNaN(secs) || secs === undefined || secs <= 0) return '';
         const m = Math.floor(secs / 60);
         const s = Math.floor(secs % 60);
-        return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        return s > 0 ? `${m}m ${s}s` : `${m} mins`;
     };
 
     // Helper to get URL dynamically
@@ -345,27 +331,12 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         if (isQuickBite || isEpisodic) {
             try {
                 const savedProgress = JSON.parse(localStorage.getItem('inplay_quickbyte_progress') || '{}');
-                if (!savedProgress[contentId] || typeof savedProgress[contentId] !== 'object' || Array.isArray(savedProgress[contentId])) {
-                    savedProgress[contentId] = { episodes: {} };
-                } else if (!savedProgress[contentId].episodes) {
-                    const oldData = { ...savedProgress[contentId] };
-                    savedProgress[contentId] = {
-                        lastEpisodeIndex: oldData.episodeIndex !== undefined ? oldData.episodeIndex : currentIndex,
-                        episodes: {}
-                    };
-                    if (oldData.episodeIndex !== undefined) {
-                        savedProgress[contentId].episodes[oldData.episodeIndex] = {
-                            watchedSeconds: oldData.watchedSeconds || 0,
-                            duration: oldData.duration || 0,
-                            progress: oldData.duration ? (oldData.watchedSeconds / oldData.duration) * 100 : 0
-                        };
-                    }
-                }
-                savedProgress[contentId].lastEpisodeIndex = currentIndex;
-                savedProgress[contentId].episodes[currentIndex] = {
+                savedProgress[contentId] = {
+                    episodeIndex: currentIndex,
                     watchedSeconds: currentTime,
-                    duration: duration,
-                    progress: progress
+                    timestamp: Date.now(),
+                    totalEpisodes: playlist.length,
+                    duration: duration
                 };
                 localStorage.setItem('inplay_quickbyte_progress', JSON.stringify(savedProgress));
             } catch (e) {
@@ -1026,35 +997,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                         {ep.title !== undefined && ep.title !== null && String(ep.title).trim() !== '0' && String(ep.title).trim() !== '' && (
                                             <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
                                         )}
-                                        {(() => {
-                                            const epProgress = getEpisodeProgress(index);
-                                            if (epProgress) {
-                                                return (
-                                                    <div style={{ marginTop: '4px' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: '#aaa' }}>
-                                                            <span>Watched: {formatEpisodeWatchedTime(epProgress.watchedSeconds)}</span>
-                                                            <span>{Math.round(epProgress.progress || 0)}%</span>
-                                                        </div>
-                                                        <div style={{ width: '100%', height: '4px', background: '#333', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${epProgress.progress || 0}%`, height: '100%', background: 'var(--accent, #E50914)' }}></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return (
-                                                <div style={{ marginTop: '4px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: '#666' }}>
-                                                        <span>Not watched</span>
-                                                        <span>0%</span>
-                                                    </div>
-                                                    <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
-                                                        <div style={{ width: '0%', height: '100%', background: '#444' }}></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                        {ep.duration > 0 && !getEpisodeProgress(index) && (
-                                            <span style={{ color: '#666', fontSize: '0.75rem', marginTop: '4px' }}>{Math.floor(ep.duration / 60)}m</span>
+                                        {ep.duration > 0 && (
+                                            <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>
+                                                Duration: {formatEpisodeDuration(ep.duration)}
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -1403,35 +1349,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                         {ep.title !== undefined && ep.title !== null && String(ep.title).trim() !== '0' && String(ep.title).trim() !== '' && (
                                             <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
                                         )}
-                                        {(() => {
-                                            const epProgress = getEpisodeProgress(index);
-                                            if (epProgress) {
-                                                return (
-                                                    <div style={{ marginTop: '4px' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: '#aaa' }}>
-                                                            <span>Watched: {formatEpisodeWatchedTime(epProgress.watchedSeconds)}</span>
-                                                            <span>{Math.round(epProgress.progress || 0)}%</span>
-                                                        </div>
-                                                        <div style={{ width: '100%', height: '4px', background: '#333', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${epProgress.progress || 0}%`, height: '100%', background: 'var(--accent, #E50914)' }}></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return (
-                                                <div style={{ marginTop: '4px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: '#666' }}>
-                                                        <span>Not watched</span>
-                                                        <span>0%</span>
-                                                    </div>
-                                                    <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
-                                                        <div style={{ width: '0%', height: '100%', background: '#444' }}></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                        {ep.duration > 0 && !getEpisodeProgress(index) && (
-                                            <span style={{ color: '#666', fontSize: '0.75rem', marginTop: '4px' }}>{Math.floor(ep.duration / 60)}m</span>
+                                        {ep.duration > 0 && (
+                                            <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>
+                                                Duration: {formatEpisodeDuration(ep.duration)}
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -1627,35 +1548,10 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             </span>
                                             {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
                                         </div>
-                                        {(() => {
-                                            const epProgress = getEpisodeProgress(index);
-                                            if (epProgress) {
-                                                return (
-                                                    <div style={{ marginTop: '4px', maxWidth: '300px' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: '#aaa' }}>
-                                                            <span>Watched: {formatEpisodeWatchedTime(epProgress.watchedSeconds)}</span>
-                                                            <span>{Math.round(epProgress.progress || 0)}%</span>
-                                                        </div>
-                                                        <div style={{ width: '100%', height: '4px', background: '#333', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${epProgress.progress || 0}%`, height: '100%', background: 'var(--accent, #E50914)' }}></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return (
-                                                <div style={{ marginTop: '4px', maxWidth: '300px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: '#666' }}>
-                                                        <span>Not watched</span>
-                                                        <span>0%</span>
-                                                    </div>
-                                                    <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
-                                                        <div style={{ width: '0%', height: '100%', background: '#444' }}></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                        {ep.duration > 0 && !getEpisodeProgress(index) && (
-                                            <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>{Math.floor(ep.duration / 60)}m</span>
+                                        {ep.duration > 0 && (
+                                            <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>
+                                                Duration: {formatEpisodeDuration(ep.duration)}
+                                            </span>
                                         )}
                                         <p style={{ color: '#666', fontSize: '0.8rem', margin: '4px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                             {ep.description || movie.description}
