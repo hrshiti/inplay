@@ -1045,7 +1045,7 @@ function App() {
                           onClick={() => handleFilterChange(filter)}
                         >
                           <span style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {filter === 'InPlay Shorts' ? 'Inplay Dramaa' : filter.replace('InPlay', 'Inplay')}
+                            {filter === 'InPlay Shorts' ? 'Inplay Drama' : filter.replace('InPlay', 'Inplay')}
                           </span>
                         </div>
                       );
@@ -2071,28 +2071,29 @@ function ContentDetailsRoute({
   const { id } = useParams();
   const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
-  const hasFetched = useRef(false);
 
   useEffect(() => {
-    // We always fetch fresh data to ensure subscription/lock states are accurate.
-    // We can use the found item from allContent as initial state for faster rendering.
+    // Reset movie state and get latest details on ID change
     let found = allContent.find(i => (i._id === id || i.id === id));
-    if (found && !movie) {
-      setMovie(found);
-    }
+    setMovie(found || null);
 
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      contentService.getContentById(id)
-        .then(data => {
-          if (data) setMovie(data);
-          else if (!found) navigate('/', { replace: true });
-        })
-        .catch(() => {
-          if (!found) navigate('/', { replace: true });
-        });
-    }
-  }, [id, allContent, navigate, movie]);
+    let active = true;
+    contentService.getContentById(id)
+      .then(data => {
+        if (active && data) {
+          setMovie(data);
+        } else if (active && !data && !found) {
+          navigate('/', { replace: true });
+        }
+      })
+      .catch(() => {
+        if (active && !found) navigate('/', { replace: true });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, allContent, navigate]);
 
   if (!movie) return null; // Or a loading spinner
 

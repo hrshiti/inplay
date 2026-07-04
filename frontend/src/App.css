@@ -981,3 +981,42 @@ html, body {
   scrollbar-width: thin;
   scrollbar-color: #d1d5db #f3f4f6;
 }
+
+/* Premium Web/Desktop Layout Improvements (Non-Mobile View Only) */
+@media (min-width: 768px) {
+  .category-tabs-container {
+    max-width: 600px !important;
+    margin: 16px auto !important;
+    border-radius: 30px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    padding: 6px 8px !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    position: sticky !important;
+    top: 75px !important;
+    background: rgba(11, 17, 32, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    overflow-x: hidden !important;
+  }
+
+  .category-tab {
+    flex: 0 1 180px !important;
+    padding: 8px 16px !important;
+    border-radius: 20px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .hero {
+    max-width: 1000px !important;
+    height: 280px !important;
+    margin: 20px auto 32px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Keep hero container children aligned within the max-width bounds */
+  .hero > div {
+    max-width: 1000px !important;
+    border-radius: 20px !important;
+  }
+}
