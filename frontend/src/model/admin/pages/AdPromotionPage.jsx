@@ -325,6 +325,7 @@ const AdPromotionPage = () => {
                             >
                                 <option value="home">Home Page</option>
                                 <option value="popular">Popular Page</option>
+                                <option value="audio">Audio Songs</option>
                                 <option value="both">Both</option>
                             </select>
                         </div>

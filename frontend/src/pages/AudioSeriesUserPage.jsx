@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Play, Pause, SkipBack, SkipForward, X, Clock, ChevronLeft } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAudioPlayer } from '../contexts/AudioPlayerContext';
+import AdCarousel from '../model/components/AdCarousel';
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/';
 const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 const API_URL = API_Base + '/audio-series';
 
-export default function AudioSeriesUserPage({ onBack }) {
+export default function AudioSeriesUserPage({ onBack, promotions }) {
     const [seriesList, setSeriesList] = useState([]);
     const [selectedSeries, setSelectedSeries] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeLanguageTab, setActiveLanguageTab] = useState('Hindi');
+    const audioPromotions = useMemo(() => {
+        return (promotions || []).filter(p => p.displayLocation === 'audio' || p.displayLocation === 'both');
+    }, [promotions]);
 
     // Use global audio player context
     const {
@@ -83,7 +87,7 @@ export default function AudioSeriesUserPage({ onBack }) {
         playEpisodeContext(episode, series);
     };
 
-    if (loading) return <div style={{ color: 'white', padding: '20px' }}>Loading Audio Series...</div>;
+    if (loading) return <div style={{ color: 'white', padding: '20px' }}>Loading Audio Songs...</div>;
 
     return (
         <div style={{ padding: '20px', paddingBottom: '100px', minHeight: '100vh', background: 'black', color: 'white' }}>
@@ -91,7 +95,7 @@ export default function AudioSeriesUserPage({ onBack }) {
             {/* Navigation / Header */}
             {!selectedSeries ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Audio Series</h2>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Audio Songs</h2>
                     
                     {/* Language Tabs */}
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
@@ -118,7 +122,25 @@ export default function AudioSeriesUserPage({ onBack }) {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
-                        {filteredSeriesList.map(series => (
+                        {filteredSeriesList.slice(0, 6).map(series => (
+                            <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
+                                <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
+                                    <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />
+                                    <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '50%' }}>
+                                        <Play fill="white" size={16} />
+                                    </div>
+                                </div>
+                                <div style={{ fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{series.title}</div>
+                            </div>
+                        ))}
+
+                        {audioPromotions.length > 0 && (
+                            <div style={{ gridColumn: '1 / -1', margin: '10px 0' }}>
+                                <AdCarousel promotions={audioPromotions} />
+                            </div>
+                        )}
+
+                        {filteredSeriesList.slice(6).map(series => (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
                                 <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
                                     <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />

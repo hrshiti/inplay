@@ -19,7 +19,7 @@ const promotionSchema = new mongoose.Schema({
     },
     displayLocation: {
         type: String,
-        enum: ['home', 'popular', 'both'],
+        enum: ['home', 'popular', 'both', 'audio'],
         default: 'both',
     },
     isActive: {

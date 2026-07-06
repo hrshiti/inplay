@@ -107,6 +107,9 @@ function App() {
   const [toast, setToast] = useState(null);
   const [quickBites, setQuickBites] = useState([]);
   const [promotions, setPromotions] = useState([]);
+  const homePromotions = useMemo(() => {
+    return (promotions || []).filter(p => p.displayLocation === 'home' || p.displayLocation === 'both');
+  }, [promotions]);
   const [contentSections, setContentSections] = useState({
     bhojpuri: [],
     trending_now: [],
@@ -1075,7 +1078,7 @@ function App() {
                         />
                       </>
                     ) : activeFilter === 'Audio Series' ? (
-                      <AudioSeriesUserPage onBack={() => setActiveFilter('Popular')} />
+                      <AudioSeriesUserPage onBack={() => setActiveFilter('Popular')} promotions={promotions} />
                     ) : activeFilter === 'InPlay Cinema' && cinemaSections && cinemaSections.length > 0 ? (
                       <CategoryGridView
                         activeFilter={activeFilter}
@@ -1522,7 +1525,7 @@ function App() {
                                   // Let's create a specialized component `AdCarousel` in a new file and use it here?
                                   // That is safer and cleaner. 
                                 })()}
-                                <AdCarousel promotions={promotions} />
+                                <AdCarousel promotions={homePromotions} />
                               </div>
                             )}
                           </section>
