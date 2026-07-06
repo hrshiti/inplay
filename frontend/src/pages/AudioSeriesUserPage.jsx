@@ -98,22 +98,24 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Audio Songs</h2>
                     
                     {/* Language Tabs */}
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', width: '100%' }}>
                         {['Hindi', 'Bhojpuri', 'Audiobook'].map(lang => (
                             <button
                                 key={lang}
                                 onClick={() => setActiveLanguageTab(lang)}
                                 style={{
-                                    padding: '8px 20px',
+                                    flex: 1,
+                                    padding: '8px 0',
                                     borderRadius: '20px',
                                     border: 'none',
                                     fontWeight: 'bold',
                                     fontSize: '0.95rem',
                                     cursor: 'pointer',
-                                    background: activeLanguageTab === lang ? 'white' : '#333',
+                                    background: activeLanguageTab === lang ? '#46d369' : '#1b4332',
                                     color: activeLanguageTab === lang ? 'black' : 'white',
                                     whiteSpace: 'nowrap',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s',
+                                    textAlign: 'center'
                                 }}
                             >
                                 {lang}
@@ -136,7 +138,7 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
 
                         {audioPromotions.length > 0 && (
                             <div style={{ gridColumn: '1 / -1', margin: '10px 0' }}>
-                                <AdCarousel promotions={audioPromotions} />
+                                <AdCarousel promotions={audioPromotions} height="180px" />
                             </div>
                         )}
 

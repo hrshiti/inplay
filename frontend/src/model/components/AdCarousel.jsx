@@ -4,7 +4,7 @@ import { Play, Volume2, VolumeX } from 'lucide-react';
 import HlsPlayer from '../../components/HlsPlayer';
 import { getImageUrl } from '../../utils/imageUtils';
 
-const AdCarousel = ({ promotions }) => {
+const AdCarousel = ({ promotions, height = '140px' }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isMuted, setIsMuted] = useState(true);
     const videoRef = useRef(null);
@@ -35,7 +35,7 @@ const AdCarousel = ({ promotions }) => {
     const isVideo = !!currentPromo.promoVideoUrl;
 
     return (
-        <div style={{ width: '100%', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '140px', background: '#111' }}>
+        <div style={{ width: '100%', position: 'relative', borderRadius: '12px', overflow: 'hidden', height: height, background: '#111' }}>
             <AnimatePresence mode='wait'>
                 <motion.div
                     key={currentPromo._id}
