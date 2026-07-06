@@ -111,8 +111,8 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                                     fontWeight: 'bold',
                                     fontSize: '0.95rem',
                                     cursor: 'pointer',
-                                    background: activeLanguageTab === lang ? '#46d369' : '#1b4332',
-                                    color: activeLanguageTab === lang ? 'black' : 'white',
+                                    background: activeLanguageTab === lang ? '#22c55e' : '#15803d',
+                                    color: 'white',
                                     whiteSpace: 'nowrap',
                                     transition: 'all 0.2s',
                                     textAlign: 'center'
