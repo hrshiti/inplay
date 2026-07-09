@@ -5,6 +5,8 @@ import { getImageUrl } from '../utils/imageUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAudioPlayer } from '../contexts/AudioPlayerContext';
 import AdCarousel from '../model/components/AdCarousel';
+import AdPlaceholder from '../components/AdPlaceholder';
+import { withAdSlots } from '../utils/interleaveAds';
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/';
 const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
@@ -142,7 +144,16 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                             </div>
                         )}
 
-                        {filteredSeriesList.slice(6).map(series => (
+                        {withAdSlots(filteredSeriesList.slice(6), { keyPrefix: `audio-${activeLanguageTab}` }).map((entry) => {
+                            if (entry.type === 'ad') {
+                                return (
+                                    <div key={entry.slotId} style={{ gridColumn: '1 / -1' }}>
+                                        <AdPlaceholder pageName="in-grid-banner" slotId={entry.slotId} />
+                                    </div>
+                                );
+                            }
+                            const series = entry.data;
+                            return (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
                                 <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
                                     <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />
@@ -152,7 +163,8 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                                 </div>
                                 <div style={{ fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{series.title}</div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </motion.div>
             ) : (

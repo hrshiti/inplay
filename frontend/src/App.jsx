@@ -51,6 +51,7 @@ import { registerFCMTokenWithBackend, setupForegroundNotificationHandler, reques
 import Header from './Header';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import AdPlaceholder from './components/AdPlaceholder';
+import { withAdSlots } from './utils/interleaveAds';
 import FloatingAudioPlayer from './components/FloatingAudioPlayer';
 import socketService from './services/socketService';
 import { trackLogout, trackAddToWatchlist, trackRemoveFromWatchlist, trackLikeVideo, trackUnlikeVideo } from './utils/analytics';
@@ -1186,6 +1187,10 @@ function App() {
 
                         {activeFilter === 'InPlay Cinema' && (
                           <AdPlaceholder pageName="inplay-cinema" />
+                        )}
+
+                        {activeFilter === 'Home' && (
+                          <AdPlaceholder pageName="inplay-home" />
                         )}
 
                         {/* Continue Watching Section */}
@@ -2403,7 +2408,16 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
         </div>
 
         <div className="originals-grid">
-          {data.map(item => (
+          {withAdSlots(data, { keyPrefix: 'originals' }).map((entry) => {
+            if (entry.type === 'ad') {
+              return (
+                <div key={entry.slotId} style={{ gridColumn: '1 / -1' }}>
+                  <AdPlaceholder pageName="in-grid-banner" slotId={entry.slotId} />
+                </div>
+              );
+            }
+            const item = entry.data;
+            return (
             <div key={item.id} className="original-card" onClick={() => setSelectedMovie(item)}>
               <div className="original-poster">
                 <img
@@ -2435,7 +2449,8 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
     )

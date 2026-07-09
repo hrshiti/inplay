@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Eye } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
+import AdPlaceholder from './components/AdPlaceholder';
+import { withAdSlots } from './utils/interleaveAds';
 
 const formatViews = (views) => {
     if (!views) return '0';
@@ -146,7 +148,16 @@ export default function DynamicTabPage({ tab, onMovieClick }) {
                         gap: '16px',
                         padding: '0 20px'
                     }}>
-                        {allContent.map((movie) => (
+                        {withAdSlots(allContent, { keyPrefix: `dynamictab-${tab.slug}` }).map((entry) => {
+                            if (entry.type === 'ad') {
+                                return (
+                                    <div key={entry.slotId} style={{ gridColumn: '1 / -1' }}>
+                                        <AdPlaceholder pageName="in-grid-banner" slotId={entry.slotId} />
+                                    </div>
+                                );
+                            }
+                            const movie = entry.data;
+                            return (
                             <motion.div
                                 key={movie._id}
                                 className="movie-card"
@@ -175,7 +186,8 @@ export default function DynamicTabPage({ tab, onMovieClick }) {
                                     {!isBhojpuriOrCinema && movie.views > 0 && <><Eye size={12} /> {formatViews(movie.views)} Views</>}
                                 </span>
                             </motion.div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             )}

@@ -10,12 +10,20 @@ const callUpdateAdPosition = (payload) => {
   }
 };
 /**
- * AdPlaceholder — empty slot synced to Flutter native AdMob overlay.dcjsnjnjl
+ * AdPlaceholder — empty slot synced to Flutter native AdMob overlay.
  * Use NATIVE_BANNER_HEIGHT (50px) so the close/info button is not clipped.
+ *
+ * `pageName` selects which AdMob ad unit Flutter uses (a "group"). `slotId`
+ * uniquely identifies this rendered instance's position/visibility — it
+ * defaults to `pageName` so the original single-slot pages (inplay-cinema,
+ * inplay-bhojpuri, content-details) need no changes. Multiple instances that
+ * share one `pageName` (e.g. repeated in-grid ad slots) must pass distinct
+ * `slotId`s or they'll clobber each other's position on the Flutter side.
  */
-const AdPlaceholder = ({ pageName, height = NATIVE_BANNER_HEIGHT, scrollContainerRef }) => {
+const AdPlaceholder = ({ pageName, slotId, height = NATIVE_BANNER_HEIGHT, scrollContainerRef }) => {
   const adPlaceholderRef = useRef(null);
   const bridgeReadyRef = useRef(canCallFlutter());
+  const resolvedSlotId = slotId || pageName;
 
   useEffect(() => {
     let animationFrameId;
@@ -29,6 +37,7 @@ const AdPlaceholder = ({ pageName, height = NATIVE_BANNER_HEIGHT, scrollContaine
 
       callUpdateAdPosition({
         page: pageName,
+        slotId: resolvedSlotId,
         x: rect.left,
         y: rect.top,
         width: rect.width,
@@ -62,6 +71,12 @@ const AdPlaceholder = ({ pageName, height = NATIVE_BANNER_HEIGHT, scrollContaine
 
     sendPositionToFlutter();
 
+    // Heartbeat: Flutter hides the ad if it hears nothing for a few seconds
+    // (protects against stale ads lingering after reload/route change). Without
+    // this, a static ad the user isn't scrolling would get hidden by that same
+    // watchdog since scroll/resize/ResizeObserver only fire on movement.
+    const heartbeatId = setInterval(sendPositionToFlutter, 1500);
+
     if (adPlaceholderRef.current && typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(handleScroll);
       resizeObserver.observe(adPlaceholderRef.current);
@@ -75,11 +90,12 @@ const AdPlaceholder = ({ pageName, height = NATIVE_BANNER_HEIGHT, scrollContaine
         scrollContainer.removeEventListener('scroll', handleScroll);
       }
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      clearInterval(heartbeatId);
       resizeObserver?.disconnect();
 
-      callUpdateAdPosition({ page: pageName, x: 0, y: -1000, width: 0, height: 0, visible: false });
+      callUpdateAdPosition({ page: pageName, slotId: resolvedSlotId, x: 0, y: -1000, width: 0, height: 0, visible: false });
     };
-  }, [pageName, scrollContainerRef]);
+  }, [pageName, resolvedSlotId, scrollContainerRef]);
 
   // No empty gap in regular browser — only reserve space inside the Flutter WebView app
   if (!canCallFlutter()) {

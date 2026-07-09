@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Crown } from 'lucide-react';
 import contentService from '../services/api/contentService';
 import { getImageUrl } from '../utils/imageUtils';
+import AdPlaceholder from '../components/AdPlaceholder';
+import { withAdSlots } from '../utils/interleaveAds';
 
 // Helper to format slug to title
 const formatTitle = (slug) => {
@@ -139,7 +141,16 @@ export default function CategoryPage({ setSelectedMovie, slug: propSlug }) {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                 gap: '16px'
             }}>
-                {content.map((item) => (
+                {withAdSlots(content, { keyPrefix: `category-${slug}` }).map((entry) => {
+                    if (entry.type === 'ad') {
+                        return (
+                            <div key={entry.slotId} style={{ gridColumn: '1 / -1' }}>
+                                <AdPlaceholder pageName="in-grid-banner" slotId={entry.slotId} />
+                            </div>
+                        );
+                    }
+                    const item = entry.data;
+                    return (
                     <motion.div
                         key={item.id || item._id}
                         whileTap={{ scale: 0.95 }}
@@ -199,7 +210,8 @@ export default function CategoryPage({ setSelectedMovie, slug: propSlug }) {
                         )}
 
                     </motion.div>
-                ))}
+                    );
+                })}
 
                 {content.length === 0 && (
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#666' }}>
