@@ -125,6 +125,8 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                         ))}
                     </div>
 
+                    <AdPlaceholder pageName="inplay-audio" />
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
                         {filteredSeriesList.slice(0, 6).map(series => (
                             <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
