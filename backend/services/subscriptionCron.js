@@ -52,7 +52,8 @@ const checkAndExpireSubscriptions = async () => {
                 
                 console.log(`✅ [Cron] User ${user.email} deactivated.`);
             } catch (err) {
-                console.error(`❌ [Cron] Error processing user ${user._id}:`, err.message);
+                const reason = err?.error?.description || err?.message || JSON.stringify(err);
+                console.error(`❌ [Cron] Error processing user ${user._id}:`, reason);
             }
         }
     } catch (err) {
