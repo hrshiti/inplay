@@ -34,6 +34,7 @@ import LegalPage from './LegalPage';
 
 import VideoPlayer from './VideoPlayer';
 import { sendUserPremiumStatus } from './utils/adBridge';
+import { initConsent } from './utils/consent';
 import { AdminRoutes } from './model/admin';
 import AdminLogin from './model/admin/components/AdminLogin';
 import ProtectedRoute from './model/admin/components/ProtectedRoute';
@@ -354,6 +355,11 @@ function App() {
   useEffect(() => {
     sendUserPremiumStatus(!!currentUser?.subscription?.isActive);
   }, [currentUser?.subscription?.isActive]);
+
+  // Load Google's Funding Choices CMP (GDPR consent) if enabled in admin settings.
+  useEffect(() => {
+    initConsent();
+  }, []);
 
   const handleAuthSuccess = () => {
     let savedUser = null;

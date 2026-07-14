@@ -1206,6 +1206,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                 <ImaAdsPlayer
                     key={`hls-std-${currentIndex}`} // Added key for robust React cleanup
                     ref={videoRef}
+                    contentId={String(movie?._id || movie?.id || '')}
                     src={videoSrc}
                     hlsUrl={currentItem.hls_url || currentItem.video?.hls_url}
                     startTime={currentIndex === 0 ? movie.watchedSeconds : 0}

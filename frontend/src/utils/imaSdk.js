@@ -25,6 +25,20 @@ export const loadImaSdk = () => {
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
 const API_Base = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
-/** Builds the VMAP ad-tag URL for a given content duration (in seconds). */
-export const getVmapTagUrl = (durationSeconds) =>
-  `${API_Base}/vmap?duration=${Math.floor(durationSeconds || 0)}`;
+/**
+ * Builds the VMAP ad-tag URL for a given content duration (in seconds).
+ * `isPremium` is forwarded so the backend can serve an empty VMAP to
+ * subscribers when the admin's "Skip Ads For Premium Users" toggle is on.
+ */
+export const getVmapTagUrl = (durationSeconds, isPremium = false) =>
+  `${API_Base}/vmap?duration=${Math.floor(durationSeconds || 0)}${isPremium ? '&premium=1' : ''}`;
+
+/** Reads the logged-in user's subscription status from localStorage. */
+export const getIsPremiumUser = () => {
+  try {
+    const savedUser = localStorage.getItem('inplay_current_user');
+    return !!(savedUser && JSON.parse(savedUser)?.subscription?.isActive);
+  } catch {
+    return false;
+  }
+};

@@ -2073,6 +2073,10 @@ const Settings = () => {
       preRollEnabled: false,
       postRollEnabled: false,
       vastTagUrl: ''
+    },
+    consent: {
+      cmpEnabled: false,
+      fundingChoicesPublisherId: ''
     }
   });
   const [loading, setLoading] = useState(true);
@@ -2103,7 +2107,8 @@ const Settings = () => {
         setAdSettings((prev) => ({
           ...prev,
           ...appSettings.adSettings,
-          midRoll: { ...prev.midRoll, ...(appSettings.adSettings?.midRoll || {}) }
+          midRoll: { ...prev.midRoll, ...(appSettings.adSettings?.midRoll || {}) },
+          consent: { ...prev.consent, ...(appSettings.adSettings?.consent || {}) }
         }));
       }
       setUsersList(allUsers);
@@ -2554,6 +2559,35 @@ const Settings = () => {
                 />
                 <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
                   Get this from Google Ad Manager: Inventory → your video ad unit → generate tag. Leave blank to keep serving Google's public test ads.
+                </p>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  GDPR Consent Message (Google CMP)
+                </label>
+                <select
+                  value={adSettings.consent?.cmpEnabled ? 'true' : 'false'}
+                  onChange={(e) => setAdSettings({ ...adSettings, consent: { ...adSettings.consent, cmpEnabled: e.target.value === 'true' } })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                >
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>Required by Google before serving ads to EEA/UK visitors on the website.</p>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                  Funding Choices Publisher ID
+                </label>
+                <input
+                  type="text"
+                  value={adSettings.consent?.fundingChoicesPublisherId || ''}
+                  onChange={(e) => setAdSettings({ ...adSettings, consent: { ...adSettings.consent, fundingChoicesPublisherId: e.target.value } })}
+                  placeholder="pub-XXXXXXXXXXXXXXXX"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                />
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+                  From Google Ad Manager / AdSense → Privacy &amp; messaging. Create and publish a GDPR message there first.
                 </p>
               </div>
             </div>

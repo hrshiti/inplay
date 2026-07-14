@@ -44,6 +44,18 @@ const getVmap = async (req, res) => {
             return res.status(200).send(emptyVmap());
         }
 
+        // Honor the admin "Skip Ads For Premium Users" toggle for web video ads too.
+        const skipForPremium = settings?.adSettings?.skipAdsForPremium !== false;
+        if (req.query.premium === '1' && skipForPremium) {
+            return res.status(200).send(emptyVmap());
+        }
+
+        // An admin saving the form with a blank tag would otherwise produce ad
+        // breaks pointing at an empty URL — fall back to the schema default.
+        if (!midRoll.vastTagUrl || !midRoll.vastTagUrl.trim()) {
+            midRoll.vastTagUrl = AppSetting.schema.path('adSettings.midRoll.vastTagUrl').defaultValue;
+        }
+
         const breaks = [];
 
         if (midRoll.preRollEnabled) {

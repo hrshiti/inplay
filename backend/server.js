@@ -237,6 +237,7 @@ app.use('/api/promotions', require('./routes/promotionRoutes'));
 app.use('/api/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/admin/app-settings', require('./routes/appSettingRoutes'));
 app.use('/api/vmap', require('./routes/vmapRoutes'));
+app.use('/api/ad-events', require('./routes/adEventRoutes'));
 app.use('/api/public', require('./routes/publicTabRoutes'));
 
 // Static files middleware moved up to improve reliability and handle requests before API routing logic.
