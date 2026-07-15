@@ -24,3 +24,7 @@ ist-ssr
 
 # Environment variables
 .env
+
+# Build output
+dist
+/dist
