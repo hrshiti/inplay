@@ -82,6 +82,29 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
         }
     }, [activeLanguageTab, seriesList]);
 
+    useEffect(() => {
+        const handlePopState = (e) => {
+            if (selectedSeries) {
+                setSelectedSeries(null);
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [selectedSeries]);
+
+    const handleSelectSeries = (series) => {
+        setSelectedSeries(series);
+        window.history.pushState({ audioPlayerOpen: true }, '');
+    };
+
+    const handleCloseSeries = () => {
+        if (window.history.state?.audioPlayerOpen) {
+            window.history.back();
+        } else {
+            setSelectedSeries(null);
+        }
+    };
+
     const playEpisode = (episode, series) => {
         // Update local selected series for context
         setSelectedSeries(series);
@@ -129,7 +152,7 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
                         {filteredSeriesList.slice(0, 6).map(series => (
-                            <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
+                            <div key={series._id} onClick={() => handleSelectSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
                                 <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
                                     <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />
                                     <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '50%' }}>
@@ -156,7 +179,7 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                             }
                             const series = entry.data;
                             return (
-                            <div key={series._id} onClick={() => setSelectedSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
+                            <div key={series._id} onClick={() => handleSelectSeries(series)} style={{ cursor: 'pointer', minWidth: 0 }}>
                                 <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px', background: '#111' }}>
                                     <img src={getImageUrl(series.coverImage)} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />
                                     <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '50%' }}>
@@ -171,7 +194,7 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                 </motion.div>
             ) : (
                 <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
-                    <button onClick={() => setSelectedSeries(null)} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#aaa', marginBottom: '16px', cursor: 'pointer' }}>
+                    <button onClick={() => handleCloseSeries()} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#aaa', marginBottom: '16px', cursor: 'pointer' }}>
                         <ChevronLeft size={20} /> Back
                     </button>
 
