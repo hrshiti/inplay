@@ -3,7 +3,6 @@ import { getImageUrl } from './utils/imageUtils';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Download, ChevronRight, Settings, User, Plus, ThumbsUp, Play } from 'lucide-react';
-import { MY_SPACE_DATA } from './data';
 import SettingsPage from './SettingsPage';
 
 export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHistory, continueWatching, currentUser, onLogout, onUpdateUser }) {
@@ -11,10 +10,10 @@ export default function MySpacePage({ onMovieClick, myList, likedVideos, watchHi
     const containerRef = useRef(null);
     const navigate = useNavigate();
 
-    // Use actual user data or fallback to mock data (only if no user)
-    const userName = currentUser?.name || MY_SPACE_DATA.user.name;
+    // Use actual user data or neutral fallbacks when logged out
+    const userName = currentUser?.name || 'Guest';
     const userAvatar = currentUser?.avatar; // Don't fallback to mock so we can show default icon
-    const userPlan = currentUser?.subscription?.plan?.name || MY_SPACE_DATA.user.plan;
+    const userPlan = currentUser?.subscription?.plan?.name || 'Free';
 
     return (
         <div ref={containerRef} className="my-space-container" style={{ padding: '24px', paddingBottom: '100px', color: 'white' }}>

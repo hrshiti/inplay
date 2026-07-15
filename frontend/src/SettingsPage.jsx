@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Globe, Info, Crown, Mail, Phone, Save, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MY_SPACE_DATA } from './data';
 import authService from './services/api/authService';
 import appSettingsService from './services/api/appSettingsService';
 import { getImageUrl } from './utils/imageUtils';
@@ -161,9 +160,9 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
         handlePreferenceUpdate({ notifications: newSettings });
     };
 
-    // Use actual user data or fallback to mock data
-    const userName = currentUser?.name || MY_SPACE_DATA.user.name;
-    const userEmail = currentUser?.email || 'john.doe@example.com';
+    // Use actual user data or neutral fallbacks when logged out
+    const userName = currentUser?.name || 'Guest';
+    const userEmail = currentUser?.email || '';
     const userAvatar = currentUser?.avatar; // No fallback to mock
 
     // Improved plan display logic

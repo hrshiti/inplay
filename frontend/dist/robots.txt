@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+# Keep private/user areas out of the index
+Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /my-space
+Disallow: /settings
+Disallow: /downloads
+Disallow: /history
+
+Sitemap: https://inplays.in/sitemap.xml

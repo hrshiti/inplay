@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Download, Trash2, Play, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MY_SPACE_DATA } from './data';
 import { getImageUrl } from './utils/imageUtils';
 
 export default function DownloadsPage({ onMovieClick }) {
     const navigate = useNavigate();
+    // Offline downloads aren't implemented yet — show the empty state instead
+    // of the old mock list (which displayed copyrighted demo posters).
+    const downloads = [];
 
     return (
         <div className="history-page" style={{
@@ -48,7 +50,7 @@ export default function DownloadsPage({ onMovieClick }) {
 
             {/* Downloads List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {MY_SPACE_DATA.downloads.map((item, index) => (
+                {downloads.map((item, index) => (
                     <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -104,7 +106,7 @@ export default function DownloadsPage({ onMovieClick }) {
                 ))}
             </div>
 
-            {MY_SPACE_DATA.downloads.length === 0 && (
+            {downloads.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '60px', color: '#666' }}>
                     <Download size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
                     <p>No downloads yet.</p>

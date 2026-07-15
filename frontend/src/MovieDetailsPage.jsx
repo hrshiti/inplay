@@ -2,7 +2,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check, Lock } from 'lucide-react';
-import { MOVIES } from './data';
 import { getImageUrl } from './utils/imageUtils';
 import contentService from './services/api/contentService';
 import AdPlaceholder from './components/AdPlaceholder';

@@ -44,8 +44,11 @@
     fbq('track', 'PageView');
   </script>
   <!-- End Meta Pixel Code -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9015405021941451"
-    crossorigin="anonymous"></script>
+  <!-- NOTE: Do NOT add the adsbygoogle.js script here. Loading AdSense on the
+       empty app shell / login / splash screens is the exact policy violation
+       "Google-served ads on screens without publisher-content" that got the
+       site rejected. Web video ads are served via the IMA SDK + GAM VAST tag
+       inside the player instead. -->
   <link rel="icon" type="image/png" href="/FINAL_LOGO_copy__1_.jpg-removebg-preview (2).png" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
@@ -54,7 +57,20 @@
   <meta name="apple-mobile-web-app-title" content="InPlay" />
   <link rel="apple-touch-icon" href="/FINAL_LOGO_copy__1_.jpg-removebg-preview (2).png" />
   <meta name="theme-color" content="#000000" />
-  <title>InPlay</title>
+  <title>InPlay — Watch Movies, Web Series, Shorts &amp; Audio Series Online</title>
+  <meta name="description"
+    content="InPlay is an OTT streaming platform for original movies, web series, Bhojpuri entertainment, quick-bite shorts and audio series. Stream original and licensed content anytime, on any device." />
+  <link rel="canonical" href="https://inplays.in/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="InPlay" />
+  <meta property="og:title" content="InPlay — Watch Movies, Web Series, Shorts & Audio Series Online" />
+  <meta property="og:description"
+    content="Stream original movies, web series, Bhojpuri entertainment, quick-bite shorts and audio series on InPlay." />
+  <meta property="og:url" content="https://inplays.in/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="InPlay — OTT Streaming Platform" />
+  <meta name="twitter:description"
+    content="Stream original movies, web series, Bhojpuri entertainment, quick-bite shorts and audio series on InPlay." />
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     window.onerror = function (msg, url, lineNo, columnNo, error) {
@@ -81,7 +97,7 @@
       return false;
     };
   </script>
-  <script type="module" crossorigin src="/assets/index-BSS0rj3e.js"></script>
+  <script type="module" crossorigin src="/assets/index-Dn4csqdq.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-BhdFFuyB.css">
   <script type="module">import'data:text/javascript,if(!import.meta.resolve)throw Error("import.meta.resolve not supported")';import.meta.url;import("_").catch(()=>1);(async function*(){})().next();window.__vite_is_modern_browser=true</script>
   <script type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
@@ -91,10 +107,48 @@
   <!-- Meta Pixel Code (Noscript) -->
   <noscript><img height="1" width="1" style="display:none"
       src="https://www.facebook.com/tr?id=1573715771125094&ev=PageView&noscript=1" /></noscript>
-  <div id="root"></div>
+  <!-- Static, crawlable landing content. React replaces this on mount, so real
+       visitors only see it for a moment while the app loads — but search
+       engines, policy reviewers and non-JS fetchers see a real page instead of
+       an empty shell. Keep this in sync with what the app actually offers. -->
+  <div id="root">
+    <div style="max-width:720px;margin:0 auto;padding:32px 20px;background:#000;color:#eee;font-family:system-ui,-apple-system,sans-serif;min-height:100vh">
+      <h1 style="color:#fff;font-size:1.6rem">InPlay — Streaming Movies, Web Series, Shorts &amp; Audio Series</h1>
+      <p>
+        InPlay is an OTT entertainment platform where you can watch original movies and web series,
+        regional Bhojpuri entertainment, quick-bite short videos and exclusive audio series.
+        Content is streamed in HD with adaptive quality, and works on mobile, tablet and desktop
+        as well as through the InPlay Android app.
+      </p>
+      <h2 style="color:#fff;font-size:1.2rem">What you can watch on InPlay</h2>
+      <ul>
+        <li><strong>InPlay Cinema</strong> — full-length original and licensed movies.</li>
+        <li><strong>Web Series</strong> — episodic originals with new episodes added regularly.</li>
+        <li><strong>Bhojpuri Zone</strong> — dedicated regional movies, music and shows.</li>
+        <li><strong>InPlay Shorts</strong> — quick-bite vertical videos and reels.</li>
+        <li><strong>Audio Series</strong> — original audio dramas and stories to listen on the go.</li>
+      </ul>
+      <p>
+        You can browse popular titles for free; a low-cost subscription unlocks the full catalog
+        and an ad-free experience. Payments are processed securely via Razorpay.
+      </p>
+      <nav>
+        <h2 style="color:#fff;font-size:1.2rem">More about InPlay</h2>
+        <ul>
+          <li><a href="/about" style="color:#46d369">About InPlay</a></li>
+          <li><a href="/privacy" style="color:#46d369">Privacy Policy</a></li>
+          <li><a href="/help" style="color:#46d369">Help Center &amp; Contact</a></li>
+        </ul>
+      </nav>
+      <noscript>
+        <p style="color:#f66">InPlay is an interactive streaming app and needs JavaScript enabled to play videos.
+          The information above describes the service; enable JavaScript to browse and watch.</p>
+      </noscript>
+    </div>
+  </div>
   <script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
   <script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-CKMu-P9w.js"></script>
-  <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-BI1j95_r.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+  <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-B8sG7Lvk.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
 </body>
 
 </html>

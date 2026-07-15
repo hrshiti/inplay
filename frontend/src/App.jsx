@@ -12,8 +12,6 @@ gsap.registerPlugin(ScrollTrigger);
 ScrollTrigger.config({ ignoreMobileResize: true, autoRefreshEvents: "DOMContentLoaded,load,visibilitychange" });
 
 // Mock Data
-import { MOVIES, CONTINUE_WATCHING } from './data';
-import { HINDI_SERIES, BHOJPURI_CONTENT, SONGS, TRENDING_NOW, ACTION_MOVIES, ORIGINALS } from './newData';
 // import { ADMIN_REELS } from './model/admin/services/mockData'; // Removed
 // import SubscriptionPage from './SubscriptionPage'; // Removed
 import MySpacePage from './MySpacePage';
@@ -35,6 +33,7 @@ import LegalPage from './LegalPage';
 import VideoPlayer from './VideoPlayer';
 import { sendUserPremiumStatus } from './utils/adBridge';
 import { initConsent } from './utils/consent';
+import { applyRouteMeta } from './utils/seo';
 import { AdminRoutes } from './model/admin';
 import AdminLogin from './model/admin/components/AdminLogin';
 import ProtectedRoute from './model/admin/components/ProtectedRoute';
@@ -360,6 +359,11 @@ function App() {
   useEffect(() => {
     initConsent();
   }, []);
+
+  // SEO: keep document.title + meta description in sync with the route.
+  useEffect(() => {
+    applyRouteMeta(location.pathname);
+  }, [location.pathname]);
 
   const handleAuthSuccess = () => {
     let savedUser = null;

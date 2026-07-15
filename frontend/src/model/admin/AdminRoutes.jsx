@@ -6,7 +6,6 @@ import AdminLayout from './components/AdminLayout';
 import DataTable from './components/tables/DataTable';
 import ContentForm from './components/forms/ContentForm';
 import QuickBitesForm from './components/forms/QuickBitesForm';
-import { ADMIN_ANALYTICS, ADMIN_ACTIVITY_LOGS, ADMIN_MOVIES, ADMIN_SERIES, ADMIN_USERS, ADMIN_REELS } from './services/mockData';
 import adminUserService from '../../services/api/adminUserService';
 import adminDashboardService from '../../services/api/adminDashboardService';
 import adminQuickByteService from '../../services/api/adminQuickByteService';
