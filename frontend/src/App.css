@@ -1020,3 +1020,25 @@ html, body {
     border-radius: 20px !important;
   }
 }
+
+/* Highlight for Continue Watching Section */
+.continue-watching-highlight {
+  margin: 20px -16px !important;
+  padding: 24px 16px !important;
+  background: linear-gradient(145deg, rgba(229,9,20,0.2) 0%, rgba(20,20,20,0.9) 100%) !important;
+  border-top: 1px solid rgba(229,9,20,0.5) !important;
+  border-bottom: 1px solid rgba(229,9,20,0.2) !important;
+  box-shadow: 0 0 40px rgba(229,9,20,0.25), inset 0 0 20px rgba(229,9,20,0.1) !important;
+  backdrop-filter: blur(12px) !important;
+  border-radius: 8px;
+}
+
+.cw-header-container {
+  box-shadow: 0 4px 15px rgba(229,9,20,0.3) !important;
+  background: linear-gradient(90deg, rgba(229, 9, 20, 0.4) 0%, transparent 100%) !important;
+  border-left: 6px solid #e50914 !important;
+}
+
+.cw-title {
+  text-shadow: 0 0 10px rgba(229,9,20,0.8) !important;
+}
