@@ -1133,7 +1133,7 @@ function App() {
                             {/* We render a track that shifts based on index - simplified approach for "center  peek" */}
                             {/* Actually, mapping absolute items is easier for this visual. */}
                             {heroMovies.slice(0, 20).map((movie, index) => {
-                              const total = Math.min(, 20);
+                              const total = Math.min(heroMovies.length, 20);
                               const isActive = index === currentHeroIndex;
 
                               let visualOffset = 100;
@@ -2521,7 +2521,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
             }}
           >
             {displayCinemaHeroMovies.slice(0, 20).map((movie, index) => {
-              const total = Math.min(, 20);
+              const total = Math.min(displayCinemaHeroMovies.length, 20);
               const isActive = index === currentHeroIndex % total;
 
               let visualOffset = 100;
@@ -2591,7 +2591,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
             })}
             <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
               {displayCinemaHeroMovies.slice(0, 20).map((_, i) => (
-                <div key={i} style={{ width: i === currentHeroIndex % Math.min(, 20) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(, 20) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+                <div key={i} style={{ width: i === currentHeroIndex % Math.min(displayCinemaHeroMovies.length, 20) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(displayCinemaHeroMovies.length, 20) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
               ))}
             </div>
           </div>
@@ -2613,7 +2613,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
             }}
           >
             {displayBhojpuriHeroMovies.slice(0, 20).map((movie, index) => {
-              const total = Math.min(, 20);
+              const total = Math.min(displayBhojpuriHeroMovies.length, 20);
               const isActive = index === currentHeroIndex % total;
 
               let visualOffset = 100;
@@ -2685,7 +2685,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
 
           <div style={{ position: 'absolute', bottom: '15px', left: '0', right: '0', display: 'flex', justifyContent: 'center', gap: '6px', zIndex: 10 }}>
             {displayBhojpuriHeroMovies.slice(0, 20).map((_, i) => (
-              <div key={i} style={{ width: i === currentHeroIndex % Math.min(, 20) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(, 20) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+              <div key={i} style={{ width: i === currentHeroIndex % Math.min(displayBhojpuriHeroMovies.length, 20) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(displayBhojpuriHeroMovies.length, 20) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
             ))}
           </div>
         </div>
@@ -2707,7 +2707,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
             }}
           >
             {displayDarmaaHeroMovies.slice(0, 20).map((movie, index) => {
-              const total = Math.min(, 20);
+              const total = Math.min(displayDarmaaHeroMovies.length, 20);
               const isActive = index === currentHeroIndex % total;
 
               let visualOffset = 100;
@@ -2781,7 +2781,7 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
             })}
             <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 30 }}>
               {displayDarmaaHeroMovies.slice(0, 20).map((_, i) => (
-                <div key={i} style={{ width: i === currentHeroIndex % Math.min(, 20) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(, 20) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
+                <div key={i} style={{ width: i === currentHeroIndex % Math.min(displayDarmaaHeroMovies.length, 20) ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === currentHeroIndex % Math.min(displayDarmaaHeroMovies.length, 20) ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'all 0.3s ease' }} />
               ))}
             </div>
           </div>
