@@ -7,7 +7,7 @@ import subscriptionService from './services/api/subscriptionService';
 import { initRazorpayPayment } from './lib/utils/razorpay';
 import HlsPlayer from './components/HlsPlayer';
 import { getImageUrl } from './utils/imageUtils';
-import { trackSubscriptionView, trackSubscriptionInitiated, trackSubscriptionPurchase, trackTrialInitiated, trackTrialPurchase } from './utils/analytics';
+import { trackSubscriptionView, trackSubscriptionInitiated, trackSubscriptionPurchase, trackSubscriptionRenewed, trackTrialInitiated, trackTrialPurchase, trackTrialRenewed } from './utils/analytics';
 
 const PlanPage = () => {
   const navigate = useNavigate();
@@ -97,10 +97,26 @@ const PlanPage = () => {
               razorpay_signature: response.razorpay_signature
             });
 
+            const isRenewal = Boolean(
+              currentUser?.subscription?.plan ||
+              currentUser?.subscription?.endDate ||
+              currentUser?.subscription?.razorpay_subscription_id ||
+              currentUser?.subscription?.isTrialUsed ||
+              currentUser?.subscription?.trialEndedAt
+            );
+
             if (isTrial) {
-              trackTrialPurchase({ planId, price: subData.amount });
+              if (isRenewal) {
+                trackTrialRenewed({ planId, price: subData.amount });
+              } else {
+                trackTrialPurchase({ planId, price: subData.amount });
+              }
             } else {
-              trackSubscriptionPurchase({ planId, price: subData.amount });
+              if (isRenewal) {
+                trackSubscriptionRenewed({ planId, price: subData.amount });
+              } else {
+                trackSubscriptionPurchase({ planId, price: subData.amount });
+              }
             }
 
             const updatedProfile = await authService.getProfile();

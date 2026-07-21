@@ -48,6 +48,28 @@ const handleVideoHLS = async (localPath, id, type = 'movie') => {
   }
 };
 
+/**
+ * Process video to HLS, upload to S3, and extract exact duration in seconds
+ * @param {string} localPath - Local path to mp4
+ * @param {string} id - ID of the content
+ * @param {string} type - Folder name (e.g., 'movie', 'episode', 'quickbyte', 'foryou')
+ * @returns {Promise<{hlsUrl: string, duration: number}>} - The public HLS URL and duration in seconds
+ */
+const handleVideoHLSWithDuration = async (localPath, id, type = 'movie') => {
+  let duration = 0;
+  try {
+    const mm = require('music-metadata');
+    const metadata = await mm.parseFile(localPath);
+    duration = Math.round(metadata?.format?.duration || 0);
+  } catch (err) {
+    console.error(`[mediaService] Could not parse duration from ${localPath}:`, err.message);
+  }
+
+  const hlsUrl = await handleVideoHLS(localPath, id, type);
+  return { hlsUrl, duration };
+};
+
 module.exports = {
-  handleVideoHLS
+  handleVideoHLS,
+  handleVideoHLSWithDuration
 };

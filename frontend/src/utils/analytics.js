@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Core Analytics Module.
  * Decouples the UI components from the Firebase Analytics implementation.
  * Provides a clean, reusable API for tracking events.
@@ -16,10 +16,27 @@ import {
   buildStandardPurchasePayload
 } from "./analyticsEvents";
 
+const canCallFlutter = () =>
+  typeof window !== 'undefined' &&
+  window.flutter_inappwebview &&
+  typeof window.flutter_inappwebview.callHandler === 'function';
+
 /**
  * Helper to safely log events only if analytics is initialized
  */
 const safeLogEvent = (eventName, params = {}) => {
+  // Try forwarding to native Flutter app via InAppWebView bridge first
+  if (canCallFlutter()) {
+    try {
+      window.flutter_inappwebview.callHandler('logAnalyticsEvent', {
+        name: eventName,
+        parameters: params
+      });
+    } catch (e) {
+      console.warn("[Analytics] Failed to bridge event to Flutter", e);
+    }
+  }
+
   if (analytics) {
     try {
       // Enable DebugView in development by injecting debug_mode

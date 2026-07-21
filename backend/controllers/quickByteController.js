@@ -243,11 +243,11 @@ const createQuickByteHandler = async (req, res) => {
 
         // Async HLS Processing in the background
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(async (hlsUrl) => {
+            mediaService.handleVideoHLSWithDuration(files.video[0].path, quickByte._id, 'quickbyte').then(async ({ hlsUrl, duration }) => {
                 if (hlsUrl) {
                     await QuickByte.findByIdAndUpdate(
                         quickByte._id, 
-                        { 'video.hls_url': hlsUrl }
+                        { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration }
                     ).exec();
                     console.log(`HLS master playlist generated and S3 synced for QuickByte: ${quickByte.title}`);
                 }
@@ -262,17 +262,17 @@ const createQuickByteHandler = async (req, res) => {
                     const epFile = files.videos[i];
                     if (epFile) {
                         try {
-                            const hlsUrl = await mediaService.handleVideoHLS(epFile.path, ep._id, 'quickbyte_episode');
+                            const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(epFile.path, ep._id, 'quickbyte_episode');
                             if (hlsUrl) {
                                 await QuickByte.updateOne(
                                     { _id: quickByte._id, "episodes._id": ep._id },
-                                    { $set: { "episodes.$.hls_url": hlsUrl } }
+                                    { $set: { "episodes.$.hls_url": hlsUrl, "episodes.$.duration": duration } }
                                 ).exec();
                                 
                                 // Sync to main video if applicable
                                 const doc = await QuickByte.findById(quickByte._id);
                                 if (doc && doc.video && doc.video.url === ep.url) {
-                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
+                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
                                 }
                                 console.log(`[HLS] Synced episode ${i+1}: ${hlsUrl}`);
                             }
@@ -412,9 +412,9 @@ const updateQuickByteHandler = async (req, res) => {
 
         // Async HLS Processing for Updates
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLS(files.video[0].path, quickByte._id, 'quickbyte').then(async (hlsUrl) => {
+            mediaService.handleVideoHLSWithDuration(files.video[0].path, quickByte._id, 'quickbyte').then(async ({ hlsUrl, duration }) => {
                 if (hlsUrl) {
-                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
+                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
                 }
             });
         }
@@ -430,17 +430,17 @@ const updateQuickByteHandler = async (req, res) => {
                     const epFile = files.videos[i];
                     if (epFile) {
                         try {
-                            const hlsUrl = await mediaService.handleVideoHLS(epFile.path, ep._id, 'quickbyte_episode');
+                            const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(epFile.path, ep._id, 'quickbyte_episode');
                             if (hlsUrl) {
                                 await QuickByte.updateOne(
                                     { _id: quickByte._id, "episodes._id": ep._id },
-                                    { $set: { "episodes.$.hls_url": hlsUrl } }
+                                    { $set: { "episodes.$.hls_url": hlsUrl, "episodes.$.duration": duration } }
                                 ).exec();
                                 
                                 // Sync to main video if applicable
                                 const doc = await QuickByte.findById(quickByte._id);
                                 if (doc && doc.video && doc.video.url === ep.url) {
-                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
+                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
                                 }
                             }
                         } catch (err) {

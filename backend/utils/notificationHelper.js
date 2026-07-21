@@ -1,6 +1,14 @@
 const { sendPushNotification } = require('../services/firebaseService');
 const User = require('../models/User');
 
+const chunkArray = (array, chunkSize) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+};
+
 /**
  * Send notification to all users
  * @param {Object} payload - { title, body, imageUrl, data }
@@ -37,26 +45,33 @@ const notifyAllUsers = async (payload) => {
         // Send to Web
         if (uniqueWebTokens.length > 0) {
             console.log(`📡 Sending notification to ${uniqueWebTokens.length} Web tokens`);
-            const response = await sendPushNotification(uniqueWebTokens, {
-                ...payload,
-                data: { ...payload.data, platform: 'web' }
-            });
-            await cleanupTokens(uniqueWebTokens, response);
+            const webChunks = chunkArray(uniqueWebTokens, 500);
+            for (const chunk of webChunks) {
+                const response = await sendPushNotification(chunk, {
+                    ...payload,
+                    data: { ...payload.data, platform: 'web' }
+                });
+                await cleanupTokens(chunk, response);
+            }
         }
 
         // Send to Mobile
         if (uniqueMobileTokens.length > 0) {
             console.log(`📡 Sending notification to ${uniqueMobileTokens.length} Mobile tokens`);
-            const response = await sendPushNotification(uniqueMobileTokens, {
-                ...payload,
-                data: { ...payload.data, platform: 'mobile' }
-            });
-            await cleanupTokens(uniqueMobileTokens, response);
+            const mobileChunks = chunkArray(uniqueMobileTokens, 500);
+            for (const chunk of mobileChunks) {
+                const response = await sendPushNotification(chunk, {
+                    ...payload,
+                    data: { ...payload.data, platform: 'mobile' }
+                });
+                await cleanupTokens(chunk, response);
+            }
         }
 
         return users.map(user => user._id);
     } catch (error) {
         console.error('Error in notifyAllUsers:', error);
+        try { require('fs').appendFileSync('notify-error.log', new Date().toISOString() + ' notifyAllUsers: ' + error.stack + '\\n'); } catch(e){}
         return [];
     }
 };
@@ -89,12 +104,16 @@ const notifySubscribedUsers = async (payload) => {
 
         const uniqueTokens = [...new Set([...webTokens, ...mobileTokens])];
         if (uniqueTokens.length > 0) {
-            const response = await sendPushNotification(uniqueTokens, payload);
-            await cleanupTokens(uniqueTokens, response);
+            const tokenChunks = chunkArray(uniqueTokens, 500);
+            for (const chunk of tokenChunks) {
+                const response = await sendPushNotification(chunk, payload);
+                await cleanupTokens(chunk, response);
+            }
         }
         return users.map(user => user._id);
     } catch (error) {
         console.error('Error in notifySubscribedUsers:', error);
+        try { require('fs').appendFileSync('notify-error.log', new Date().toISOString() + ' notifySubscribedUsers: ' + error.stack + '\\n'); } catch(e){}
         return [];
     }
 };

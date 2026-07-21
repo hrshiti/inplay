@@ -1387,7 +1387,16 @@ function App() {
                           if (activeFilter === 'InPlay Shorts') return tc === 'Darmaa' || tc === 'Both' || item.isDarmaaHero;
                           return false;
                         }).length > 0 && (
-                            <section className="section" style={{ marginBottom: '32px', marginTop: '20px' }}>
+                            <section className="section" style={{
+                              marginBottom: '24px',
+                              marginTop: '10px',
+                              background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
+                              paddingTop: '20px',
+                              paddingBottom: '20px',
+                              margin: '0 -16px',
+                              paddingLeft: '16px',
+                              paddingRight: '16px'
+                            }}>
                               <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                   <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>
@@ -2791,7 +2800,15 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
       {/* Continue Watching (InPlay Dramaa) Section */}
       {activeFilter === 'InPlay Shorts' && qbContinueWatching && qbContinueWatching.filter(item => item.targetCategory === 'Darmaa' || item.targetCategory === 'Both' || item.isDarmaaHero).length > 0 && (
         <div style={{ marginTop: '24px' }}>
-          <section className="section" style={{ marginBottom: '24px' }}>
+          <section className="section" style={{
+            marginBottom: '24px',
+            background: 'linear-gradient(180deg, rgba(220, 20, 60, 0.15) 0%, rgba(0,0,0,0) 100%)',
+            paddingTop: '20px',
+            paddingBottom: '20px',
+            margin: '0 -16px',
+            paddingLeft: '16px',
+            paddingRight: '16px'
+          }}>
             <div className="section-header" style={{ padding: '0 20px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '4px', height: '24px', background: '#e50914', borderRadius: '2px' }}></div>

@@ -139,11 +139,11 @@ const createContent = async (contentData, adminId, files = {}) => {
     // START ASYNC HLS PROCESSING
     // 1. Process main video
     if (files.video) {
-      mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
+      mediaService.handleVideoHLSWithDuration(files.video.path, content._id, 'movie').then(async ({ hlsUrl, duration }) => {
         if (hlsUrl) {
           const updatedContent = await Content.findByIdAndUpdate(
             content._id,
-            { 'video.hls_url': hlsUrl, status: 'published' },
+            { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' },
             { new: true }
           ).exec();
 
@@ -177,11 +177,11 @@ const createContent = async (contentData, adminId, files = {}) => {
             const fileField = `season_${sIdx}_episode_${eIdx}_video`;
             if (files[fileField]) {
               try {
-                const hlsUrl = await mediaService.handleVideoHLS(files[fileField].path, episode._id, 'episode');
+                const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(files[fileField].path, episode._id, 'episode');
                 if (hlsUrl) {
                   await Content.updateOne(
                     { _id: content._id, "seasons.episodes._id": episode._id },
-                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
+                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl, "seasons.$[s].episodes.$[e].duration": duration } },
                     { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
                   ).exec();
                 }
@@ -242,9 +242,9 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
 
     // Process main video HLS if updated
     if (files.video) {
-      mediaService.handleVideoHLS(files.video.path, content._id, 'movie').then(async (hlsUrl) => {
+      mediaService.handleVideoHLSWithDuration(files.video.path, content._id, 'movie').then(async ({ hlsUrl, duration }) => {
         if (hlsUrl) {
-          await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
+          await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
         }
       });
     }
@@ -261,11 +261,11 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
           const episode = season?.episodes?.[eIdx];
           if (episode) {
             try {
-              const hlsUrl = await mediaService.handleVideoHLS(files[key].path, episode._id, 'episode');
+              const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(files[key].path, episode._id, 'episode');
               if (hlsUrl) {
                 await Content.updateOne(
                   { _id: content._id },
-                  { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl } },
+                  { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl, "seasons.$[s].episodes.$[e].duration": duration } },
                   { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
                 ).exec();
               }
