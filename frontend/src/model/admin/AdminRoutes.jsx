@@ -1675,6 +1675,7 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
                     <option value="quarterly">Quarterly</option>
                     <option value="half-yearly">Half-Yearly</option>
                     <option value="yearly">Yearly</option>
+                    <option value="lifetime">Lifetime (One-Time)</option>
                   </select>
                 </div>
               </div>

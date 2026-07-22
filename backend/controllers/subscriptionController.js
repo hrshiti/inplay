@@ -13,6 +13,8 @@ const getRazorpayPlanDetails = (duration) => {
       return { period: 'monthly', interval: 6 };
     case 'yearly':
       return { period: 'yearly', interval: 1 };
+    case 'lifetime':
+      return { period: 'lifetime', interval: 0 };
     default:
       return { period: 'monthly', interval: 1 };
   }
@@ -65,14 +67,52 @@ exports.createSubscription = async (req, res) => {
 
     // Self-healing for Plan ID
     if (!plan.razorpayPlanId) {
-      const rpDetails = getRazorpayPlanDetails(plan.duration);
-      const newRpPlan = await rzp.plans.create({
-        period: rpDetails.period,
-        interval: rpDetails.interval,
-        item: { name: plan.name, amount: plan.price * 100, currency: 'INR' }
-      });
-      plan.razorpayPlanId = newRpPlan.id;
+      if (plan.duration !== 'lifetime') {
+        const rpDetails = getRazorpayPlanDetails(plan.duration);
+        const newRpPlan = await rzp.plans.create({
+          period: rpDetails.period,
+          interval: rpDetails.interval,
+          item: { name: plan.name, amount: plan.price * 100, currency: 'INR' }
+        });
+        plan.razorpayPlanId = newRpPlan.id;
+      } else {
+        plan.razorpayPlanId = 'LIFETIME_PLAN';
+      }
       await plan.save();
+    }
+
+    // --- LIFETIME ONE-TIME ORDER HANDLING ---
+    if (plan.duration === 'lifetime') {
+      const order = await rzp.orders.create({
+        amount: Math.round(plan.price * 100),
+        currency: 'INR',
+        receipt: `lt_${req.user.id.toString().slice(-6)}_${Date.now()}`,
+        notes: {
+          userId: req.user.id.toString(),
+          planId: plan._id.toString(),
+          isLifetime: "true"
+        }
+      });
+
+      const User = require('../models/User');
+      await User.findByIdAndUpdate(req.user.id, {
+        'subscription.plan': plan._id
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          orderId: order.id,
+          isOrder: true,
+          planName: plan.name,
+          amount: plan.price,
+          trialDays: 0,
+          isTrial: false,
+          isLifetime: true,
+          description: `Lifetime Access to ${plan.name} Plan (One-Time Payment)`,
+          razorpayKeyId: process.env.RAZORPAY_KEY_ID
+        }
+      });
     }
 
     // 3. Prepare Subscription Options (AutoPay Set)
@@ -136,10 +176,67 @@ exports.createSubscription = async (req, res) => {
 // @route   POST /api/user/subscription/verify
 exports.verifySubscription = async (req, res) => {
   try {
-    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+    const { razorpay_payment_id, razorpay_subscription_id, razorpay_order_id, razorpay_signature, isLifetime } = req.body;
     const crypto = require('crypto');
     const rzp = razorpayService.getInstance();
     
+    // --- LIFETIME ORDER VERIFICATION ---
+    if (razorpay_order_id || isLifetime) {
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      const signData = (razorpay_order_id || "") + "|" + razorpay_payment_id;
+
+      const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(signData.toString())
+        .digest('hex');
+
+      if (expectedSignature !== razorpay_signature) {
+        console.error('Signature Mismatch for Lifetime Order:', { expectedSignature, razorpay_signature });
+        return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+      }
+
+      const User = require('../models/User');
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+      let order = null;
+      try {
+        if (razorpay_order_id) order = await rzp.orders.fetch(razorpay_order_id);
+      } catch (e) {}
+
+      const planId = order?.notes?.planId || user.subscription?.plan;
+      const SubscriptionPlan = require('../models/SubscriptionPlan');
+      const plan = await SubscriptionPlan.findById(planId);
+
+      user.isActive = true;
+      user.subscription.isActive = true;
+      user.subscription.plan = plan ? plan._id : user.subscription?.plan;
+      user.subscription.startDate = new Date();
+      user.subscription.endDate = new Date('2099-12-31'); // Never expires
+      user.subscription.status = 'active';
+      user.subscription.razorpay_subscription_id = null;
+      await user.save();
+
+      const CustomerSubscription = require('../models/CustomerSubscription');
+      await CustomerSubscription.findOneAndUpdate(
+        { razorpaySubscriptionId: razorpay_order_id || razorpay_payment_id },
+        {
+          user: user._id,
+          plan: plan ? plan._id : user.subscription?.plan,
+          status: 'active',
+          price: plan ? plan.price : ((order?.amount || 0) / 100),
+          startDate: new Date(),
+          endDate: new Date('2099-12-31'),
+          rawRazorpayData: order || {}
+        },
+        { upsert: true, new: true }
+      );
+
+      console.log(`✅ Verified Lifetime Access for ${user.email}`);
+      return res.status(200).json({ success: true, message: 'Payment verified and Lifetime access granted' });
+    }
+
+    // --- REGULAR SUBSCRIPTION VERIFICATION ---
     // 1. Verify Signature
     const secret = process.env.RAZORPAY_KEY_SECRET;
     const signData = razorpay_payment_id + "|" + razorpay_subscription_id;
@@ -234,21 +331,25 @@ exports.createPlan = async (req, res) => {
     const { name, price, duration, description } = req.body;
     const rzp = razorpayService.getInstance();
 
-    const rpDetails = getRazorpayPlanDetails(duration);
-    const rpPlan = await rzp.plans.create({
-      period: rpDetails.period,
-      interval: rpDetails.interval,
-      item: {
-        name: name,
-        amount: price * 100,
-        currency: 'INR',
-        description: description
-      }
-    });
+    let rpPlanId = 'LIFETIME_PLAN';
+    if (duration !== 'lifetime') {
+      const rpDetails = getRazorpayPlanDetails(duration);
+      const rpPlan = await rzp.plans.create({
+        period: rpDetails.period,
+        interval: rpDetails.interval,
+        item: {
+          name: name,
+          amount: price * 100,
+          currency: 'INR',
+          description: description
+        }
+      });
+      rpPlanId = rpPlan.id;
+    }
 
     const plan = await SubscriptionPlan.create({
       ...req.body,
-      razorpayPlanId: rpPlan.id
+      razorpayPlanId: rpPlanId
     });
 
     res.status(201).json({ success: true, data: plan });
@@ -266,18 +367,22 @@ exports.updatePlan = async (req, res) => {
     const rzp = razorpayService.getInstance();
 
     if (price !== plan.price || duration !== plan.duration) {
-      const rpDetails = getRazorpayPlanDetails(duration);
-      const rpPlan = await rzp.plans.create({
-        period: rpDetails.period,
-        interval: rpDetails.interval,
-        item: {
-          name: name || plan.name,
-          amount: price * 100,
-          currency: 'INR',
-          description: description || plan.description
-        }
-      });
-      req.body.razorpayPlanId = rpPlan.id;
+      if (duration !== 'lifetime') {
+        const rpDetails = getRazorpayPlanDetails(duration);
+        const rpPlan = await rzp.plans.create({
+          period: rpDetails.period,
+          interval: rpDetails.interval,
+          item: {
+            name: name || plan.name,
+            amount: price * 100,
+            currency: 'INR',
+            description: description || plan.description
+          }
+        });
+        req.body.razorpayPlanId = rpPlan.id;
+      } else {
+        req.body.razorpayPlanId = 'LIFETIME_PLAN';
+      }
     }
 
     plan = await SubscriptionPlan.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -380,6 +485,9 @@ exports.handleWebhook = async (req, res) => {
       // If paid_count > 0, it means the trial has ended and a real payment was taken, even if notes say isTrial: true
       const isTrialType = trialKey && (notes[trialKey] === 'true' || notes[trialKey] === true) && (subscription ? subscription.paid_count === 0 : true);
 
+      const lifetimeKey = Object.keys(notes).find(key => key.toLowerCase() === 'islifetime');
+      const isLifetimeType = lifetimeKey && (notes[lifetimeKey] === 'true' || notes[lifetimeKey] === true);
+
       if (isTrialType) {
         // --- TRIAL HANDLING ---
         const trialDays = parseInt(notes.trialDays) || 4;
@@ -402,6 +510,28 @@ exports.handleWebhook = async (req, res) => {
             razorpaySubscriptionId: order?.id || subscription?.id || (payment?.order_id || payment?.id)
           });
         }
+      } else if (isLifetimeType) {
+        // --- LIFETIME HANDLING ---
+        user.subscription.endDate = new Date('2099-12-31'); // Never expires
+        user.subscription.razorpay_subscription_id = null;
+        await user.save();
+
+        const CustomerSubscription = require('../models/CustomerSubscription');
+        const SubscriptionPlan = require('../models/SubscriptionPlan');
+        const plan = await SubscriptionPlan.findById(notes.planId || user.subscription.plan);
+
+        await CustomerSubscription.findOneAndUpdate(
+          { razorpaySubscriptionId: order?.id || (payment?.order_id || payment?.id) },
+          {
+            user: user._id,
+            plan: plan?._id || user.subscription.plan,
+            status: 'active',
+            price: plan?.price || ((payment?.amount || 0) / 100),
+            startDate: new Date(),
+            endDate: new Date('2099-12-31')
+          },
+          { upsert: true, new: true }
+        );
       } else {
         // --- PLAN HANDLING ---
         user.subscription.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

@@ -80,7 +80,9 @@ const PlanPage = () => {
       await initRazorpayPayment({
         key: subData.razorpayKeyId,
         subscriptionId: subData.subscriptionId,
-        description: isTrial ? 'Pay Trial & Enable AutoPay' : `${subData.planName} Plan`,
+        orderId: subData.orderId,
+        amount: subData.isOrder ? subData.amount * 100 : undefined,
+        description: subData.description || (isTrial ? 'Pay Trial & Enable AutoPay' : `${subData.planName} Plan`),
         prefill: {
           name: currentUser?.name || '',
           email: currentUser?.email || '',
@@ -94,7 +96,9 @@ const PlanPage = () => {
             await subscriptionService.verifySubscription({
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_subscription_id: response.razorpay_subscription_id,
-              razorpay_signature: response.razorpay_signature
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              isLifetime: subData.isLifetime
             });
 
             const isRenewal = Boolean(
