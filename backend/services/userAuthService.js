@@ -17,7 +17,7 @@ const sendSMS = async (phone, text) => {
       return true;
     }
 
-    const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone)}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2`;
+    const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone)}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2&peid=1001164203633432409&templateid=1007282516644508833`;
 
     // Add timeout and robust parsing
     const response = await fetch(url);
@@ -144,7 +144,7 @@ const requestOtp = async (phone) => {
   }
 
   // Send SMS using the explicitly registered template
-  const text = `Welcome to the inplay powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
+  const text = `Welcome to the inplay powered by Appzeto.Your OTP for registration is ${otp}.BGADEC`;
   await sendSMS(phone, text);
 
   return { message: 'OTP sent successfully' };
