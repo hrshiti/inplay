@@ -20,9 +20,12 @@ const sendSMS = async (phone, text) => {
     const url = `http://cloud.smsindiahub.in/vendorsms/pushsms.aspx?APIKey=${encodeURIComponent(apiKey)}&msisdn=${encodeURIComponent(phone)}&sid=${encodeURIComponent(senderId)}&msg=${encodeURIComponent(text)}&fl=0&gwid=2&peid=1001164203633432409&templateid=1007282516644508833`;
 
     // Add timeout and robust parsing
+    console.log('--- SMS API REQUEST START ---');
+    console.log('API URL:', url);
     const response = await fetch(url);
     const dataText = await response.text();
     console.log('SMS India Hub response:', dataText);
+    console.log('--- SMS API REQUEST END ---');
     return true;
   } catch (err) {
     console.error('Error sending SMS:', err);

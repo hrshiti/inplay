@@ -503,7 +503,7 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
     return { message: 'Skipping mock content tracking' };
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select('role subscription phone freeEpisodesWatched watchHistory').lean();
 
   if (!user) {
     throw new Error('User not found');
@@ -589,7 +589,14 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
     user.watchHistory = user.watchHistory.slice(0, 100);
   }
 
-  await user.save();
+  await User.updateOne(
+    { _id: userId },
+    { $set: { 
+        watchHistory: user.watchHistory, 
+        freeEpisodesWatched: user.freeEpisodesWatched 
+      } 
+    }
+  );
 
   // PER-SHOW: passesExhausted is true only if THIS show's free episodes (5) are used up
   const watchedForThisShowFinal = user.freeEpisodesWatched.filter(

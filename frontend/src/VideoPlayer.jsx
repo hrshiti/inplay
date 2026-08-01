@@ -372,7 +372,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
     };
 
-    // Auto-sync every 10 seconds; also emit a playback_tick every 60s of active
+    // Auto-sync every 30 seconds; also emit a playback_tick every 60s of active
     // playback so Flutter's time-based interstitial cooldown can accumulate watch time.
     useEffect(() => {
         let tickCount = 0;
@@ -380,14 +380,14 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             if (videoRef.current && !videoRef.current.paused) {
                 syncProgress();
                 tickCount += 1;
-                if (tickCount % 6 === 0) {
+                if (tickCount % 2 === 0) {
                     sendAdTriggerEvent(isQuickBite ? 'shorts' : 'watch', 'playback_tick', {
                         contentId: movie._id || movie.id,
                         watchedSeconds: videoRef.current.currentTime,
                     });
                 }
             }
-        }, 10000);
+        }, 30000);
 
         return () => {
             clearInterval(interval);
