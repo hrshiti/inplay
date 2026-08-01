@@ -83,9 +83,9 @@ export const initRazorpayPayment = async (options) => {
         paylater: true,
       },
       
-      // Mandatory for UPI Intent inside Flutter WebView
-      redirect: true,
-      webview_intent: true, // Forced true for Flutter hybrid app context
+      // Conditional setup: Flutter WebView needs redirect & intent, normal web browsers don't.
+      redirect: isProbablyWebView(),
+      webview_intent: isProbablyWebView(),
       
       upi: {
         allow_intent: true,

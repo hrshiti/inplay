@@ -20,6 +20,32 @@ const getRazorpayPlanDetails = (duration) => {
   }
 };
 
+// Helper to calculate end date based on duration
+const calculateEndDate = (startDate, duration) => {
+  const date = new Date(startDate);
+  switch (duration) {
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1);
+      break;
+    case 'quarterly':
+      date.setMonth(date.getMonth() + 3);
+      break;
+    case 'half-yearly':
+      date.setMonth(date.getMonth() + 6);
+      break;
+    case 'yearly':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    case 'lifetime':
+      date.setFullYear(2099, 11, 31); // 2099-12-31
+      break;
+    default:
+      date.setMonth(date.getMonth() + 1);
+      break;
+  }
+  return date;
+};
+
 // @desc    Get all subscription plans (for both Admin and User)
 exports.getPlans = async (req, res) => {
   try {
@@ -296,7 +322,9 @@ exports.verifySubscription = async (req, res) => {
       user.isActive = true;
       user.subscription.isActive = true;
       user.subscription.startDate = new Date();
-      user.subscription.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      
+      const duration = plan ? plan.duration : 'monthly';
+      user.subscription.endDate = calculateEndDate(user.subscription.startDate, duration);
       user.subscription.status = 'active';
       await user.save();
 
@@ -534,13 +562,15 @@ exports.handleWebhook = async (req, res) => {
         );
       } else {
         // --- PLAN HANDLING ---
-        user.subscription.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        const SubscriptionPlan = require('../models/SubscriptionPlan');
+        const plan = await SubscriptionPlan.findById(user.subscription.plan);
+        const duration = plan ? plan.duration : 'monthly';
+
+        user.subscription.endDate = calculateEndDate(user.subscription.startDate, duration);
         await user.save();
 
         // Record in CustomerSubscription
         const CustomerSubscription = require('../models/CustomerSubscription');
-        const SubscriptionPlan = require('../models/SubscriptionPlan');
-        const plan = await SubscriptionPlan.findById(user.subscription.plan);
 
         await CustomerSubscription.findOneAndUpdate(
           { razorpaySubscriptionId: subscription?.id || (payment?.order_id || payment?.id) },
