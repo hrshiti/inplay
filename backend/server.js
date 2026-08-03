@@ -450,6 +450,10 @@ const startServer = async () => {
   const { startSubscriptionCron } = require('./services/subscriptionCron');
   startSubscriptionCron();
 
+  // Start Content Publish Cron
+  const { startContentPublishCron } = require('./services/contentPublishCron');
+  startContentPublishCron();
+
   // Port is defined globally at the top
   const server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

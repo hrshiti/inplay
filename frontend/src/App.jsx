@@ -2901,6 +2901,11 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                           alt={movie.title}
                           className="poster-img"
                         />
+                        {section.title?.toLowerCase().includes('trending') && (
+                          <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'linear-gradient(45deg, #ff0000, #ff7300)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.3)', textTransform: 'uppercase' }}>
+                            Trending
+                          </div>
+                        )}
                       </div>
                       <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                         {!isUpcoming ? (
@@ -3037,6 +3042,11 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                           alt={movie.title}
                           className="poster-img"
                         />
+                        {section.title?.toLowerCase().includes('trending') && (
+                          <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'linear-gradient(45deg, #ff0000, #ff7300)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.3)', textTransform: 'uppercase' }}>
+                            Trending
+                          </div>
+                        )}
                       </div>
                       <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                         {isUpcoming && (
@@ -3149,6 +3159,11 @@ function CategoryGridView({ activeFilter, setSelectedMovie, originalsData, trend
                           alt={movie.title}
                           className="poster-img"
                         />
+                        {section.title?.toLowerCase().includes('trending') && (
+                          <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'linear-gradient(45deg, #ff0000, #ff7300)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.3)', textTransform: 'uppercase' }}>
+                            Trending
+                          </div>
+                        )}
                       </div>
                       <span style={{ fontSize: '11px', color: '#888', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                         {isUpcoming && (

@@ -20,6 +20,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
         status: content?.status || 'published',
         views: content?.views || 0,
         fakeViews: content?.fakeViews || 0,
+        publishAt: content?.publishAt ? new Date(content.publishAt).toISOString().slice(0, 16) : '',
         type: 'reel'
     });
 
@@ -376,6 +377,40 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
                         />
                     </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                            Status
+                        </label>
+                        <select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleInputChange}
+                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', background: 'white' }}
+                        >
+                            <option value="draft">Draft</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="published">Published</option>
+                        </select>
+                    </div>
+
+                    {formData.status === 'scheduled' && (
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                                Publish At (Date & Time) *
+                            </label>
+                            <input
+                                type="datetime-local"
+                                name="publishAt"
+                                value={formData.publishAt}
+                                onChange={handleInputChange}
+                                required={formData.status === 'scheduled'}
+                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', background: 'white' }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Removed Monetization and Display Categories sections as per user request */}

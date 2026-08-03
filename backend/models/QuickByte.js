@@ -76,8 +76,12 @@ const quickByteSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['draft', 'published'],
+        enum: ['draft', 'scheduled', 'published'],
         default: 'published'
+    },
+    publishAt: {
+        type: Date,
+        default: null
     },
     views: {
         type: Number,

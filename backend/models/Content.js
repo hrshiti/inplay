@@ -125,8 +125,12 @@ const contentSchema = new mongoose.Schema({
   // Content status
   status: {
     type: String,
-    enum: ['draft', 'published', 'unpublished', 'archived'],
+    enum: ['draft', 'scheduled', 'published', 'unpublished', 'archived'],
     default: 'draft'
+  },
+  publishAt: {
+    type: Date,
+    default: null
   },
   isActive: {
     type: Boolean,

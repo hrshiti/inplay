@@ -1415,6 +1415,7 @@ const Monetization = () => {
   };
 
   const columns = [
+    { key: 'order', label: 'Order', sortable: true },
     { key: 'name', label: 'Plan Name', sortable: true },
     { key: 'price', label: 'Price (₹)', sortable: true, render: (v) => `₹${v}` },
     { key: 'duration', label: 'Duration', sortable: true },
@@ -1614,6 +1615,7 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
             description: formData.get('description'),
             price: parseFloat(formData.get('price')),
             duration: formData.get('duration'),
+            order: parseInt(formData.get('order')) || 0,
             isActive: formData.get('isActive') === 'true'
           });
         }}>
@@ -1680,18 +1682,32 @@ function PlanFormModal({ mode, initialData, onSave, onCancel, isLoading }) {
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                  Status
-                </label>
-                <select
-                  name="isActive"
-                  defaultValue={initialData?.isActive !== false ? 'true' : 'false'}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                    Order Number
+                  </label>
+                  <input
+                    name="order"
+                    type="number"
+                    defaultValue={initialData?.order || 0}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                    Status
+                  </label>
+                  <select
+                    name="isActive"
+                    defaultValue={initialData?.isActive !== false ? 'true' : 'false'}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }}
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </div>
               </div>
             </div>
 

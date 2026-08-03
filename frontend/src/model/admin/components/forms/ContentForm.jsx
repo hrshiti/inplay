@@ -12,6 +12,7 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
     rating: content?.rating || '',
     fakeViews: content?.fakeViews || '',
     status: content?.status || 'draft',
+    publishAt: content?.publishAt ? new Date(content.publishAt).toISOString().slice(0, 16) : '',
     type: content?.type || 'bhojpuri',
     image: content ? (content.image || content.poster?.url || content.poster?.secure_url || content.thumbnail || content.poster || '') : '',
     backdrop: content ? (content.backdrop?.url || content.backdrop?.secure_url || content.backdrop || content.background || '') : '',
@@ -722,10 +723,35 @@ export default function ContentForm({ content = null, onSave, onCancel, isUpload
               }}
             >
               <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
               <option value="published">Published</option>
               <option value="inactive">Inactive</option>
             </select>
           </div>
+
+          {formData.status === 'scheduled' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Publish At (Date & Time) *
+              </label>
+              <input
+                type="datetime-local"
+                name="publishAt"
+                value={formData.publishAt}
+                onChange={handleInputChange}
+                required={formData.status === 'scheduled'}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* New Fields: Cast, Producer, Production, Release Date */}
