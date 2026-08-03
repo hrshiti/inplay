@@ -183,13 +183,13 @@ const PlanPage = () => {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
-            <img src="/FINAL_LOGO_copy__1_.jpg-removebg-preview (2).png" alt="INPLAY OTT" style={{ height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(255,255,255,0.2))' }} />
-          </div>
-          <div style={{ fontSize: '0.65rem', color: '#9CA3AF', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #555)', width: '25px' }}></div>
-            <span style={{ opacity: 0.8 }}>OTT</span>
-            <div style={{ height: '1px', background: 'linear-gradient(to left, transparent, #555)', width: '25px' }}></div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
+            <img src="/FINAL_LOGO_copy__1_.jpg-removebg-preview (2).png" alt="INPLAY" style={{ height: '100px', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(255,255,255,0.2))' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #555)', width: '15px' }}></div>
+              <span style={{ fontSize: '0.85rem', color: '#9CA3AF', letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, fontWeight: '800' }}>OTT</span>
+              <div style={{ height: '1px', background: 'linear-gradient(to left, transparent, #555)', width: '15px' }}></div>
+            </div>
           </div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: '800', margin: '0 0 6px', letterSpacing: '0.5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>PREMIUM ENTERTAINMENT</h1>
           <p style={{ color: '#EAB308', fontSize: '0.8rem', fontWeight: '800', margin: 0, textShadow: '0 2px 8px rgba(234,179,8,0.3)' }}>UNLIMITED ACCESS. ONE TIME PAYMENT.</p>
