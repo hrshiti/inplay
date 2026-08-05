@@ -5,13 +5,16 @@ const { getActiveSections } = require('../controllers/darmaaSectionController');
 const { getActiveSections: getActiveBhojpuriSections } = require('../controllers/bhojpuriSectionController');
 const { getActiveSections: getActiveCinemaSections } = require('../controllers/cinemaSectionController');
 const { getPublicBanners } = require('../controllers/bannerController');
-const { optionalProtect } = require('../middlewares/auth');
+const { protect, subscribed } = require('../middlewares/auth');
 
+// Tab/category config only, no video content — needed pre-subscription to render nav
 router.get('/dynamic-structure', getDynamicStructure);
-router.get('/dynamic-content', getDynamicContent);
-router.get('/darmaa-sections', optionalProtect, getActiveSections);
-router.get('/bhojpuri-sections', optionalProtect, getActiveBhojpuriSections);
-router.get('/cinema-sections', optionalProtect, getActiveCinemaSections);
+// Real content data — requires an active subscription
+router.get('/dynamic-content', protect, subscribed, getDynamicContent);
+router.get('/darmaa-sections', protect, subscribed, getActiveSections);
+router.get('/bhojpuri-sections', protect, subscribed, getActiveBhojpuriSections);
+router.get('/cinema-sections', protect, subscribed, getActiveCinemaSections);
+// Marketing banners only, no user/video content
 router.get('/banners', getPublicBanners);
 
 module.exports = router;

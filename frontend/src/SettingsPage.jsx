@@ -7,6 +7,7 @@ import appSettingsService from './services/api/appSettingsService';
 import { getImageUrl } from './utils/imageUtils';
 import subscriptionService from './services/api/subscriptionService';
 import { trackProfileUpdated, trackSubscriptionCancelled } from './utils/analytics';
+import { isUserSubscribed } from './utils/subscription';
 
 export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embedded = false }) {
     const navigate = useNavigate();
@@ -242,6 +243,10 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
         }
     ];
 
+    // Unsubscribed users only get Account (Profile + Subscription) — everything else in
+    // Settings stays hidden until they have an active subscription.
+    const visibleSections = isUserSubscribed(currentUser) ? sections : sections.filter(s => s.title === 'Account');
+
     const Toggle = ({ active, onToggle }) => (
         <div
             onClick={onToggle}
@@ -346,7 +351,7 @@ export default function SettingsPage({ onLogout, currentUser, onUpdateUser, embe
 
             <div style={{ padding: embedded ? '0' : '0 20px 20px' }}>
                 {/* Settings Sections */}
-                {sections.map((section, idx) => (
+                {visibleSections.map((section, idx) => (
                     <div key={idx} style={{ marginBottom: '32px' }}>
                         <h4 style={{
                             fontSize: '0.85rem',

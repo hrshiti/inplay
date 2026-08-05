@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Play, Download, Search, Folder, User, Star, Crown, Layout, Sparkles, Plus, Check, Headphones, Clapperboard, Eye, Bookmark, VolumeX, Compass, Music, UserCircle, Home } from 'lucide-react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
@@ -55,6 +55,7 @@ import { withAdSlots } from './utils/interleaveAds';
 import FloatingAudioPlayer from './components/FloatingAudioPlayer';
 import socketService from './services/socketService';
 import { trackLogout, trackAddToWatchlist, trackRemoveFromWatchlist, trackLikeVideo, trackUnlikeVideo } from './utils/analytics';
+import { isUserSubscribed } from './utils/subscription';
 
 const formatViews = (views) => {
   if (!views) return '0';
@@ -101,6 +102,10 @@ function App() {
       return null;
     }
   });
+  // Tracks whether we've finished checking auth/subscription state (profile fetch
+  // settled, or there was no token to check). The gate effect below waits for this
+  // before redirecting, so we never bounce a user based on stale/incomplete state.
+  const [authResolved, setAuthResolved] = useState(false);
   const [myList, setMyList] = useState(() => currentUser?.myList || []);
   const [likedVideos, setLikedVideos] = useState(() => currentUser?.likedContent || []);
   const [continueWatching, setContinueWatching] = useState(() => currentUser?.continueWatching || []);
@@ -125,13 +130,13 @@ function App() {
   const [dynamicStructure, setDynamicStructure] = useState([]);
   const [forYouReels, setForYouReels] = useState([]);
 
+  // Safety net only: never let the splash hang forever if the profile fetch stalls.
+  // The gate effect below is what actually clears `loading` in the normal case.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // console.log('🚀 [APP] Loading finished, showing main content');
-      setLoading(false);
-    }, 1500); // Reduced from 3000ms for better UX
+    if (authResolved) return;
+    const timer = setTimeout(() => setAuthResolved(true), 4000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [authResolved]);
 
   // Keyboard Detection for Mobile
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
@@ -247,46 +252,10 @@ function App() {
   // Track the source tab for correct "More Like This" recommendations
   const [selectedSourceTab, setSelectedSourceTab] = useState(null);
 
-  // Helper to check if platform is iOS or Safari for App Store submission review
-  const isIosOrSafariPlatform = () => {
-    const userAgent = navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
-    return isIOS || isSafari;
-  };
-
-  // Helper to check and increment free content views on iOS/Safari
-  const checkAndRegisterFreeView = (movie) => {
-    if (currentUser) return true; // Already logged in
-    if (!isIosOrSafariPlatform()) return false; // Non-iOS/Safari requires login
-
-    const contentId = movie?._id || movie?.id;
-    if (!contentId) return false;
-
-    try {
-      const viewed = JSON.parse(localStorage.getItem('inplay_free_viewed_ids') || '[]');
-      if (viewed.includes(contentId)) {
-        return true; // Already viewed, allow again
-      }
-      if (viewed.length < 3) { // Allow up to 3 unique free contents
-        viewed.push(contentId);
-        localStorage.setItem('inplay_free_viewed_ids', JSON.stringify(viewed));
-        return true;
-      }
-    } catch (e) {
-      console.error("Failed to update free views:", e);
-    }
-    return false;
-  };
-
   const handleContentSelect = (movie, sourceTab = null) => {
     if (!currentUser) {
-      if (checkAndRegisterFreeView(movie)) {
-        // Proceed without login (iOS/Safari guest review)
-      } else {
-        navigate('/login');
-        return;
-      }
+      navigate('/login');
+      return;
     }
     // Check if content is 'For You' style (Quick Byte/Vertical)
     if (movie.type === 'quick_byte' || movie.isVertical || (movie.category === 'Quick Bites')) {
@@ -311,7 +280,10 @@ function App() {
     } catch (e) {
       console.warn("localStorage blocked", e);
     }
-    if (!token) return;
+    if (!token) {
+      setAuthResolved(true);
+      return;
+    }
     try {
       const profile = await authService.getProfile();
       setCurrentUser(profile);
@@ -326,28 +298,49 @@ function App() {
       return profile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
-      // If profile fetch fails due to 401 (handled in authService), socket shouldn't connect
+      // If profile fetch fails due to 401 (handled in authService), socket shouldn't connect.
+      // authService already clears localStorage in that case — mirror it in React state
+      // so the gate below doesn't treat this user as still logged in.
+      try {
+        if (!localStorage.getItem('inplay_token')) setCurrentUser(null);
+      } catch (e) { /* ignore */ }
+    } finally {
+      setAuthResolved(true);
     }
   };
 
-  // Check subscription and redirect if needed
+  // Auth/subscription gate: everything requires login, and everything but a small
+  // allowlist (plans, auth pages, legal pages, settings) requires an active subscription.
+  // Admin has its own guard (ProtectedRoute) and is left alone here. This also owns
+  // clearing the splash screen, so nothing renders until we know where the user belongs.
   useEffect(() => {
-    const checkAccess = async () => {
-      // Don't redirect on public or admin routes
-      if (currentUser && !location.pathname.startsWith('/admin') &&
-        location.pathname !== '/plan' && location.pathname !== '/login' &&
-        location.pathname !== '/signup') {
+    const path = location.pathname;
 
-        const isSubscribed = currentUser.subscription?.isActive;
-        const isTrialUsed = currentUser.subscription?.isTrialUsed;
+    if (path.startsWith('/admin')) {
+      setLoading(false);
+      return;
+    }
 
-        // Selective subscription check: do not redirect automatically at boot/browse time.
-        // Users will only be prompted to subscribe when attempting to play locked episodes (6+).
+    if (!authResolved) return;
+
+    const PUBLIC_PATHS = ['/plan', '/login', '/signup', '/help', '/privacy', '/about'];
+    // '/settings' is intentionally allowed through here — Account/Subscription/Logout must
+    // stay reachable while unsubscribed; SettingsPage itself hides every other section.
+    const isAllowed = PUBLIC_PATHS.includes(path) || path === '/settings';
+
+    if (!isAllowed) {
+      if (!currentUser) {
+        navigate('/login', { replace: true });
+        return;
       }
-    };
+      if (!isUserSubscribed(currentUser)) {
+        navigate('/plan', { replace: true });
+        return;
+      }
+    }
 
-    checkAccess();
-  }, [currentUser?._id, location.pathname, navigate]);
+    setLoading(false);
+  }, [authResolved, currentUser, location.pathname, navigate]);
 
   // Tell the Flutter shell whether this user is premium, so it can skip
   // loading/showing interstitial ads entirely for active subscribers.
@@ -557,12 +550,8 @@ function App() {
 
   const handleFilterChange = (cat) => {
     if (!currentUser && cat !== 'Popular' && cat !== 'InPlay Cinema' && cat !== 'InPlay Shorts') {
-      if (isIosOrSafariPlatform()) {
-        // Allow browsing categories on iOS/Safari without login for guest review
-      } else {
-        navigate('/login');
-        return;
-      }
+      navigate('/login');
+      return;
     }
     setActiveFilter(cat);
 
@@ -640,13 +629,8 @@ function App() {
 
   const handleTabChange = (tab) => {
     if (tab !== 'Home' && !currentUser) {
-      // Allow browsing other content-discovery tabs (For You, Search, Audio) on iOS/Safari without login
-      if (isIosOrSafariPlatform() && (tab === 'For You' || tab === 'Search' || tab === 'Audio')) {
-        // Allow proceeding
-      } else {
-        navigate('/login');
-        return;
-      }
+      navigate('/login');
+      return;
     }
 
     setActiveTab(tab);
@@ -748,12 +732,8 @@ function App() {
 
   const handlePlay = (movie, episode = null) => {
     if (!currentUser) {
-      if (checkAndRegisterFreeView(movie)) {
-        // Allow playing without login (iOS/Safari guest review)
-      } else {
-        navigate('/login');
-        return;
-      }
+      navigate('/login');
+      return;
     }
     const contentId = movie._id || movie.id;
     // Navigate to watch route, passing movie/episode object to avoid re-fetch if possible
@@ -1015,6 +995,8 @@ function App() {
           handleToggleMyList={handleToggleMyList}
           handleToggleLike={handleToggleLike}
           onClose={() => setSelectedMovie(null)}
+          currentUser={currentUser}
+          authResolved={authResolved}
         />
       } />
       <Route path="/watch/:id" element={
@@ -1025,6 +1007,8 @@ function App() {
           handleToggleLike={handleToggleLike}
           myList={myList}
           likedVideos={likedVideos}
+          currentUser={currentUser}
+          authResolved={authResolved}
         />
       } />
 
@@ -2093,13 +2077,20 @@ function ContentDetailsRoute({
   myList,
   likedVideos,
   handleToggleMyList,
-  handleToggleLike
+  handleToggleLike,
+  currentUser,
+  authResolved
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
+  // A direct/shared link to this route bypasses every other in-app gate, so it needs
+  // its own check rather than relying on App's effect (which only guards the catch-all).
+  const blocked = authResolved && (!currentUser || !isUserSubscribed(currentUser));
 
   useEffect(() => {
+    if (!authResolved || blocked) return; // don't fetch content the caller isn't allowed to see
+
     // Reset movie state and get latest details on ID change
     let found = allContent.find(i => (i._id === id || i.id === id));
     setMovie(found || null);
@@ -2120,7 +2111,11 @@ function ContentDetailsRoute({
     return () => {
       active = false;
     };
-  }, [id, allContent, navigate]);
+  }, [id, allContent, navigate, authResolved, blocked]);
+
+  if (authResolved && blocked) {
+    return <Navigate to={currentUser ? '/plan' : '/login'} replace />;
+  }
 
   if (!movie) return null; // Or a loading spinner
 
@@ -2150,7 +2145,9 @@ function WatchPageRoute({
   handleToggleMyList,
   handleToggleLike,
   myList,
-  likedVideos
+  likedVideos,
+  currentUser,
+  authResolved
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -2158,6 +2155,11 @@ function WatchPageRoute({
   const [movie, setMovie] = useState(location.state?.movie || null);
   const [episode, setEpisode] = useState(location.state?.episode || null);
   const hasFetched = useRef(false);
+  // A direct/shared link to this route bypasses every other in-app gate, so it needs
+  // its own check rather than relying on App's effect (which only guards the catch-all).
+  // This also protects against a stale location.state-seeded movie from a subscription
+  // that lapsed since the in-app navigate() call that set it.
+  const blocked = authResolved && (!currentUser || !isUserSubscribed(currentUser));
 
   const nextShow = useMemo(() => {
     if (!movie || !allContent) return null;
@@ -2178,6 +2180,8 @@ function WatchPageRoute({
   }, [movie, allContent]);
 
   useEffect(() => {
+    if (!authResolved || blocked) return; // don't fetch content the caller isn't allowed to see
+
     // If current movie already matches the URL id, do nothing
     if (movie && (movie._id === id || movie.id === id)) return;
 
@@ -2205,7 +2209,11 @@ function WatchPageRoute({
             });
         });
     }
-  }, [id, allContent, quickBites, navigate, movie]);
+  }, [id, allContent, quickBites, navigate, movie, authResolved, blocked]);
+
+  if (authResolved && blocked) {
+    return <Navigate to={currentUser ? '/plan' : '/login'} replace />;
+  }
 
   if (!movie) return <div style={{ background: 'black', height: '100vh' }} />;
 

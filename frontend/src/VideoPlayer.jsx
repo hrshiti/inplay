@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
-import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone, Lock } from 'lucide-react';
+import { X, SkipForward, SkipBack, Pause, Play, Maximize2, Heart, MessageCircle, MoreVertical, Share2, List, Volume2, VolumeX, ArrowLeft, ArrowRight, RotateCcw, RotateCw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, ThumbsUp, Download, Settings, Minus, Smartphone } from 'lucide-react';
 import contentService from './services/api/contentService';
 import { getImageUrl } from './utils/imageUtils';
 import { getProxiedHlsUrl } from './utils/hlsUrl';
@@ -49,13 +49,6 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     const lastSyncTime = useRef(0);
 
     const currentItem = playlist[currentIndex];
-
-    useEffect(() => {
-        if (currentItem?.isLocked) {
-            navigate('/plan');
-            onClose();
-        }
-    }, [currentIndex, playlist, currentItem, navigate, onClose]);
 
     // Helper for formatting episode duration
     const formatEpisodeDuration = (secs) => {
@@ -345,7 +338,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
         }
 
         try {
-            const res = await contentService.updateWatchHistory({
+            await contentService.updateWatchHistory({
                 contentId,
                 progress,
                 watchedSeconds: currentTime,
@@ -356,18 +349,9 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
             });
             trackWatchTime({ contentId, durationWatched: currentTime });
             lastSyncTime.current = currentTime;
-            
-            if (res && res.data && res.data.passesExhausted) {
-                return true;
-            }
             return false;
         } catch (e) {
             console.error("Failed to sync progress", e);
-            if (e.message && e.message.toLowerCase().includes('subscription')) {
-                if (videoRef.current) videoRef.current.pause();
-                navigate('/plan');
-                return true;
-            }
             return false;
         }
     };
@@ -979,11 +963,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => { e.target.src = 'https://placehold.co/120x68/333/FFF?text=Ep+' + (index + 1); }}
                                         />
-                                        {ep.isLocked ? (
-                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Lock size={16} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
-                                            </div>
-                                        ) : currentIndex === index && (
+                                        {currentIndex === index && (
                                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <div style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', boxShadow: '0 0 8px var(--accent)' }}></div>
                                             </div>
@@ -991,8 +971,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ color: ep.isLocked ? '#aaa' : 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
-                                            {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
+                                            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
                                         </div>
                                         {ep.title !== undefined && ep.title !== null && String(ep.title).trim() !== '0' && String(ep.title).trim() !== '' && (
                                             <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
@@ -1332,11 +1311,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => { e.target.src = 'https://placehold.co/120x68/333/FFF?text=Ep+' + (index + 1); }}
                                         />
-                                        {ep.isLocked ? (
-                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Lock size={16} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
-                                            </div>
-                                        ) : currentIndex === index && (
+                                        {currentIndex === index && (
                                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <div style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', boxShadow: '0 0 8px var(--accent)' }}></div>
                                             </div>
@@ -1344,8 +1319,7 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ color: ep.isLocked ? '#aaa' : 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
-                                            {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
+                                            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>Episode {index + 1}</span>
                                         </div>
                                         {ep.title !== undefined && ep.title !== null && String(ep.title).trim() !== '0' && String(ep.title).trim() !== '' && (
                                             <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{ep.title}</span>
@@ -1534,20 +1508,15 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => { e.target.src = 'https://placehold.co/130x74/333/FFF?text=Ep+' + (index + 1); }}
                                         />
-                                        <div style={{ position: 'absolute', inset: 0, background: ep.isLocked ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {ep.isLocked ? (
-                                                <Lock size={20} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
-                                            ) : (
-                                                <Play size={20} fill="white" stroke="none" />
-                                            )}
+                                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Play size={20} fill="white" stroke="none" />
                                         </div>
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ color: ep.isLocked ? '#aaa' : 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>
                                                 {index + 1}. {(!ep.title || String(ep.title).trim() === '0') ? `Episode ${index + 1}` : ep.title}
                                             </span>
-                                            {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
                                         </div>
                                         {ep.duration > 0 && (
                                             <span style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>

@@ -4,8 +4,8 @@ const forYouController = require('../controllers/forYouController');
 const userAuthController = require('../controllers/userAuthController');
 const { protect, authorize, subscribed } = require('../middlewares/auth');
 
-// Public routes
-router.get('/', forYouController.getAllForYou);
+// Requires an active subscription — no guest/unsubscribed browsing
+router.get('/', protect, subscribed, forYouController.getAllForYou);
 router.get('/:id/comments', forYouController.getComments);
 router.post('/:id/view', forYouController.incrementViews);
 

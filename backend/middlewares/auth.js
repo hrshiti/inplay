@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isUserSubscribed } = require('../utils/subscriptionAccess');
 
 // Protect routes - require authentication
 const protect = async (req, res, next) => {
@@ -153,8 +154,7 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success') => 
 
 // Ensure user has an active subscription
 const subscribed = (req, res, next) => {
-  // Allow admins and dev testing numbers to bypass subscription check
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.phone === '6268204871' || req.user.phone === '6268455485' || req.user.phone === '6260491554')) {
+  if (isUserSubscribed(req.user)) {
     return next();
   }
 
@@ -166,16 +166,12 @@ const subscribed = (req, res, next) => {
     });
   }
 
-  // Double check end date (fallback for cron/webhooks)
-  if (req.user.subscription.endDate && new Date(req.user.subscription.endDate) < new Date()) {
-    return res.status(403).json({
-      success: false,
-      message: 'Your subscription has expired. Please renew to continue.',
-      errorCode: 'SUBSCRIPTION_EXPIRED'
-    });
-  }
-
-  next();
+  // Reaching here means isActive was true but isUserSubscribed still rejected it (expired endDate)
+  return res.status(403).json({
+    success: false,
+    message: 'Your subscription has expired. Please renew to continue.',
+    errorCode: 'SUBSCRIPTION_EXPIRED'
+  });
 };
 
 // Optional protect - populate req.user if token exists but do not block if missing/invalid

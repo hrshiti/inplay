@@ -8,6 +8,7 @@ import { initRazorpayPayment } from './lib/utils/razorpay';
 import HlsPlayer from './components/HlsPlayer';
 import { getImageUrl } from './utils/imageUtils';
 import { trackSubscriptionView, trackSubscriptionInitiated, trackSubscriptionPurchase, trackSubscriptionRenewed, trackTrialInitiated, trackTrialPurchase, trackTrialRenewed } from './utils/analytics';
+import { isUserSubscribed } from './utils/subscription';
 
 const PlanPage = () => {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ const PlanPage = () => {
   }, []);
 
   useEffect(() => {
-    if (currentUser && (currentUser.phone === '6268204871' || currentUser.phone === '6268455485')) {
+    if (currentUser && isUserSubscribed(currentUser)) {
       navigate('/', { replace: true });
     }
   }, [currentUser, navigate]);

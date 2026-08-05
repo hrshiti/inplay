@@ -1,6 +1,5 @@
 const Content = require('../models/Content');
 const User = require('../models/User');
-const QuickByte = require('../models/QuickByte');
 const { generateSignedUrl, generateHLSUrl } = require('../config/cloudinary');
 const { DOWNLOAD_EXPIRY_DAYS } = require('../constants');
 const { hydrateHlsUrl } = require('../utils/hlsUrl');
@@ -103,13 +102,6 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
   // Ideally, valid pagination across two collections requires specific pipelines (aggregations).
   // For now, this satisfies the "show audio series if searched" requirement.
 
-  const user = userId ? await User.findById(userId) : null;
-  const isSubscribed = user ? (
-    user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554' ||
-    (user.subscription?.isActive && (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()))
-  ) : false;
-  const freeEpisodesWatched = user?.freeEpisodesWatched || [];
-
   // Check user's access to each content (only for standard content model)
   const processedContent = await Promise.all(
     combinedContent.map(async (item) => {
@@ -117,13 +109,11 @@ const getContentForUsers = async (filters = {}, page = 1, limit = 10, userId = n
       if (item.isAudioSeries) return item;
 
       const accessInfo = await checkUserContentAccess(userId, item._id);
-      let itemObj = {
+      return {
         ...item.toObject(),
         hasAccess: accessInfo.hasAccess,
         accessType: accessInfo.accessType
       };
-      itemObj = applySelectiveSubscription(itemObj, isSubscribed, freeEpisodesWatched);
-      return itemObj;
     })
   );
 
@@ -186,122 +176,6 @@ const hydrateContentItem = (item) => {
   return item;
 };
 
-// Helper to check if a user has an active subscription
-const checkIsSubscribed = async (userId) => {
-  if (!userId) return false;
-  try {
-    const user = await User.findById(userId);
-    if (!user) return false;
-
-    // Allow bypass for admin/superadmin role or test numbers
-    if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554') {
-      return true;
-    }
-
-    if (user.subscription && user.subscription.isActive) {
-      if (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()) {
-        return true;
-      }
-    }
-  } catch (err) {
-    console.error('Error checking subscription status:', err);
-  }
-  return false;
-};
-
-// Helper to redact premium episodes for unsubscribed users in InPlay Drama category
-const applySelectiveSubscription = (result, isSubscribed, freeEpisodesWatched = []) => {
-  if (!result) return result;
-  
-  // Match 'Darmaa', 'Dharmaa', 'Inplay Darmaa', 'InPlay Dharmaa', etc. (prefix optional)
-  const isDarmaa = result.category && /(?:inplay\s*)?dhar?maa?/i.test(result.category);
-  if (isDarmaa && !isSubscribed) {
-    const watchedMap = {};
-    freeEpisodesWatched.forEach(item => {
-      const cId = item.contentId?.toString();
-      if (cId) {
-        if (!watchedMap[cId]) {
-          watchedMap[cId] = new Set();
-        }
-        watchedMap[cId].add(item.episodeIndex);
-      }
-    });
-
-    const contentIdStr = result._id?.toString();
-
-    // PER-SHOW free episode limit: count only episodes watched for THIS specific show
-    const watchedForThisShow = freeEpisodesWatched.filter(
-      item => item.contentId?.toString() === contentIdStr
-    ).length;
-    let remainingPasses = Math.max(0, 5 - watchedForThisShow);
-
-    let globalEpisodeIndex = 0;
-    if (result.seasons && Array.isArray(result.seasons)) {
-      result.seasons = result.seasons.map(season => {
-        if (season.episodes && Array.isArray(season.episodes)) {
-          const updatedEpisodes = season.episodes.map(ep => {
-            const epIdx = globalEpisodeIndex;
-            globalEpisodeIndex++;
-
-            const isAlreadyWatched = watchedMap[contentIdStr] && watchedMap[contentIdStr].has(epIdx);
-            
-            if (isAlreadyWatched) {
-              return { ...ep, isLocked: false };
-            } else {
-              if (remainingPasses > 0) {
-                remainingPasses--;
-                return { ...ep, isLocked: false };
-              } else {
-                return {
-                  ...ep,
-                  isLocked: true,
-                  isPremium: true,
-                  video: ep.video ? {
-                    ...ep.video,
-                    url: '',
-                    secure_url: '',
-                    hls_url: ''
-                  } : null
-                };
-              }
-            }
-          });
-          return { ...season, episodes: updatedEpisodes };
-        }
-        return season;
-      });
-    }
-
-    if (result.episodes && Array.isArray(result.episodes)) {
-      result.episodes = result.episodes.map((ep, idx) => {
-        const isAlreadyWatched = watchedMap[contentIdStr] && watchedMap[contentIdStr].has(idx);
-
-        if (isAlreadyWatched) {
-          return { ...ep, isLocked: false };
-        } else {
-          if (remainingPasses > 0) {
-            remainingPasses--;
-            return { ...ep, isLocked: false };
-          } else {
-            return {
-              ...ep,
-              isLocked: true,
-              isPremium: true,
-              video: ep.video ? {
-                ...ep.video,
-                url: '',
-                secure_url: '',
-                hls_url: ''
-              } : null
-            };
-          }
-        }
-      });
-    }
-  }
-  return result;
-};
-
 // Get single content with access control
 const getContentById = async (contentId, userId = null) => {
   const content = await Content.findOne({
@@ -313,22 +187,14 @@ const getContentById = async (contentId, userId = null) => {
     throw new Error('Content not found or not available');
   }
 
-  const user = userId ? await User.findById(userId) : null;
-  const isSubscribed = user ? (
-    user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554' ||
-    (user.subscription?.isActive && (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()))
-  ) : false;
-  const freeEpisodesWatched = user?.freeEpisodesWatched || [];
-
   const accessInfo = { hasAccess: true, accessType: 'free' };
 
-  let result = {
+  const result = {
     ...content.toObject(),
     hasAccess: accessInfo.hasAccess,
     accessType: accessInfo.accessType
   };
 
-  result = applySelectiveSubscription(result, isSubscribed, freeEpisodesWatched);
   return hydrateContentItem(result);
 };
 
@@ -497,65 +363,16 @@ const getUserMyList = async (userId) => {
 const mongoose = require('mongoose');
 
 // Update watch history
-const updateWatchHistory = async (userId, contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0, contentType = '', episodeIndex) => {
+const updateWatchHistory = async (userId, contentId, progress, completed = false, watchedSeconds = 0, totalDuration = 0, contentType = '') => {
   // Only track if it's a valid MongoDB ID (ignore mock data IDs like 1, 2, etc.)
   if (!mongoose.Types.ObjectId.isValid(contentId)) {
     return { message: 'Skipping mock content tracking' };
   }
 
-  const user = await User.findById(userId).select('role subscription phone freeEpisodesWatched watchHistory').lean();
+  const user = await User.findById(userId).select('watchHistory').lean();
 
   if (!user) {
     throw new Error('User not found');
-  }
-
-  // Check subscription status
-  const isSubscribed = user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554' ||
-    (user.subscription?.isActive && (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()));
-
-  // Check if content is inplay drama
-  let isDrama = false;
-  let content = await Content.findById(contentId);
-  if (content) {
-    // Match 'Darmaa', 'Dharmaa', 'Inplay Darmaa', 'InPlay Dharmaa', etc. (prefix optional)
-    isDrama = content.category && /(?:inplay\s*)?dhar?maa?/i.test(content.category);
-  } else {
-    const quickByte = await QuickByte.findById(contentId);
-    if (quickByte) {
-      isDrama = quickByte.targetCategory === 'Darmaa' || quickByte.targetCategory === 'Both';
-    }
-  }
-
-  if (isDrama && !isSubscribed) {
-    const epIdx = (episodeIndex !== undefined && episodeIndex !== null) ? parseInt(episodeIndex, 10) : 0;
-
-    // PER-SHOW free episode limit: count only episodes watched for THIS specific show
-    const watchedForThisShow = user.freeEpisodesWatched.filter(
-      item => item.contentId.toString() === contentId.toString()
-    ).length;
-
-    if (watchedForThisShow >= 5) {
-      // This show's free trial is exhausted, block further new episodes
-      const alreadyWatched = user.freeEpisodesWatched.some(
-        item => item.contentId.toString() === contentId.toString() && item.episodeIndex === epIdx
-      );
-      if (!alreadyWatched) {
-        throw new Error('Subscription required to watch this content.');
-      }
-    } else {
-      // Check if this specific episode is already watched (re-watch is always allowed)
-      const alreadyWatched = user.freeEpisodesWatched.some(
-        item => item.contentId.toString() === contentId.toString() && item.episodeIndex === epIdx
-      );
-
-      if (!alreadyWatched) {
-        user.freeEpisodesWatched.push({
-          contentId,
-          episodeIndex: epIdx,
-          watchedAt: new Date()
-        });
-      }
-    }
   }
 
   // Check if content exists in watch history
@@ -591,20 +408,10 @@ const updateWatchHistory = async (userId, contentId, progress, completed = false
 
   await User.updateOne(
     { _id: userId },
-    { $set: { 
-        watchHistory: user.watchHistory, 
-        freeEpisodesWatched: user.freeEpisodesWatched 
-      } 
-    }
+    { $set: { watchHistory: user.watchHistory } }
   );
 
-  // PER-SHOW: passesExhausted is true only if THIS show's free episodes (5) are used up
-  const watchedForThisShowFinal = user.freeEpisodesWatched.filter(
-    item => item.contentId.toString() === contentId.toString()
-  ).length;
-  const passesExhausted = Boolean(isDrama && !isSubscribed && watchedForThisShowFinal >= 5);
-
-  return { message: 'Watch history updated', progress, completed, passesExhausted };
+  return { message: 'Watch history updated', progress, completed };
 };
 
 // Get trending content

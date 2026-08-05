@@ -1,7 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check, Lock } from 'lucide-react';
+import { ArrowLeft, Play, Plus, Download, Share2, ThumbsUp, ChevronDown, Check } from 'lucide-react';
 import { getImageUrl } from './utils/imageUtils';
 import contentService from './services/api/contentService';
 import AdPlaceholder from './components/AdPlaceholder';
@@ -18,7 +17,6 @@ export default function MovieDetailsPage({
     onSelectMovie,
     sourceTab // Receive the source tab context
 }) {
-    const navigate = useNavigate();
     if (!movie) return null;
 
     const isSeries = movie.type === 'hindi_series'; // ONLY show episodes/seasons for Hindi Series
@@ -380,15 +378,8 @@ export default function MovieDetailsPage({
                                     {(selectedSeason ? selectedSeason.episodes : (displayMovie.episodes || [])).map((ep, index) => (
                                         <div
                                             key={ep.id || index}
-                                            onClick={() => {
-                                                if (ep.isLocked) {
-                                                    navigate('/plan');
-                                                } else if (onPlay) {
-                                                    // Pass both movie and the specific episode
-                                                    onPlay(displayMovie, ep);
-                                                }
-                                            }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', opacity: ep.isLocked ? 0.75 : 1 }}
+                                            onClick={() => onPlay && onPlay(displayMovie, ep)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
                                         >
                                             <div style={{ position: 'relative', width: '120px', height: '68px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                                                 <img
@@ -397,18 +388,13 @@ export default function MovieDetailsPage({
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     onError={(e) => { e.target.src = `https://placehold.co/300x170/333/FFF?text=Ep` }}
                                                 />
-                                                <div style={{ position: 'absolute', inset: 0, background: ep.isLocked ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    {ep.isLocked ? (
-                                                        <Lock size={20} color="#EF4444" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} />
-                                                    ) : (
-                                                        <Play size={20} fill="white" style={{ opacity: 0.8 }} />
-                                                    )}
+                                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Play size={20} fill="white" style={{ opacity: 0.8 }} />
                                                 </div>
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <h4 style={{ fontSize: '0.95rem', marginBottom: '4px', color: ep.isLocked ? '#aaa' : '#fff' }}>{ep.title}</h4>
-                                                    {ep.isLocked && <span style={{ background: '#EF4444', color: 'white', fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', fontWeight: 'bold' }}>VIP</span>}
+                                                    <h4 style={{ fontSize: '0.95rem', marginBottom: '4px', color: '#fff' }}>{ep.title}</h4>
                                                 </div>
                                                 <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{ep.duration ? `${Math.floor(ep.duration / 60)}m` : '24m'}</span>
                                             </div>

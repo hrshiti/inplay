@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause, ArrowLeft, Send, X, Trash2, Lock } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause, ArrowLeft, Send, X, Trash2 } from 'lucide-react';
 import { getImageUrl } from './utils/imageUtils';
 import socketService from './services/socketService';
 import contentService from './services/api/contentService';
@@ -157,7 +156,6 @@ function ReelItem({
     setActiveIndex, index, isActiveIndex, shouldPreload,
     isAlreadyLiked, onToggleLike, onAutoNext, apiPrefix
 }) {
-    const navigate = useNavigate();
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [likes, setLikes] = useState(reel.likes || 0);
@@ -168,8 +166,7 @@ function ReelItem({
 
     const episodes = reel.episodes && reel.episodes.length > 0 ? reel.episodes : (reel.video ? [reel.video] : []);
     const currentEpisode = episodes[currentEpIndex];
-    const isLocked = currentEpisode?.isLocked;
-    const currentVideoSrc = isLocked ? '' : (getImageUrl(currentEpisode?.url) || '');
+    const currentVideoSrc = getImageUrl(currentEpisode?.url) || '';
 
     // Touch Handling for Episodes Swipe
     const touchStartX = useRef(0);
@@ -227,7 +224,6 @@ function ReelItem({
         if (!videoRef.current) return;
         // Ensure reel ID exists
         if (!reel?._id) return;
-        if (isLocked) return;
 
         const currentTime = videoRef.current.currentTime;
         const duration = videoRef.current.duration;
@@ -269,7 +265,7 @@ function ReelItem({
                     if (socket) {
                         socket.emit('join_reel', reel._id);
                     }
-                    if (videoRef.current && !isLocked) {
+                    if (videoRef.current) {
                         videoRef.current.currentTime = 0;
                         videoRef.current.play().catch(e => { /* console.log("Autoplay blocked", e); */ });
                     }
@@ -319,7 +315,7 @@ function ReelItem({
                 if (isPlayingRef.current) syncProgress(false);
             }
         };
-    }, [reel._id, setActiveReelId, index, setActiveIndex, isLocked]); // Added dependencies
+    }, [reel._id, setActiveReelId, index, setActiveIndex]); // Added dependencies
 
     const handlePlayPause = () => {
         if (videoRef.current) {
@@ -399,7 +395,7 @@ function ReelItem({
 
     // Auto-play when episode changes if we are already playing
     useEffect(() => {
-        if (isPlaying && videoRef.current && !isLocked) {
+        if (isPlaying && videoRef.current) {
             // Small delay to ensure src is updated
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
@@ -409,7 +405,7 @@ function ReelItem({
                 });
             }
         }
-    }, [currentEpIndex, isLocked]);
+    }, [currentEpIndex]);
 
     // ... existing hooks ...
     // Note: I will keep existing hooks but ensure they work with dynamic src.
@@ -435,69 +431,9 @@ function ReelItem({
                     onEnded={handleVideoEnd}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-                {!isPlaying && !isLocked && (
+                {!isPlaying && (
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
                         <Play size={48} fill="rgba(255,255,255,0.8)" stroke="none" />
-                    </div>
-                )}
-                {isLocked && (
-                    <div 
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url(${getImageUrl(reel.thumbnail?.url)})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 15,
-                            padding: '24px',
-                            textAlign: 'center',
-                            color: 'white'
-                        }}
-                    >
-                        <div style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            borderRadius: '50%',
-                            padding: '20px',
-                            marginBottom: '20px',
-                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <Lock size={48} color="#EF4444" style={{ filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.5))' }} />
-                        </div>
-                        <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '10px', textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
-                            Premium Episode
-                        </h3>
-                        <p style={{ fontSize: '0.95rem', color: '#ccc', marginBottom: '24px', maxWidth: '280px', lineHeight: '1.5', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
-                            This episode is locked. Subscribe to InPlay Premium to watch the full drama series.
-                        </p>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); navigate('/plan'); }}
-                            style={{
-                                background: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
-                                color: 'white',
-                                border: 'none',
-                                padding: '12px 32px',
-                                borderRadius: '30px',
-                                fontSize: '1rem',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                outline: 'none'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-                        >
-                            Subscribe Now
-                        </button>
                     </div>
                 )}
             </div>

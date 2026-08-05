@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const quickByteController = require('../controllers/quickByteController');
-const { protect, authorize, subscribed, optionalProtect } = require('../middlewares/auth');
+const { protect, authorize, subscribed } = require('../middlewares/auth');
 
-// Public routes (for user side)
-router.get('/', optionalProtect, quickByteController.getAllQuickBytes);
-router.get('/:id', optionalProtect, quickByteController.getQuickByteById);
+// Requires an active subscription — no guest/unsubscribed browsing
+router.get('/', protect, subscribed, quickByteController.getAllQuickBytes);
+router.get('/:id', protect, subscribed, quickByteController.getQuickByteById);
 router.get('/:id/comments', quickByteController.getComments);
 router.post('/:id/view', quickByteController.incrementViews);
 

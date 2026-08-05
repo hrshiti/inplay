@@ -4,6 +4,7 @@ const QuickByte = require('../models/QuickByte');
 const ForYou = require('../models/ForYou');
 const { sendTokenResponse } = require('../middlewares/auth');
 const { hydrateHlsUrl } = require('../utils/hlsUrl');
+const { isUserSubscribed } = require('../utils/subscriptionAccess');
 
 // Helper to send SMS via SMS India Hub
 const sendSMS = async (phone, text) => {
@@ -343,6 +344,28 @@ const getUserProfile = async (userId) => {
 
     if (userObj.continueWatching && Array.isArray(userObj.continueWatching)) {
       userObj.continueWatching = userObj.continueWatching.map(hydrateContentItem);
+    }
+
+    // Unsubscribed users must not be able to recover playable video URLs via their
+    // My List / History / Continue Watching, even though this endpoint itself must
+    // stay reachable pre-subscription so the frontend can determine that fact.
+    if (!isUserSubscribed(user)) {
+      const stripVideo = (media) => (media ? { ...media, url: '', secure_url: '', hls_url: '' } : media);
+      const redact = (item) => {
+        if (!item) return item;
+        if (item.video) item.video = stripVideo(item.video);
+        if (Array.isArray(item.seasons)) {
+          item.seasons = item.seasons.map(season => ({
+            ...season,
+            episodes: (season.episodes || []).map(ep => (ep.video ? { ...ep, video: stripVideo(ep.video) } : ep))
+          }));
+        }
+        return item;
+      };
+      userObj.myList = (userObj.myList || []).map(redact);
+      userObj.likedContent = (userObj.likedContent || []).map(redact);
+      userObj.history = (userObj.history || []).map(redact);
+      userObj.continueWatching = (userObj.continueWatching || []).map(redact);
     }
 
     // Check downloads

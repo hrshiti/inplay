@@ -1,6 +1,5 @@
 const DarmaaSection = require('../models/DarmaaSection');
 const QuickByte = require('../models/QuickByte');
-const User = require('../models/User');
 
 // @desc    Create a new Darmaa section
 // @route   POST /api/admin/darmaa-sections
@@ -69,100 +68,9 @@ const getActiveSections = async (req, res) => {
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
-    let isSubscribed = false;
-    let freeEpisodesWatched = [];
-    const userId = req.user?._id;
-    if (userId) {
-        const user = await User.findById(userId);
-        if (user) {
-            freeEpisodesWatched = user.freeEpisodesWatched || [];
-            if (user.role === 'admin' || user.role === 'superadmin' || user.phone === '6268204871' || user.phone === '6268455485' || user.phone === '6260491554') {
-                isSubscribed = true;
-            } else if (user.subscription && user.subscription.isActive) {
-                if (!user.subscription.endDate || new Date(user.subscription.endDate) >= new Date()) {
-                    isSubscribed = true;
-                }
-            }
-        }
-    }
-
-    const watchedMap = {};
-    freeEpisodesWatched.forEach(item => {
-        const cId = item.contentId?.toString();
-        if (cId) {
-            if (!watchedMap[cId]) {
-                watchedMap[cId] = new Set();
-            }
-            watchedMap[cId].add(item.episodeIndex);
-        }
-    });
-
-    let remainingPasses = 0; // unused after per-show refactor — kept for reference only
-
-    const processedSections = sections.map(section => {
-        if (section.videos && Array.isArray(section.videos)) {
-            section.videos = section.videos.map(qb => {
-                const isDarmaa = qb.targetCategory === 'Darmaa' || qb.targetCategory === 'Both';
-                if (isDarmaa && !isSubscribed) {
-                    const qbIdStr = qb._id?.toString();
-                    if (qb.episodes && Array.isArray(qb.episodes)) {
-
-                        // PER-SHOW free episode limit: count only episodes watched for THIS specific show
-                        const watchedForThisShow = freeEpisodesWatched.filter(
-                            item => item.contentId?.toString() === qbIdStr
-                        ).length;
-                        let remainingPasses = Math.max(0, 5 - watchedForThisShow);
-
-                        qb.episodes = qb.episodes.map((ep, idx) => {
-                            const isAlreadyWatched = watchedMap[qbIdStr] && watchedMap[qbIdStr].has(idx);
-
-                            if (isAlreadyWatched) {
-                                return { ...ep, isLocked: false };
-                            } else {
-                                if (remainingPasses > 0) {
-                                    remainingPasses--;
-                                    return { ...ep, isLocked: false };
-                                } else {
-                                    return {
-                                        ...ep,
-                                        isLocked: true,
-                                        isPremium: true,
-                                        url: '',
-                                        secure_url: '',
-                                        hls_url: '',
-                                        video: ep.video ? {
-                                            ...ep.video,
-                                            url: '',
-                                            secure_url: '',
-                                            hls_url: ''
-                                        } : null
-                                    };
-                                }
-                            }
-                        });
-
-                        // Lock/redact primary video of the QuickByte if the first episode is locked
-                        if (qb.episodes[0] && qb.episodes[0].isLocked) {
-                            qb.isLocked = true;
-                            qb.isPremium = true;
-                            qb.video = qb.video ? {
-                                ...qb.video,
-                                url: '',
-                                secure_url: '',
-                                hls_url: ''
-                            } : null;
-                        }
-                    }
-                }
-                return qb;
-            });
-        }
-        return section;
-    });
-    
     res.status(200).json({
       success: true,
-      data: processedSections
+      data: sections
     });
   } catch (error) {
     console.error('Get Active Darmaa Sections Error:', error);
