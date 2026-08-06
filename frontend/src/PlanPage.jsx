@@ -338,7 +338,17 @@ const PlanPage = () => {
         </div>
 
         {/* Unified Subscribe Button */}
-        <div style={{ textAlign: 'center', marginBottom: '16px', maxWidth: '360px', margin: '0 auto' }}>
+        <div style={{ 
+          position: 'fixed', 
+          bottom: '24px', 
+          left: '0', 
+          right: '0', 
+          zIndex: 50, 
+          textAlign: 'center', 
+          maxWidth: '360px', 
+          margin: '0 auto',
+          padding: '0 16px'
+        }}>
           <button
             onClick={() => handleSubscribe(selectedPlanId)}
             disabled={!selectedPlanId || loading}
@@ -366,7 +376,7 @@ const PlanPage = () => {
         </div>
 
         {/* Footer info */}
-        <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '0.65rem' }}>
+        <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '0.65rem', paddingBottom: '80px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '8px' }}>
              <Shield size={12} color="#EAB308" /> <span style={{ fontWeight: '600' }}>Secure Payment | Instant Access</span>
           </div>
