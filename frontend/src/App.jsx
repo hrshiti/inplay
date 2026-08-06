@@ -909,7 +909,20 @@ function App() {
     return () => ctx.revert();
   }, []);
 
+  // Fix: GSAP ScrollTrigger runs at mount when content arrays are still empty (async fetch in-flight).
+  // Elements rendered after fetch are never seen by the initial GSAP pass, so they stay at opacity:0.
+  // Refreshing ScrollTrigger once after content lands in the DOM re-evaluates all triggers
+  // without re-creating or duplicating any animations.
+  useEffect(() => {
+    if (quickBites.length > 0 || contentSections.trending_now.length > 0) {
+      // Small delay lets React flush the DOM paint before ScrollTrigger measures positions
+      const t = setTimeout(() => ScrollTrigger.refresh(), 150);
+      return () => clearTimeout(t);
+    }
+  }, [quickBites.length, contentSections.trending_now.length]);
+
   const getAppBannersByCategory = (cat) => {
+
     if (!banners) return [];
     if (!Array.isArray(banners)) {
       const catBanners = banners[cat.toLowerCase()] || [];
