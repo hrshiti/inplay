@@ -39,9 +39,48 @@ const FILE_SIZE_LIMITS = {
 // Allowed MIME types
 const ALLOWED_MIMETYPES = {
     images: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
-    videos: ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'],
-    audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg'],
+    videos: [
+        'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+        'video/webm', 'video/3gpp', 'video/mp2t', 'video/x-m4v'
+    ],
+    audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/x-m4a', 'audio/mp4'],
 };
+
+// Extension fallback: browsers/OS often report a generic or unlisted mimetype
+// (application/octet-stream, video/x-flv, "" ...) for perfectly valid media.
+const ALLOWED_EXTENSIONS = {
+    images: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+    videos: ['.mp4', '.m4v', '.mov', '.avi', '.mkv', '.webm', '.3gp', '.ts', '.mpeg', '.mpg'],
+    audio: ['.mp3', '.wav', '.aac', '.ogg', '.m4a'],
+};
+
+// Errors flagged this way are reported to the client as a 400 with the real
+// message instead of being masked as a generic 500 by the global error handler.
+const createUploadError = (message) => {
+    const error = new Error(message);
+    error.isUploadError = true;
+    error.statusCode = 400;
+    return error;
+};
+
+// A file matches a kind when either its mimetype or its extension is allowed
+const matchesKind = (file, kind) => {
+    if (ALLOWED_MIMETYPES[kind].includes(file.mimetype)) return true;
+    return ALLOWED_EXTENSIONS[kind].includes(path.extname(file.originalname || '').toLowerCase());
+};
+
+// Resolve what a file actually is, so storage routing does not depend on a
+// mimetype the browser may have reported wrongly
+const detectKind = (file) => {
+    if (matchesKind(file, 'images')) return 'images';
+    if (matchesKind(file, 'videos')) return 'videos';
+    if (matchesKind(file, 'audio')) return 'audio';
+    return null;
+};
+
+const describeRejection = (file, allowedExtensions) =>
+    `"${file.originalname}" is not a supported format (${file.mimetype || 'unknown type'}). ` +
+    `Allowed: ${allowedExtensions.map(e => e.replace('.', '').toUpperCase()).join(', ')}.`;
 
 // Generate unique filename
 const generateFileName = (originalname, prefix = '') => {
@@ -105,43 +144,46 @@ const audioStorage = multer.diskStorage({
 
 // File filter for images
 const imageFileFilter = (req, file, cb) => {
-    if (ALLOWED_MIMETYPES.images.includes(file.mimetype)) {
+    if (matchesKind(file, 'images')) {
         cb(null, true);
     } else {
-        cb(new Error(`Invalid image type. Allowed: ${ALLOWED_MIMETYPES.images.join(', ')}`), false);
+        cb(createUploadError(describeRejection(file, ALLOWED_EXTENSIONS.images)), false);
     }
 };
 
 // File filter for videos
 const videoFileFilter = (req, file, cb) => {
-    if (ALLOWED_MIMETYPES.videos.includes(file.mimetype)) {
+    if (matchesKind(file, 'videos')) {
         cb(null, true);
     } else {
-        cb(new Error(`Invalid video type. Allowed: ${ALLOWED_MIMETYPES.videos.join(', ')}`), false);
+        cb(createUploadError(describeRejection(file, ALLOWED_EXTENSIONS.videos)), false);
     }
 };
 
 // File filter for audio
 const audioFileFilter = (req, file, cb) => {
-    if (ALLOWED_MIMETYPES.audio.includes(file.mimetype)) {
+    if (matchesKind(file, 'audio')) {
         cb(null, true);
     } else {
-        cb(new Error(`Invalid audio type. Allowed: ${ALLOWED_MIMETYPES.audio.join(', ')}`), false);
+        cb(createUploadError(describeRejection(file, ALLOWED_EXTENSIONS.audio)), false);
     }
 };
 
 // Generic file filter for mixed uploads
 const mixedFileFilter = (req, file, cb) => {
-    const allAllowedTypes = [
-        ...ALLOWED_MIMETYPES.images,
-        ...ALLOWED_MIMETYPES.videos,
-        ...ALLOWED_MIMETYPES.audio
-    ];
+    const kind = detectKind(file);
 
-    if (allAllowedTypes.includes(file.mimetype)) {
+    if (kind) {
+        // Remember the resolved kind so storage puts the file in the right folder
+        file.detectedKind = kind;
         cb(null, true);
     } else {
-        cb(new Error(`Invalid file type: ${file.mimetype}`), false);
+        const allowed = [
+            ...ALLOWED_EXTENSIONS.images,
+            ...ALLOWED_EXTENSIONS.videos,
+            ...ALLOWED_EXTENSIONS.audio
+        ];
+        cb(createUploadError(describeRejection(file, allowed)), false);
     }
 };
 
@@ -176,8 +218,10 @@ const uploadMixed = multer({
         destination: (req, file, cb) => {
             let uploadPath;
 
-            // Determine destination based on file type
-            if (file.mimetype.startsWith('image/')) {
+            // Prefer the kind resolved by the filter (mimetype can be wrong/generic)
+            const kind = file.detectedKind || detectKind(file);
+
+            if (kind === 'images') {
                 if (file.fieldname === 'poster') {
                     uploadPath = UPLOAD_DIRS.posters;
                 } else if (file.fieldname === 'backdrop') {
@@ -187,9 +231,9 @@ const uploadMixed = multer({
                 } else {
                     uploadPath = UPLOAD_DIRS.images;
                 }
-            } else if (file.mimetype.startsWith('video/')) {
+            } else if (kind === 'videos') {
                 uploadPath = UPLOAD_DIRS.videos;
-            } else if (file.mimetype.startsWith('audio/')) {
+            } else if (kind === 'audio') {
                 uploadPath = UPLOAD_DIRS.audio;
             } else {
                 uploadPath = UPLOAD_DIRS.images; // fallback
@@ -199,12 +243,10 @@ const uploadMixed = multer({
             cb(null, uploadPath);
         },
         filename: (req, file, cb) => {
-            let prefix = 'file_';
-            if (file.mimetype.startsWith('image/')) prefix = 'img_';
-            if (file.mimetype.startsWith('video/')) prefix = 'video_';
-            if (file.mimetype.startsWith('audio/')) prefix = 'audio_';
+            const kind = file.detectedKind || detectKind(file);
+            const prefixes = { images: 'img_', videos: 'video_', audio: 'audio_' };
 
-            cb(null, generateFileName(file.originalname, prefix));
+            cb(null, generateFileName(file.originalname, prefixes[kind] || 'file_'));
         }
     }),
     limits: { fileSize: FILE_SIZE_LIMITS.VIDEO }, // Use max limit
@@ -414,8 +456,10 @@ module.exports = {
     deleteFile,
     getFilePathFromUrl,
     transformFileToResponse,
+    createUploadError,
     FILE_SIZE_LIMITS,
     ALLOWED_MIMETYPES,
+    ALLOWED_EXTENSIONS,
     UPLOAD_DIRS,
     UPLOAD_BASE
 };
