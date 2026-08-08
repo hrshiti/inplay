@@ -772,6 +772,9 @@ const Users = () => {
   // Export Date Filters
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchUsers();
@@ -964,6 +967,13 @@ const Users = () => {
     document.body.removeChild(a);
   };
 
+  const itemsPerPage = 50;
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const paginatedUsers = users.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div style={{ padding: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
@@ -984,7 +994,7 @@ const Users = () => {
               <span style={{ color: '#b91c1c' }}>{error}</span>
             ) : (
               <strong style={{ color: '#064e3b' }}>
-                Real-time Data: {users.length} users ({users.filter(u => u.status === 'active').length} active, {users.filter(u => u.status === 'inactive').length} inactive)
+                Real-time Data: {users.length} users ({users.filter(u => u.status === 'active').length} active, {users.filter(u => u.status === 'inactive').length} inactive) - Page {currentPage} of {Math.max(1, totalPages)}
               </strong>
             )}
           </div>
@@ -1067,7 +1077,7 @@ const Users = () => {
       </div>
 
       <DataTable
-        data={users}
+        data={paginatedUsers}
         columns={columns}
         title="All Users"
         onEdit={handleEdit}
@@ -1077,6 +1087,46 @@ const Users = () => {
         error={error}
         emptyMessage={isLoading ? "Loading..." : "No users found."}
       />
+      
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px', paddingBottom: '24px' }}>
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              background: currentPage === 1 ? '#f3f4f6' : 'white',
+              color: currentPage === 1 ? '#9ca3af' : '#374151',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '500'
+            }}
+          >
+            Previous
+          </button>
+          <div style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: '500' }}>
+            Page <span style={{ color: '#111827' }}>{currentPage}</span> of {totalPages}
+          </div>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              background: currentPage === totalPages ? '#f3f4f6' : 'white',
+              color: currentPage === totalPages ? '#9ca3af' : '#374151',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '500'
+            }}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* User Modal */}
       {selectedUser && (
