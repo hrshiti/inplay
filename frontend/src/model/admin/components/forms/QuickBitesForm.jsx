@@ -1,5 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, X, Save, ArrowLeft, Play, Plus, Trash2 } from 'lucide-react';
+
+// Keep these in sync with ALLOWED_EXTENSIONS in backend/config/multerStorage.js,
+// so a bad file is rejected here instead of after a long upload.
+const ALLOWED_VIDEO_EXTENSIONS = ['mp4', 'm4v', 'mov', 'avi', 'mkv', 'webm', '3gp', 'ts', 'mpeg', 'mpg'];
+const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const MAX_VIDEO_PARTS = 20;
+
+const getExtension = (name = '') => name.split('.').pop().toLowerCase();
 
 export default function QuickBitesForm({ content = null, onSave, onCancel }) {
     const [formData, setFormData] = useState({
@@ -25,33 +33,37 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
     });
 
     const [files, setFiles] = useState({
-        videos: [],
         thumbnail: null
     });
 
+    // Each new video part carries its own File object, so removing one by index
+    // can never drop a different part that happens to share the same filename.
     const [previews, setPreviews] = useState({
         videos: content?.episodes?.length
-            ? content.episodes.map(e => ({ url: e.url, type: 'url' }))
-            : (content?.video?.url ? [{ url: content.video.url, type: 'url' }] : []),
+            ? content.episodes.map((e, idx) => ({ url: e.url, type: 'url', name: e.title || `Episode ${idx + 1}` }))
+            : (content?.video?.url ? [{ url: content.video.url, type: 'url', name: 'Episode 1' }] : []),
         thumbnail: content?.thumbnail?.url || content?.poster?.url || ''
     });
 
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Cleanup object URLs on unmount
+    // Cleanup object URLs on unmount only. Revoking on every `previews` change
+    // would kill blob URLs that are still rendered (e.g. the thumbnail preview).
+    const previewsRef = useRef(previews);
+    previewsRef.current = previews;
+
     useEffect(() => {
         return () => {
-            if (previews.videos) {
-                previews.videos.forEach(v => {
-                    if (v.type === 'blob') URL.revokeObjectURL(v.url);
-                });
-            }
-            if (previews.thumbnail && typeof previews.thumbnail === 'string' && previews.thumbnail.startsWith('blob:')) {
-                URL.revokeObjectURL(previews.thumbnail);
+            const current = previewsRef.current;
+            current.videos?.forEach(v => {
+                if (v.type === 'blob') URL.revokeObjectURL(v.url);
+            });
+            if (typeof current.thumbnail === 'string' && current.thumbnail.startsWith('blob:')) {
+                URL.revokeObjectURL(current.thumbnail);
             }
         };
-    }, [previews]);
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -66,10 +78,50 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
 
     const validateForm = () => {
         const newErrors = {};
-        if (!formData.title.trim()) newErrors.title = 'Title is required';
-        if (!formData.description.trim()) newErrors.description = 'Description is required';
-        if (previews.videos.length === 0) newErrors.video = 'At least one video part is required';
+        const newVideoCount = previews.videos.filter(v => v.type === 'blob').length;
+
+        if (!formData.title.trim()) {
+            newErrors.title = 'Title is required';
+        } else if (formData.title.trim().length > 100) {
+            newErrors.title = `Title is too long (${formData.title.trim().length}/100 characters)`;
+        }
+
+        if (!formData.description.trim()) {
+            newErrors.description = 'Description is required';
+        } else if (formData.description.trim().length > 1000) {
+            newErrors.description = `Description is too long (${formData.description.trim().length}/1000 characters)`;
+        }
+
+        if (previews.videos.length === 0) {
+            newErrors.video = 'At least one video part is required';
+        } else if (newVideoCount > MAX_VIDEO_PARTS) {
+            newErrors.video = `You can upload at most ${MAX_VIDEO_PARTS} video parts at a time (selected ${newVideoCount})`;
+        }
+
         if (!files.thumbnail && !previews.thumbnail) newErrors.thumbnail = 'Thumbnail is required';
+
+        const rating = Number(formData.rating);
+        if (formData.rating === '' || Number.isNaN(rating)) {
+            newErrors.rating = 'Rating must be a number';
+        } else if (rating < 0 || rating > 10) {
+            newErrors.rating = 'Rating must be between 0 and 10';
+        }
+
+        const year = Number(formData.year);
+        if (formData.year === '' || Number.isNaN(year)) {
+            newErrors.year = 'Year must be a number';
+        } else if (year < 1900 || year > new Date().getFullYear() + 5) {
+            newErrors.year = `Year must be between 1900 and ${new Date().getFullYear() + 5}`;
+        }
+
+        const fakeViews = Number(formData.fakeViews);
+        if (formData.fakeViews === '' || Number.isNaN(fakeViews) || fakeViews < 0) {
+            newErrors.fakeViews = 'Fake views must be 0 or more';
+        }
+
+        if (formData.status === 'scheduled' && !formData.publishAt) {
+            newErrors.publishAt = 'Pick a publish date & time for scheduled content';
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -77,97 +129,116 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (validateForm()) {
-            setIsSubmitting(true);
-            try {
-                const submissionData = new FormData();
-                submissionData.append('title', formData.title);
-                submissionData.append('description', formData.description);
-                submissionData.append('genre', formData.genre);
-                submissionData.append('year', formData.year);
-                submissionData.append('rating', formData.rating);
-                submissionData.append('isNewAndHot', formData.isNewAndHot);
-                submissionData.append('isOriginal', formData.isOriginal);
-                submissionData.append('isRanking', formData.isRanking);
-                submissionData.append('isMovie', formData.isMovie);
-                submissionData.append('isTV', formData.isTV);
-                submissionData.append('isPopular', formData.isPopular);
-                submissionData.append('isDarmaaHero', formData.isDarmaaHero);
-                submissionData.append('isBhojpuriHero', formData.isBhojpuriHero);
-                submissionData.append('targetCategory', formData.targetCategory);
-                submissionData.append('type', 'reel');
-                submissionData.append('status', formData.status);
-                submissionData.append('views', formData.views);
-                submissionData.append('fakeViews', formData.fakeViews);
 
-                if (files.videos && files.videos.length > 0) {
-                    files.videos.forEach(file => {
-                        submissionData.append('videos', file);
-                    });
-                }
-                if (files.thumbnail) {
-                    submissionData.append('poster', files.thumbnail);
-                }
+        if (!validateForm()) {
+            setErrors(prev => ({ ...prev, submit: 'Please fix the highlighted fields before saving.' }));
+            return;
+        }
 
-                await onSave(submissionData);
-            } catch (error) {
-                console.error('Submission error:', error);
-                setErrors(prev => ({ ...prev, submit: error.message || 'Failed to save' }));
-            } finally {
-                setIsSubmitting(false);
+        setIsSubmitting(true);
+        setErrors(prev => ({ ...prev, submit: '' }));
+
+        try {
+            const submissionData = new FormData();
+            submissionData.append('title', formData.title.trim());
+            submissionData.append('description', formData.description.trim());
+            submissionData.append('genre', formData.genre);
+            submissionData.append('year', formData.year);
+            submissionData.append('rating', formData.rating);
+            submissionData.append('isNewAndHot', formData.isNewAndHot);
+            submissionData.append('isOriginal', formData.isOriginal);
+            submissionData.append('isRanking', formData.isRanking);
+            submissionData.append('isMovie', formData.isMovie);
+            submissionData.append('isTV', formData.isTV);
+            submissionData.append('isPopular', formData.isPopular);
+            submissionData.append('isDarmaaHero', formData.isDarmaaHero);
+            submissionData.append('isBhojpuriHero', formData.isBhojpuriHero);
+            submissionData.append('targetCategory', formData.targetCategory);
+            submissionData.append('type', 'reel');
+            submissionData.append('status', formData.status);
+            submissionData.append('views', formData.views);
+            submissionData.append('fakeViews', formData.fakeViews);
+            if (formData.status === 'scheduled') {
+                submissionData.append('publishAt', new Date(formData.publishAt).toISOString());
             }
+
+            previews.videos
+                .filter(v => v.type === 'blob' && v.file)
+                .forEach(v => submissionData.append('videos', v.file));
+
+            if (files.thumbnail) {
+                submissionData.append('poster', files.thumbnail);
+            }
+
+            await onSave(submissionData);
+        } catch (error) {
+            console.error('Submission error:', error);
+            setErrors(prev => ({ ...prev, submit: error.message || 'Failed to save. Please try again.' }));
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleVideoAdd = (e) => {
         const selectedFiles = Array.from(e.target.files);
-        if (selectedFiles.length > 0) {
-            setFiles(prev => ({
-                ...prev,
-                videos: [...prev.videos, ...selectedFiles]
-            }));
+        e.target.value = ''; // allow re-picking the same file after a removal
+        if (selectedFiles.length === 0) return;
 
-            const newPreviews = selectedFiles.map(file => ({
+        const rejected = selectedFiles.filter(file => !ALLOWED_VIDEO_EXTENSIONS.includes(getExtension(file.name)));
+        const accepted = selectedFiles.filter(file => ALLOWED_VIDEO_EXTENSIONS.includes(getExtension(file.name)));
+
+        if (accepted.length > 0) {
+            const newPreviews = accepted.map(file => ({
                 url: URL.createObjectURL(file),
                 type: 'blob',
-                name: file.name
+                name: file.name,
+                file
             }));
 
             setPreviews(prev => ({
                 ...prev,
                 videos: [...prev.videos, ...newPreviews]
             }));
-
-            if (errors.video) setErrors(prev => ({ ...prev, video: '' }));
         }
+
+        setErrors(prev => ({
+            ...prev,
+            video: rejected.length > 0
+                ? `Unsupported video format: ${rejected.map(f => f.name).join(', ')}. Allowed: ${ALLOWED_VIDEO_EXTENSIONS.join(', ').toUpperCase()}`
+                : ''
+        }));
     };
 
     const handleRemoveVideo = (index) => {
         setPreviews(prev => {
             const newVs = [...prev.videos];
-            const item = newVs[index];
-
-            if (item.type === 'blob') {
-                URL.revokeObjectURL(item.url);
-                setFiles(f => ({
-                    ...f,
-                    videos: f.videos.filter(v => v.name !== item.name) // Remove by name
-                }));
-            }
-
-            newVs.splice(index, 1);
+            const [removed] = newVs.splice(index, 1);
+            if (removed?.type === 'blob') URL.revokeObjectURL(removed.url);
             return { ...prev, videos: newVs };
         });
     };
 
     const handleThumbnailUpload = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setFiles(prev => ({ ...prev, thumbnail: file }));
-            const previewUrl = URL.createObjectURL(file);
-            setPreviews(prev => ({ ...prev, thumbnail: previewUrl }));
-            if (errors.thumbnail) setErrors(prev => ({ ...prev, thumbnail: '' }));
+        e.target.value = '';
+        if (!file) return;
+
+        if (!ALLOWED_IMAGE_EXTENSIONS.includes(getExtension(file.name))) {
+            setErrors(prev => ({
+                ...prev,
+                thumbnail: `Unsupported image format: ${file.name}. Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(', ').toUpperCase()}`
+            }));
+            return;
         }
+
+        setPreviews(prev => {
+            if (typeof prev.thumbnail === 'string' && prev.thumbnail.startsWith('blob:')) {
+                URL.revokeObjectURL(prev.thumbnail);
+            }
+            return { ...prev, thumbnail: URL.createObjectURL(file) };
+        });
+        setFiles(prev => ({ ...prev, thumbnail: file }));
+        setErrors(prev => ({ ...prev, thumbnail: '' }));
     };
 
     return (
@@ -198,55 +269,29 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '24px', background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    {/* Title */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                            Title *
-                        </label>
-                        <input
-                            type="text"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleInputChange}
-                            placeholder="e.g., Funny Moment from Movie"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: `1px solid ${errors.title ? '#ef4444' : '#d1d5db'}`,
-                                borderRadius: '6px',
-                                fontSize: '0.9rem',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                        {errors.title && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.title}</p>}
-                    </div>
-
-                    {/* Status */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                            Status
-                        </label>
-                        <select
-                            name="status"
-                            value={formData.status}
-                            onChange={handleInputChange}
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '6px',
-                                fontSize: '0.9rem',
-                                outline: 'none',
-                                background: 'white',
-                                boxSizing: 'border-box'
-                            }}
-                        >
-                            <option value="draft">Draft (Hidden)</option>
-                            <option value="published">Published (Visible)</option>
-                        </select>
-                    </div>
+                {/* Title */}
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                        Title *
+                    </label>
+                    <input
+                        type="text"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        maxLength={100}
+                        placeholder="e.g., Funny Moment from Movie"
+                        style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1px solid ${errors.title ? '#ef4444' : '#d1d5db'}`,
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                        }}
+                    />
+                    {errors.title && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.title}</p>}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
@@ -312,6 +357,7 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                         value={formData.description}
                         onChange={handleInputChange}
                         placeholder="Enter content description"
+                        maxLength={1000}
                         rows={3}
                         style={{
                             width: '100%',
@@ -347,23 +393,29 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                         <input
                             type="number"
                             name="year"
+                            min="1900"
+                            max={new Date().getFullYear() + 5}
                             value={formData.year}
                             onChange={handleInputChange}
-                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${errors.year ? '#ef4444' : '#d1d5db'}`, boxSizing: 'border-box' }}
                         />
+                        {errors.year && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.year}</p>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                            Rating
+                            Rating (0 - 10)
                         </label>
                         <input
                             type="number"
                             name="rating"
                             step="0.1"
+                            min="0"
+                            max="10"
                             value={formData.rating}
                             onChange={handleInputChange}
-                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${errors.rating ? '#ef4444' : '#d1d5db'}`, boxSizing: 'border-box' }}
                         />
+                        {errors.rating && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.rating}</p>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
@@ -372,10 +424,12 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                         <input
                             type="number"
                             name="fakeViews"
+                            min="0"
                             value={formData.fakeViews}
                             onChange={handleInputChange}
-                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${errors.fakeViews ? '#ef4444' : '#d1d5db'}`, boxSizing: 'border-box' }}
                         />
+                        {errors.fakeViews && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.fakeViews}</p>}
                     </div>
                 </div>
 
@@ -406,9 +460,9 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                                 name="publishAt"
                                 value={formData.publishAt}
                                 onChange={handleInputChange}
-                                required={formData.status === 'scheduled'}
-                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', background: 'white' }}
+                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${errors.publishAt ? '#ef4444' : '#d1d5db'}`, boxSizing: 'border-box', background: 'white' }}
                             />
+                            {errors.publishAt && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>{errors.publishAt}</p>}
                         </div>
                     )}
                 </div>
@@ -475,6 +529,8 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
                             </label>
                             <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '8px' }}>
                                 Upload multiple clips. They will play in sequence.
+                                <br />
+                                Allowed: {ALLOWED_VIDEO_EXTENSIONS.join(', ').toUpperCase()} &middot; max {MAX_VIDEO_PARTS} parts per upload.
                             </p>
                         </div>
                     </div>
@@ -536,7 +592,13 @@ export default function QuickBitesForm({ content = null, onSave, onCancel }) {
 
                 {/* Error Message */}
                 {errors.submit && (
-                    <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '6px', color: '#b91c1c', fontSize: '0.9rem' }}>
+                    <div style={{
+                        padding: '12px 14px', background: '#fee2e2', border: '1px solid #fecaca',
+                        borderRadius: '6px', color: '#b91c1c', fontSize: '0.9rem', lineHeight: '1.5'
+                    }}>
+                        <strong style={{ display: 'block', marginBottom: '2px' }}>
+                            {content ? 'Could not update this Quick Bite' : 'Could not save this Quick Bite'}
+                        </strong>
                         {errors.submit}
                     </div>
                 )}

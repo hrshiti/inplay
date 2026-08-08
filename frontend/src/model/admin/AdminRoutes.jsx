@@ -2010,7 +2010,8 @@ const AddQuickBite = () => {
       navigate('/admin/quick-bytes');
     } catch (error) {
       console.error('Failed to save:', error);
-      alert('Failed to save Quick Bite. Check console for details.');
+      // Re-throw so the form shows the real reason inline instead of a generic alert
+      throw new Error(error.message || 'Failed to save Quick Bite.');
     }
   };
   return (
@@ -2052,7 +2053,8 @@ const EditQuickBite = () => {
       navigate('/admin/quick-bytes');
     } catch (error) {
       console.error('Failed to update:', error);
-      alert('Failed to update: ' + error.message);
+      // Re-throw so the form shows the real reason inline instead of a generic alert
+      throw new Error(error.message || 'Failed to update Quick Bite.');
     }
   };
 

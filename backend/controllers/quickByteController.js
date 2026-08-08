@@ -9,6 +9,23 @@ const { hydrateHlsUrl } = require('../utils/hlsUrl');
 // Files are automatically saved to disk by the uploadMixed middleware
 
 
+// Turn any save/validation failure into a message an admin can act on
+const describeError = (error) => {
+    if (error.name === 'ValidationError' && error.errors) {
+        return Object.values(error.errors).map(e => e.message).join(', ');
+    }
+    if (error.name === 'CastError') {
+        return `"${error.value}" is not a valid value for ${error.path}.`;
+    }
+    return error.message || 'Unexpected server error';
+};
+
+const errorStatus = (error) => {
+    if (error.statusCode) return error.statusCode;
+    if (error.name === 'ValidationError' || error.name === 'CastError') return 400;
+    return 500;
+};
+
 // Helper to hydrate relative URLs to absolute URLs
 const hydrateQuickByte = (doc) => {
     if (!doc) return doc;
@@ -66,20 +83,36 @@ const getAllQuickBytes = async (req, res) => {
 // @route   POST /api/quickbytes
 // @access  Private (Admin)
 const createQuickByteHandler = async (req, res) => {
-    let mediaUrls = {};
+    let uploadedPaths = [];
     try {
         const {
-            title, status, audioTitle, description,
+            title, status, audioTitle, description, publishAt,
             genre, year, rating, fakeViews,
             isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero,
             isBhojpuriHero, targetCategory
         } = req.body;
         const files = req.files || {};
 
-        if (!title) throw new Error('Title is required');
+        // Track every file multer wrote, so nothing is orphaned if we bail out
+        uploadedPaths = Object.values(files).flat().map(f => f.path).filter(Boolean);
+
+        // Validate required data up front with specific messages
+        const missing = [];
+        if (!title || !title.trim()) missing.push('Title');
+        if (!files.video?.length && !files.videos?.length) missing.push('At least one video file');
+        if (missing.length > 0) {
+            throw Object.assign(
+                new Error(`Missing required ${missing.length > 1 ? 'data' : 'field'}: ${missing.join(', ')}.`),
+                { statusCode: 400 }
+            );
+        }
 
         // Determine intended status - publish immediately
         const intendedStatus = status || 'published';
+
+        if (intendedStatus === 'scheduled' && !publishAt) {
+            throw Object.assign(new Error('A publish date & time is required for scheduled Quick Bites.'), { statusCode: 400 });
+        }
 
         const quickByte = new QuickByte({
             title,
@@ -98,14 +131,14 @@ const createQuickByteHandler = async (req, res) => {
             isPopular: isPopular === 'true' || isPopular === true,
             isDarmaaHero: isDarmaaHero === 'true' || isDarmaaHero === true,
             isBhojpuriHero: isBhojpuriHero === 'true' || isBhojpuriHero === true,
-            targetCategory: targetCategory || 'Darmaa'
+            targetCategory: targetCategory || 'Darmaa',
+            publishAt: intendedStatus === 'scheduled' ? new Date(publishAt) : null
         });
 
         // Transform uploaded video (already saved by multer)
         if (files.video && files.video[0]) {
             const result = transformFileToResponse(files.video[0]);
             quickByte.video = result;
-            mediaUrls.video = result.path;
         }
 
         // Transform uploaded episodes (already saved by multer)
@@ -125,7 +158,6 @@ const createQuickByteHandler = async (req, res) => {
         if (files.poster && files.poster[0]) {
             const result = transformFileToResponse(files.poster[0]);
             quickByte.thumbnail = result;
-            mediaUrls.thumbnail = result.path;
         }
 
         // Transform uploaded audio
@@ -135,7 +167,6 @@ const createQuickByteHandler = async (req, res) => {
                 ...result,
                 title: audioTitle || 'Original Audio'
             };
-            mediaUrls.audio = result.path;
         }
 
         await quickByte.save();
@@ -206,14 +237,14 @@ const createQuickByteHandler = async (req, res) => {
         // Removed immediate notification, now handled after HLS
 
     } catch (error) {
-        // Cleanup uploaded files from disk
-        if (mediaUrls.video) deleteFile(mediaUrls.video);
-        if (mediaUrls.thumbnail) deleteFile(mediaUrls.thumbnail);
-        if (mediaUrls.audio) deleteFile(mediaUrls.audio);
+        console.error('Create Quick Bite failed:', error);
 
-        res.status(400).json({
+        // Cleanup every uploaded file from disk (including episode parts)
+        uploadedPaths.forEach(filePath => deleteFile(filePath));
+
+        res.status(errorStatus(error)).json({
             success: false,
-            message: error.message
+            message: describeError(error)
         });
     }
 };
@@ -241,10 +272,9 @@ const getQuickByteById = async (req, res) => {
 // @route   PUT /api/quickbytes/:id
 // @access  Private (Admin)
 const updateQuickByteHandler = async (req, res) => {
-    let mediaUrls = {};
     try {
         const {
-            title, status, audioTitle, description,
+            title, status, audioTitle, description, publishAt,
             genre, year, rating, fakeViews,
             isNewAndHot, isOriginal, isRanking, isMovie, isTV, isPopular, isDarmaaHero,
             isBhojpuriHero, targetCategory
@@ -252,11 +282,21 @@ const updateQuickByteHandler = async (req, res) => {
         const files = req.files || {};
 
         let quickByte = await QuickByte.findById(req.params.id);
-        if (!quickByte) return res.status(404).json({ success: false, message: 'Not found' });
+        if (!quickByte) {
+            return res.status(404).json({ success: false, message: 'This Quick Bite no longer exists. It may have been deleted.' });
+        }
+
+        if (title !== undefined && !title.trim()) {
+            throw Object.assign(new Error('Title cannot be empty.'), { statusCode: 400 });
+        }
+        if (status === 'scheduled' && !publishAt && !quickByte.publishAt) {
+            throw Object.assign(new Error('A publish date & time is required for scheduled Quick Bites.'), { statusCode: 400 });
+        }
 
         // Update basic fields
         if (title !== undefined) quickByte.title = title;
         if (status !== undefined) quickByte.status = status;
+        if (publishAt !== undefined) quickByte.publishAt = publishAt ? new Date(publishAt) : null;
         if (description !== undefined) quickByte.description = description;
         if (genre !== undefined) quickByte.genre = genre;
         if (year !== undefined) quickByte.year = year;
@@ -371,9 +411,10 @@ const updateQuickByteHandler = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        console.error('Update Quick Bite failed:', error);
+        res.status(errorStatus(error)).json({
             success: false,
-            message: error.message
+            message: describeError(error)
         });
     }
 };

@@ -367,6 +367,33 @@ app.use('*', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Error:', err);
 
+  // Multer errors (file too large, too many files, unexpected field)
+  if (err instanceof multer.MulterError) {
+    const multerMessages = {
+      LIMIT_FILE_SIZE: 'One of the uploaded files is larger than the allowed limit.',
+      LIMIT_FILE_COUNT: 'Too many files were uploaded at once.',
+      LIMIT_PART_COUNT: 'Too many form parts in this upload.',
+      LIMIT_FIELD_KEY: 'A form field name is too long.',
+      LIMIT_FIELD_VALUE: 'A form field value is too long.',
+      LIMIT_FIELD_COUNT: 'Too many form fields in this upload.',
+      LIMIT_UNEXPECTED_FILE: `Unexpected file field "${err.field}". Too many files, or the wrong upload field was used.`
+    };
+
+    return res.status(400).json({
+      success: false,
+      message: multerMessages[err.code] || `Upload failed: ${err.message}`,
+      code: err.code
+    });
+  }
+
+  // Rejected file type from our upload filters - the message is safe to show
+  if (err.isUploadError) {
+    return res.status(err.statusCode || 400).json({
+      success: false,
+      message: err.message
+    });
+  }
+
   // Mongoose validation error
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(val => val.message);
