@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash, GripVertical, Check, X, Search } from 'lucide-react';
 import CinemaSectionService from '../../../services/api/cinemaSectionService';
-import contentService from '../../../services/api/contentService';
+import adminContentService from '../../../services/api/adminContentService';
 import { getImageUrl } from '../../../utils/imageUtils';
 
 export default function CinemaSectionsPage() {
@@ -35,9 +35,9 @@ export default function CinemaSectionsPage() {
     const fetchCinemaVideos = async () => {
         try {
             // Fetch all content to allow admins to pick any standard content for Cinema
-            const data = await contentService.getAllContent({ limit: 500 });
+            const response = await adminContentService.getAllContent({ limit: 500 });
             // Filter out bhojpuri and reels as they belong to other sections
-            const cinemaContents = (data || []).filter(c => 
+            const cinemaContents = (response.data || []).filter(c => 
                 c.type !== 'bhojpuri' && c.type !== 'reel' && !c.dynamicTabId
             );
             setCinemaVideos(cinemaContents);

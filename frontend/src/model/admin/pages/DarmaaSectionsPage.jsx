@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash, GripVertical, Check, X, Search } from 'lucide-react';
 import darmaaSectionService from '../../../services/api/darmaaSectionService';
-import contentService from '../../../services/api/contentService';
+import adminQuickByteService from '../../../services/api/adminQuickByteService';
 import { getImageUrl } from '../../../utils/imageUtils';
 
 export default function DarmaaSectionsPage() {
@@ -34,7 +34,7 @@ export default function DarmaaSectionsPage() {
 
     const fetchQuickBytes = async () => {
         try {
-            const data = await contentService.getQuickBytes(100);
+            const data = await adminQuickByteService.getAllReels();
             setQuickBytes(data);
         } catch (error) {
             console.error("Failed to fetch QuickBytes:", error);

@@ -6,7 +6,7 @@ const adminUserService = {
         const token = localStorage.getItem('adminToken');
         if (!token) throw new Error('No admin token found');
 
-        const response = await fetch(`${API_URL}/admin/users?limit=2000`, {
+        const response = await fetch(`${API_URL}/admin/users?limit=0`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

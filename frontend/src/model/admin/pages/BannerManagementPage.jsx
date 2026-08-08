@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash, GripVertical, Check, X, Image as ImageIcon, Film } from 'lucide-react';
 import bannerService from '../../../services/api/bannerService';
-import contentService from '../../../services/api/contentService';
+import adminContentService from '../../../services/api/adminContentService';
+import adminQuickByteService from '../../../services/api/adminQuickByteService';
 import { getImageUrl } from '../../../utils/imageUtils';
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.inplays.in/api';
@@ -25,10 +26,11 @@ export default function BannerManagementPage() {
 
     const fetchAllContent = async () => {
         try {
-            const [data, quickBites] = await Promise.all([
-                contentService.getAllContent(),
-                contentService.getQuickBytes(500)
+            const [contentResponse, quickBites] = await Promise.all([
+                adminContentService.getAllContent({ limit: 500 }),
+                adminQuickByteService.getAllReels()
             ]);
+            const data = contentResponse.data;
             
             const formattedQuickBites = (quickBites || []).map(qb => ({
                 ...qb,

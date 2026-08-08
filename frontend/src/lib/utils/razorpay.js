@@ -73,14 +73,14 @@ export const initRazorpayPayment = async (options) => {
       description: options.description || 'Premium Subscription',
       image: options.image || 'https://inplay.com/logo.png',
       
-      // Explicitly enable UPI and others
+      // Explicitly enable only UPI
       method: {
         upi: true,
-        card: true,
-        netbanking: true,
-        wallet: true,
-        emi: true,
-        paylater: true,
+        card: false,
+        netbanking: false,
+        wallet: false,
+        emi: false,
+        paylater: false,
       },
       
       // Conditional setup: Flutter WebView needs redirect & intent, normal web browsers don't.
@@ -126,7 +126,7 @@ export const initRazorpayPayment = async (options) => {
         max_count: 3
       },
 
-      // App A Reference Config: Priority for UPI Apps Icons
+      // Config: Priority for UPI Apps Icons
       config: {
         display: {
           blocks: {
@@ -140,7 +140,7 @@ export const initRazorpayPayment = async (options) => {
               ]
             }
           },
-          sequence: ["block.upi", "block.card", "block.netbanking", "block.wallet"],
+          sequence: ["block.upi"],
           preferences: {
             show_default_blocks: true,
             show_recommended_instruments: true

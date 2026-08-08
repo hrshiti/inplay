@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash, GripVertical, Check, X, Search } from 'lucide-react';
 import bhojpuriSectionService from '../../../services/api/bhojpuriSectionService';
-import contentService from '../../../services/api/contentService';
+import adminContentService from '../../../services/api/adminContentService';
 import { getImageUrl } from '../../../utils/imageUtils';
 
 export default function BhojpuriSectionsPage() {
@@ -35,8 +35,8 @@ export default function BhojpuriSectionsPage() {
     const fetchBhojpuriVideos = async () => {
         try {
             // Fetch all bhojpuri type contents
-            const data = await contentService.getAllContent({ type: 'bhojpuri' });
-            setBhojpuriVideos(data || []);
+            const response = await adminContentService.getAllContent({ type: 'bhojpuri' });
+            setBhojpuriVideos(response.data || []);
         } catch (error) {
             console.error("Failed to fetch Bhojpuri videos:", error);
         }
