@@ -42,24 +42,62 @@ const listFiles = (dir) => {
     return out;
 };
 
-// Pull every /uploads/... path referenced anywhere in a document
-const collectReferences = (value, into) => {
+const toAbsolute = (uploadsPath) =>
+    path.join(UPLOAD_BASE, uploadsPath.replace('/uploads/', '').replace(/\//g, path.sep));
+
+/**
+ * Pull every /uploads/... path referenced anywhere in a document.
+ *
+ * Filenames are not always safe to regex out of a string: the generic /upload
+ * route keeps the original name, so spaces are common ("My Image 1.webp").
+ * A whitespace-terminated match would truncate those and mark a live file as
+ * orphaned. So we record several candidates per occurrence, and additionally
+ * track basenames as a conservative safety net - keeping a little junk is fine,
+ * deleting a referenced file is not.
+ */
+const collectReferences = (value, into, basenames) => {
     if (!value) return;
 
     if (typeof value === 'string') {
-        // matchAll, not match: a single string can hold several media paths
-        // (e.g. HTML or a joined list). Missing one would delete a live file.
-        for (const match of value.matchAll(/\/uploads\/[^\s"'?,)\]]+/g)) {
-            into.add(path.join(UPLOAD_BASE, match[0].replace('/uploads/', '').replace(/\//g, path.sep)));
+        let index = value.indexOf('/uploads/');
+
+        while (index !== -1) {
+            const tail = value.slice(index);
+
+            const candidates = [
+                tail,                                    // rest of the string (handles spaces)
+                tail.split(/["'?]/)[0],                  // up to a quote or query string
+                tail.split(/\s/)[0]                      // up to whitespace
+            ];
+
+            for (const candidate of candidates) {
+                const cleaned = candidate.trim().replace(/[),\]]+$/, '');
+                if (!cleaned || cleaned === '/uploads/') continue;
+
+                for (const variant of new Set([cleaned, decodeURIComponentSafe(cleaned)])) {
+                    into.add(toAbsolute(variant));
+                    basenames.add(path.basename(variant));
+                }
+            }
+
+            index = value.indexOf('/uploads/', index + 1);
         }
         return;
     }
     if (Array.isArray(value)) {
-        value.forEach(v => collectReferences(v, into));
+        value.forEach(v => collectReferences(v, into, basenames));
         return;
     }
     if (typeof value === 'object') {
-        Object.values(value).forEach(v => collectReferences(v, into));
+        Object.values(value).forEach(v => collectReferences(v, into, basenames));
+    }
+};
+
+const decodeURIComponentSafe = (input) => {
+    try {
+        return decodeURIComponent(input);
+    } catch {
+        return input; // malformed escape sequence - keep as-is
     }
 };
 
@@ -80,23 +118,41 @@ const run = async () => {
     // Read every collection generically so new models are covered automatically
     const collections = await mongoose.connection.db.listCollections().toArray();
     const referenced = new Set();
+    const referencedBasenames = new Set();
 
-    for (const { name } of collections) {
-        const docs = await mongoose.connection.db.collection(name).find({}).toArray();
-        docs.forEach(doc => collectReferences(doc, referenced));
+    for (const { name: collectionName } of collections) {
+        const docs = await mongoose.connection.db.collection(collectionName).find({}).toArray();
+        docs.forEach(doc => collectReferences(doc, referenced, referencedBasenames));
     }
-    console.log(`Scanned ${collections.length} collections - ${referenced.size} referenced media paths\n`);
+    // Note: `referenced` holds several candidate spellings per occurrence, so its
+    // raw size is not a media count. Report what is actually verifiable instead.
+    console.log(`Scanned ${collections.length} collections for media references\n`);
 
     const onDisk = listFiles(UPLOAD_BASE);
-    const orphans = onDisk.filter(f => !referenced.has(f));
+
+    // A file is only junk when neither its full path nor its filename is
+    // referenced anywhere. The basename check is the guard against paths this
+    // script failed to extract cleanly from a string.
+    const orphans = onDisk.filter(f => !referenced.has(f) && !referencedBasenames.has(path.basename(f)));
+
+    // Report how many files the basename net saved - if this is non-zero, the
+    // path extraction missed something and is worth looking at.
+    const savedByBasename = onDisk.filter(f => !referenced.has(f) && referencedBasenames.has(path.basename(f)));
+    if (savedByBasename.length > 0) {
+        console.log(`ℹ️  ${savedByBasename.length} file(s) kept by the filename safety net (path was not matched exactly):`);
+        savedByBasename.slice(0, 5).forEach(f => console.log(`     ${path.relative(UPLOAD_BASE, f)}`));
+        if (savedByBasename.length > 5) console.log(`     ... and ${savedByBasename.length - 5} more`);
+        console.log('');
+    }
 
     let orphanBytes = 0;
     orphans.forEach(f => {
         try { orphanBytes += fs.statSync(f).size; } catch { /* gone */ }
     });
 
-    console.log(`Files on disk : ${onDisk.length}`);
-    console.log(`Orphaned      : ${orphans.length} (${formatBytes(orphanBytes)})`);
+    console.log(`Files on disk    : ${onDisk.length}`);
+    console.log(`Still referenced : ${onDisk.length - orphans.length}`);
+    console.log(`Orphaned         : ${orphans.length} (${formatBytes(orphanBytes)})`);
 
     orphans.slice(0, 20).forEach(f => console.log(`  - ${path.relative(UPLOAD_BASE, f)}`));
     if (orphans.length > 20) console.log(`  ... and ${orphans.length - 20} more`);
@@ -172,7 +228,12 @@ const run = async () => {
     if (DRY_RUN) console.log('\nDry run - re-run with --delete to actually remove these files.');
 };
 
-run().catch(error => {
-    console.error('Cleanup failed:', error);
-    process.exit(1);
-});
+// Only run when executed directly, so the helpers stay importable for testing
+if (require.main === module) {
+    run().catch(error => {
+        console.error('Cleanup failed:', error);
+        process.exit(1);
+    });
+}
+
+module.exports = { collectReferences, listFiles, toAbsolute };
