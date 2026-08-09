@@ -25,6 +25,7 @@ const { sweepStaleTempHls } = require('../utils/tempHlsSweeper');
 const args = process.argv.slice(2);
 const DRY_RUN = !args.includes('--delete');
 const DELETE_SOURCES = args.includes('--delete-transcoded-sources');
+const SKIP_HLS_CHECK = args.includes('--skip-hls-check');
 
 const TEMP_HLS = path.join(UPLOAD_BASE, 'temp_hls');
 
@@ -203,20 +204,73 @@ const run = async () => {
         console.log(`\nDeleted ${orphans.length} orphaned files, freed ${formatBytes(freed)}`);
     }
 
-    // Source MP4s that already have an HLS rendition on S3
+    // Source MP4s that already have an HLS rendition on S3.
+    // Model-agnostic: any nested object carrying both hls_url and a local url
+    // qualifies, so movies, series episodes, quickbytes, reels and promos are
+    // all covered without hardcoding a model list.
     if (DELETE_SOURCES) {
-        const QuickByte = require('../models/QuickByte');
-        const quickBytes = await QuickByte.find({}).lean();
-        const sources = [];
+        const sourceMap = new Map(); // absolute path -> hls_url
 
-        for (const qb of quickBytes) {
-            const candidates = [qb.video, ...(qb.episodes || [])];
-            for (const media of candidates) {
-                // Only when HLS exists - it is the only remaining copy otherwise
-                if (media?.hls_url && media?.url?.startsWith('/uploads/')) {
-                    const abs = path.join(UPLOAD_BASE, media.url.replace('/uploads/', '').replace(/\//g, path.sep));
-                    if (fs.existsSync(abs)) sources.push(abs);
+        const findTranscodedSources = (value) => {
+            if (!value || typeof value !== 'object') return;
+
+            if (Array.isArray(value)) {
+                value.forEach(findTranscodedSources);
+                return;
+            }
+
+            if (typeof value.hls_url === 'string' && value.hls_url &&
+                typeof value.url === 'string' && value.url.startsWith('/uploads/')) {
+                const abs = toAbsolute(value.url);
+                if (fs.existsSync(abs)) sourceMap.set(abs, value.hls_url);
+            }
+
+            Object.values(value).forEach(findTranscodedSources);
+        };
+
+        for (const { name: collectionName } of collections) {
+            const docs = await mongoose.connection.db.collection(collectionName).find({}).toArray();
+            docs.forEach(findTranscodedSources);
+        }
+
+        let sources = [...sourceMap.keys()];
+        console.log(`\nLocal sources that claim an HLS rendition: ${sources.length}`);
+
+        // Trust but verify: the DB says HLS exists, but deleting the only local
+        // copy on the strength of a database field is not acceptable. Confirm
+        // each playlist is actually reachable before removing its source.
+        if (!SKIP_HLS_CHECK) {
+            if (typeof fetch !== 'function') {
+                console.log('This Node build has no global fetch - re-run with --skip-hls-check to bypass verification (not advised).');
+                sources = [];
+            } else {
+                console.log('Verifying each HLS playlist is live on S3...');
+                const verified = [];
+                const unreachable = [];
+                const queue = [...sourceMap.entries()];
+                const CONCURRENCY = 8;
+
+                const worker = async () => {
+                    while (queue.length > 0) {
+                        const [abs, hlsUrl] = queue.shift();
+                        try {
+                            const response = await fetch(hlsUrl, { method: 'HEAD' });
+                            if (response.ok) verified.push(abs);
+                            else unreachable.push(`${path.basename(abs)} -> HTTP ${response.status}`);
+                        } catch (error) {
+                            unreachable.push(`${path.basename(abs)} -> ${error.message}`);
+                        }
+                    }
+                };
+
+                await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+                if (unreachable.length > 0) {
+                    console.log(`⚠️  ${unreachable.length} source(s) KEPT - their HLS could not be confirmed:`);
+                    unreachable.slice(0, 10).forEach(u => console.log(`     ${u}`));
+                    if (unreachable.length > 10) console.log(`     ... and ${unreachable.length - 10} more`);
                 }
+                sources = verified;
             }
         }
 
@@ -225,7 +279,7 @@ const run = async () => {
             try { sourceBytes += fs.statSync(f).size; } catch { /* gone */ }
         });
 
-        console.log(`\nTranscoded sources with HLS on S3: ${sources.length} (${formatBytes(sourceBytes)})`);
+        console.log(`Safe to remove (HLS confirmed): ${sources.length} (${formatBytes(sourceBytes)})`);
 
         if (!DRY_RUN) {
             let freed = 0;
