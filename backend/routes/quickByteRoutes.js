@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const quickByteController = require('../controllers/quickByteController');
 const { protect, authorize, subscribed } = require('../middlewares/auth');
+const { requireFreeDiskSpace } = require('../utils/diskSpace');
 
 // Requires an active subscription — no guest/unsubscribed browsing
 router.get('/', protect, subscribed, quickByteController.getAllQuickBytes);
@@ -16,8 +17,8 @@ router.delete('/comments/:id', protect, quickByteController.deleteComment);
 router.post('/comments/:id/like', protect, quickByteController.toggleCommentLike);
 
 // Protected Admin routes
-router.post('/', protect, authorize('admin', 'superadmin'), quickByteController.createQuickByte);
-router.put('/:id', protect, authorize('admin', 'superadmin'), quickByteController.updateQuickByte);
+router.post('/', protect, authorize('admin', 'superadmin'), requireFreeDiskSpace, quickByteController.createQuickByte);
+router.put('/:id', protect, authorize('admin', 'superadmin'), requireFreeDiskSpace, quickByteController.updateQuickByte);
 router.delete('/:id', protect, authorize('admin', 'superadmin'), quickByteController.deleteQuickByte);
 
 module.exports = router;

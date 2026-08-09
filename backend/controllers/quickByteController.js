@@ -84,6 +84,7 @@ const getAllQuickBytes = async (req, res) => {
 // @access  Private (Admin)
 const createQuickByteHandler = async (req, res) => {
     let uploadedPaths = [];
+    let persisted = false;
     try {
         const {
             title, status, audioTitle, description, publishAt,
@@ -170,6 +171,7 @@ const createQuickByteHandler = async (req, res) => {
         }
 
         await quickByte.save();
+        persisted = true; // past this point the record owns the files - never delete them
 
         // Send notification immediately if status is published
         if (quickByte.status === 'published') {
@@ -239,8 +241,9 @@ const createQuickByteHandler = async (req, res) => {
     } catch (error) {
         console.error('Create Quick Bite failed:', error);
 
-        // Cleanup every uploaded file from disk (including episode parts)
-        uploadedPaths.forEach(filePath => deleteFile(filePath));
+        // Cleanup every uploaded file from disk (including episode parts),
+        // unless the record was already saved and now references them
+        if (!persisted) uploadedPaths.forEach(filePath => deleteFile(filePath));
 
         res.status(errorStatus(error)).json({
             success: false,
@@ -272,6 +275,8 @@ const getQuickByteById = async (req, res) => {
 // @route   PUT /api/quickbytes/:id
 // @access  Private (Admin)
 const updateQuickByteHandler = async (req, res) => {
+    let uploadedPaths = [];
+    let persisted = false;
     try {
         const {
             title, status, audioTitle, description, publishAt,
@@ -280,6 +285,9 @@ const updateQuickByteHandler = async (req, res) => {
             isBhojpuriHero, targetCategory
         } = req.body;
         const files = req.files || {};
+
+        // Track every file multer wrote, so a failure does not orphan them on disk
+        uploadedPaths = Object.values(files).flat().map(f => f.path).filter(Boolean);
 
         let quickByte = await QuickByte.findById(req.params.id);
         if (!quickByte) {
@@ -362,6 +370,7 @@ const updateQuickByteHandler = async (req, res) => {
         }
 
         await quickByte.save();
+        persisted = true; // past this point the record owns the files - never delete them
 
         // Async HLS Processing for Updates
         if (files.video && files.video[0]) {
@@ -412,6 +421,10 @@ const updateQuickByteHandler = async (req, res) => {
 
     } catch (error) {
         console.error('Update Quick Bite failed:', error);
+
+        // The update did not land - do not leave the new files behind
+        if (!persisted) uploadedPaths.forEach(filePath => deleteFile(filePath));
+
         res.status(errorStatus(error)).json({
             success: false,
             message: describeError(error)

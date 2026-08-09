@@ -49,6 +49,9 @@ const forYouRoutes = require('./routes/forYouRoutes');
 const audioSeriesRoutes = require('./routes/audioSeriesRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const { convertImagesToWebpMiddleware } = require('./config/multerStorage');
+const { getFreeBytes, formatBytes } = require('./utils/diskSpace');
+const { logServerError } = require('./utils/errorLog');
+const { sweepStaleTempHls } = require('./utils/tempHlsSweeper');
 
 // Security middleware
 app.use(helmet({
@@ -365,7 +368,27 @@ app.use('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  logServerError(err, req);
+
+  // Disk full - surface the real cause instead of a generic failure
+  if (err.code === 'ENOSPC') {
+    const freeBytes = getFreeBytes();
+    return res.status(507).json({
+      success: false,
+      message: `Server storage is full${freeBytes !== null ? ` (${formatBytes(freeBytes)} free)` : ''}. ` +
+        `The upload could not be written to disk. Free up space on the server and try again.`,
+      code: 'INSUFFICIENT_STORAGE'
+    });
+  }
+
+  // Permission / missing upload directory
+  if (err.code === 'EACCES' || err.code === 'EPERM') {
+    return res.status(500).json({
+      success: false,
+      message: 'The server is not allowed to write to the uploads folder. Check file permissions.',
+      code: err.code
+    });
+  }
 
   // Multer errors (file too large, too many files, unexpected field)
   if (err instanceof multer.MulterError) {
@@ -450,6 +473,30 @@ const connectDB = async () => {
 
 // Scheduled tasks
 const startScheduledTasks = () => {
+  // Reclaim abandoned transcode folders now and every 6 hours. A crash or
+  // restart mid-transcode otherwise leaves multi-GB folders on disk forever.
+  const runTempHlsSweep = () => {
+    try {
+      sweepStaleTempHls();
+    } catch (error) {
+      console.error('Error sweeping stale temp_hls folders:', error);
+    }
+  };
+
+  runTempHlsSweep();
+  setInterval(runTempHlsSweep, 6 * 60 * 60 * 1000);
+
+  // Warn early when the uploads volume is running low
+  const checkDiskSpace = () => {
+    const freeBytes = getFreeBytes();
+    if (freeBytes !== null && freeBytes < 5 * 1024 * 1024 * 1024) {
+      console.warn(`⚠️  Low disk space on the uploads volume: ${formatBytes(freeBytes)} free. Uploads will start failing.`);
+    }
+  };
+
+  checkDiskSpace();
+  setInterval(checkDiskSpace, 30 * 60 * 1000);
+
   // Clean expired downloads every 6 hours
   setInterval(async () => {
     try {

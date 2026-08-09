@@ -7,3 +7,6 @@ node_modules
 
 # Firebase credentials
 config/inplay-43123-firebase-adminsdk-fbsvc-f938162894.json
+
+# Server error log (written by utils/errorLog.js)
+logs/
