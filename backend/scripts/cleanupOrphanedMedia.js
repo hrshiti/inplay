@@ -157,6 +157,27 @@ const run = async () => {
     orphans.slice(0, 20).forEach(f => console.log(`  - ${path.relative(UPLOAD_BASE, f)}`));
     if (orphans.length > 20) console.log(`  ... and ${orphans.length - 20} more`);
 
+    // Always write the complete list somewhere reviewable - deleting 200+ files
+    // off a 20-line preview is not something anyone should have to do.
+    if (orphans.length > 0) {
+        const reportDir = path.join(__dirname, '../logs');
+        const reportPath = path.join(reportDir, `orphaned-media-${new Date().toISOString().slice(0, 10)}.txt`);
+        try {
+            fs.mkdirSync(reportDir, { recursive: true });
+            // Path first, tab separated: `cut -f1` yields a clean list for tar,
+            // which matters because some filenames contain spaces.
+            const lines = orphans.map(f => {
+                let size = 0;
+                try { size = fs.statSync(f).size; } catch { /* gone */ }
+                return `${path.relative(UPLOAD_BASE, f)}\t${formatBytes(size)}`;
+            });
+            fs.writeFileSync(reportPath, `${lines.join('\n')}\n`);
+            console.log(`\nFull list written to: ${reportPath}`);
+        } catch (error) {
+            console.error(`Could not write the orphan list: ${error.message}`);
+        }
+    }
+
     const orphanRatio = onDisk.length > 0 ? orphans.length / onDisk.length : 0;
     const looksWrong = orphanRatio > MAX_ORPHAN_RATIO && onDisk.length > 10;
 
