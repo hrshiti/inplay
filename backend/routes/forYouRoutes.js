@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const forYouController = require('../controllers/forYouController');
 const userAuthController = require('../controllers/userAuthController');
-const { protect, authorize, subscribed } = require('../middlewares/auth');
+const { protect, authorize, optionalProtect } = require('../middlewares/auth');
 
-// Requires an active subscription — no guest/unsubscribed browsing
-router.get('/', protect, subscribed, forYouController.getAllForYou);
+// Browsing/listing is public (guest-friendly)
+router.get('/', optionalProtect, forYouController.getAllForYou);
 router.get('/:id/comments', forYouController.getComments);
 router.post('/:id/view', forYouController.incrementViews);
 

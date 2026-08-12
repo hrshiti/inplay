@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const quickByteController = require('../controllers/quickByteController');
-const { protect, authorize, subscribed } = require('../middlewares/auth');
+const { protect, authorize, optionalProtect } = require('../middlewares/auth');
 const { requireFreeDiskSpace } = require('../utils/diskSpace');
 
-// Requires an active subscription — no guest/unsubscribed browsing
-router.get('/', protect, subscribed, quickByteController.getAllQuickBytes);
-router.get('/:id', protect, subscribed, quickByteController.getQuickByteById);
+// Browsing/listing is public (guest-friendly)
+router.get('/', optionalProtect, quickByteController.getAllQuickBytes);
+router.get('/:id', optionalProtect, quickByteController.getQuickByteById);
 router.get('/:id/comments', quickByteController.getComments);
 router.post('/:id/view', quickByteController.incrementViews);
 

@@ -56,6 +56,7 @@ import FloatingAudioPlayer from './components/FloatingAudioPlayer';
 import socketService from './services/socketService';
 import { trackLogout, trackAddToWatchlist, trackRemoveFromWatchlist, trackLikeVideo, trackUnlikeVideo } from './utils/analytics';
 import { isUserSubscribed } from './utils/subscription';
+import { setPendingDestination } from './utils/pendingDestination';
 
 const formatViews = (views) => {
   if (!views) return '0';
@@ -253,21 +254,15 @@ function App() {
   const [selectedSourceTab, setSelectedSourceTab] = useState(null);
 
   const handleContentSelect = (movie, sourceTab = null) => {
-    if (!currentUser) {
-      navigate('/login');
+    // Quick Bytes/vertical content open straight into the player — that's a Play
+    // action (auth + subscription required), not browsing. Route it through
+    // handlePlay so it gets the same gate and pending-destination handling.
+    if (movie.type === 'quick_byte' || movie.isVertical || (movie.category === 'Quick Bites')) {
+      handlePlay({ ...movie, isVertical: true, type: 'quick_byte' }, null);
       return;
     }
-    // Check if content is 'For You' style (Quick Byte/Vertical)
-    if (movie.type === 'quick_byte' || movie.isVertical || (movie.category === 'Quick Bites')) {
-      navigate(`/watch/${movie._id || movie.id}`, {
-        state: {
-          movie: { ...movie, isVertical: true, type: 'quick_byte' },
-          episode: null
-        }
-      });
-    } else {
-      navigate(`/content/${movie._id || movie.id}`, { state: { movie, sourceTab } });
-    }
+    // Content detail pages are free to browse — no login required to view them.
+    navigate(`/content/${movie._id || movie.id}`, { state: { movie, sourceTab } });
   };
 
 
@@ -309,34 +304,32 @@ function App() {
     }
   };
 
-  // Auth/subscription gate: everything requires login, and everything but a small
-  // allowlist (plans, auth pages, legal pages, settings) requires an active subscription.
-  // Admin has its own guard (ProtectedRoute) and is left alone here. This also owns
-  // clearing the splash screen, so nothing renders until we know where the user belongs.
+  // Personal-data gate: browsing (home, categories, search, for-you, audio, content
+  // details) is public — no login or subscription required just to look around.
+  // Only the "My Space" cluster (personal list/history/likes/downloads hub) requires
+  // login, matching the "personalized actions need identity" model. Subscription is
+  // checked per-action instead (see handlePlay) rather than blocking whole routes.
+  // Admin has its own guard (ProtectedRoute) and is left alone here. /content/:id and
+  // /watch/:id have their own dedicated guards (ContentDetailsRoute / WatchPageRoute)
+  // since they can be reached directly via deep link, bypassing this effect. This
+  // also owns clearing the splash screen, so nothing renders until we know where the
+  // user belongs.
   useEffect(() => {
     const path = location.pathname;
 
-    if (path.startsWith('/admin')) {
+    if (path.startsWith('/admin') || path.startsWith('/content/') || path.startsWith('/watch/')) {
       setLoading(false);
       return;
     }
 
     if (!authResolved) return;
 
-    const PUBLIC_PATHS = ['/plan', '/login', '/signup', '/help', '/privacy', '/about'];
-    // '/settings' is intentionally allowed through here — Account/Subscription/Logout must
-    // stay reachable while unsubscribed; SettingsPage itself hides every other section.
-    const isAllowed = PUBLIC_PATHS.includes(path) || path === '/settings';
+    const PERSONAL_PATHS = ['/my-space', '/history', '/my-list', '/liked-videos', '/downloads'];
 
-    if (!isAllowed) {
-      if (!currentUser) {
-        navigate('/login', { replace: true });
-        return;
-      }
-      if (!isUserSubscribed(currentUser)) {
-        navigate('/plan', { replace: true });
-        return;
-      }
+    if (PERSONAL_PATHS.includes(path) && !currentUser) {
+      setPendingDestination(path);
+      navigate('/login', { replace: true });
+      return;
     }
 
     setLoading(false);
@@ -549,10 +542,7 @@ function App() {
   };
 
   const handleFilterChange = (cat) => {
-    if (!currentUser && cat !== 'Popular' && cat !== 'InPlay Cinema' && cat !== 'InPlay Shorts') {
-      navigate('/login');
-      return;
-    }
+    // Browsing categories/filters is free — no login required.
     setActiveFilter(cat);
 
     // 1. Check Dynamic Tabs from Backend
@@ -628,7 +618,10 @@ function App() {
   }, [location.pathname, dynamicStructure]);
 
   const handleTabChange = (tab) => {
-    if (tab !== 'Home' && !currentUser) {
+    // "My Space" is the personal hub (list/history/likes/downloads/settings) — it
+    // requires login. Every other tab is free browsing.
+    if (tab === 'My Space' && !currentUser) {
+      setPendingDestination('/my-space');
       navigate('/login');
       return;
     }
@@ -731,17 +724,27 @@ function App() {
 
 
   const handlePlay = (movie, episode = null) => {
+    const contentId = movie._id || movie.id;
+    const targetPath = `/watch/${contentId}`;
+
     if (!currentUser) {
+      setPendingDestination(targetPath);
       navigate('/login');
       return;
     }
-    const contentId = movie._id || movie.id;
+    // Playback always requires an active subscription — no exceptions.
+    if (!isUserSubscribed(currentUser)) {
+      setPendingDestination(targetPath);
+      navigate('/plan');
+      return;
+    }
     // Navigate to watch route, passing movie/episode object to avoid re-fetch if possible
-    navigate(`/watch/${contentId}`, { state: { movie, episode } });
+    navigate(targetPath, { state: { movie, episode } });
   };
 
   const handleToggleMyList = async (movie) => {
     if (!currentUser) {
+      setPendingDestination(location.pathname);
       navigate('/login');
       return;
     }
@@ -787,6 +790,7 @@ function App() {
 
   const handleToggleLike = async (movie, showNotification = true) => {
     if (!currentUser) {
+      setPendingDestination(location.pathname);
       navigate('/login');
       return;
     }
@@ -993,7 +997,7 @@ function App() {
       {/* Dedicated Routes for Login and Signup */}
       <Route path="/login" element={<Login onClose={() => navigate(-1)} onSwitchToSignup={() => navigate('/signup')} onLoginSuccess={handleAuthSuccess} />} />
       <Route path="/signup" element={<Signup onClose={() => navigate(-1)} onSwitchToLogin={() => navigate('/login')} onSignupSuccess={handleAuthSuccess} />} />
-      <Route path="/plan" element={<PlanPage />} />
+      <Route path="/plan" element={<PlanPage onUpdateUser={setCurrentUser} />} />
       <Route path="/help" element={<LegalPage type="help" />} />
       <Route path="/privacy" element={<LegalPage type="privacy" />} />
       <Route path="/about" element={<LegalPage type="about" />} />
@@ -2090,20 +2094,15 @@ function ContentDetailsRoute({
   myList,
   likedVideos,
   handleToggleMyList,
-  handleToggleLike,
-  currentUser,
-  authResolved
+  handleToggleLike
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
-  // A direct/shared link to this route bypasses every other in-app gate, so it needs
-  // its own check rather than relying on App's effect (which only guards the catch-all).
-  const blocked = authResolved && (!currentUser || !isUserSubscribed(currentUser));
+  // Content details are free to browse — no auth/subscription gate here. Play/Watch
+  // (WatchPageRoute) is where auth + subscription are actually required.
 
   useEffect(() => {
-    if (!authResolved || blocked) return; // don't fetch content the caller isn't allowed to see
-
     // Reset movie state and get latest details on ID change
     let found = allContent.find(i => (i._id === id || i.id === id));
     setMovie(found || null);
@@ -2124,11 +2123,7 @@ function ContentDetailsRoute({
     return () => {
       active = false;
     };
-  }, [id, allContent, navigate, authResolved, blocked]);
-
-  if (authResolved && blocked) {
-    return <Navigate to={currentUser ? '/plan' : '/login'} replace />;
-  }
+  }, [id, allContent, navigate]);
 
   if (!movie) return null; // Or a loading spinner
 
@@ -2225,6 +2220,8 @@ function WatchPageRoute({
   }, [id, allContent, quickBites, navigate, movie, authResolved, blocked]);
 
   if (authResolved && blocked) {
+    // Remember this exact watch URL so login/subscribe can return here directly.
+    setPendingDestination(location.pathname);
     return <Navigate to={currentUser ? '/plan' : '/login'} replace />;
   }
 

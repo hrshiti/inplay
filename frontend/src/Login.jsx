@@ -4,6 +4,7 @@ import { Phone, Lock } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from './services/api/authService';
 import { trackLogin } from './utils/analytics';
+import { consumePendingDestination } from './utils/pendingDestination';
 export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
   const [step, setStep] = useState(1); // 1 = Phone input, 2 = OTP input
   const [phone, setPhone] = useState('');
@@ -93,7 +94,9 @@ export default function Login({ onClose, onSwitchToSignup, onLoginSuccess }) {
       await authService.verifyOtp(phone, otp);
       trackLogin('phone');
       onLoginSuccess();
-      navigate('/');
+      // Return to whatever the user was trying to do before login, if anything.
+      const dest = consumePendingDestination();
+      navigate(dest || '/', { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed. Invalid OTP.');
     } finally {

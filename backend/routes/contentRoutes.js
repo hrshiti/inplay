@@ -2,16 +2,17 @@ const express = require('express');
 const router = express.Router();
 
 const userContentController = require('../controllers/userContentController');
-const { protect, subscribed } = require('../middlewares/auth');
+const { protect, subscribed, optionalProtect } = require('../middlewares/auth');
 
-// Content requires an active subscription — no guest/unsubscribed browsing
-router.get('/all', protect, subscribed, userContentController.getAllContent);
-router.get('/trending', protect, subscribed, userContentController.getTrendingContent);
-router.get('/new-releases', protect, subscribed, userContentController.getNewReleases);
-router.get('/category/:category', protect, subscribed, userContentController.getContentByCategory);
+// Browsing/listing is public (guest-friendly); playback and downloads still require
+// an authenticated user with an active subscription.
+router.get('/all', optionalProtect, userContentController.getAllContent);
+router.get('/trending', optionalProtect, userContentController.getTrendingContent);
+router.get('/new-releases', optionalProtect, userContentController.getNewReleases);
+router.get('/category/:category', optionalProtect, userContentController.getContentByCategory);
 router.post('/:id/view', userContentController.incrementViews);
 
-router.get('/:id', protect, subscribed, userContentController.getContent);
+router.get('/:id', optionalProtect, userContentController.getContent);
 router.get('/:id/stream', protect, subscribed, userContentController.streamContent);
 router.post('/:id/download', protect, subscribed, userContentController.createDownloadLicense);
 router.post('/validate-download', protect, subscribed, userContentController.validateDownload);

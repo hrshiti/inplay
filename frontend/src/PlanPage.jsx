@@ -9,8 +9,9 @@ import HlsPlayer from './components/HlsPlayer';
 import { getImageUrl } from './utils/imageUtils';
 import { trackSubscriptionView, trackSubscriptionInitiated, trackSubscriptionPurchase, trackSubscriptionRenewed, trackTrialInitiated, trackTrialPurchase, trackTrialRenewed } from './utils/analytics';
 import { isUserSubscribed } from './utils/subscription';
+import { consumePendingDestination } from './utils/pendingDestination';
 
-const PlanPage = () => {
+const PlanPage = ({ onUpdateUser }) => {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [trialSettings, setTrialSettings] = useState(null);
@@ -31,7 +32,8 @@ const PlanPage = () => {
 
   useEffect(() => {
     if (currentUser && isUserSubscribed(currentUser)) {
-      navigate('/', { replace: true });
+      const dest = consumePendingDestination();
+      navigate(dest || '/', { replace: true });
     }
   }, [currentUser, navigate]);
 
@@ -62,6 +64,7 @@ const PlanPage = () => {
       }
       setTrialSettings(appSettings?.subscriptionSettings);
       setCurrentUser(profile);
+      onUpdateUser?.(profile);
     } catch (err) {
       console.error('Failed to load settings:', err);
     } finally {
@@ -131,7 +134,11 @@ const PlanPage = () => {
 
             const updatedProfile = await authService.getProfile();
             localStorage.setItem('inplay_current_user', JSON.stringify(updatedProfile));
-            navigate('/');
+            // Keep App's in-memory user in sync immediately — otherwise the app-level
+            // subscription check would still see the stale pre-payment state.
+            onUpdateUser?.(updatedProfile);
+            const dest = consumePendingDestination();
+            navigate(dest || '/', { replace: true });
           } catch (err) {
             console.error('Verification failed:', err);
             alert('Payment verified, but activation failed. Refreshing...');
