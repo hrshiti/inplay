@@ -49,7 +49,8 @@ const calculateEndDate = (startDate, duration) => {
 // @desc    Get all subscription plans (for both Admin and User)
 exports.getPlans = async (req, res) => {
   try {
-    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ order: 1, price: 1 });
+    const query = req.query.all === 'true' ? {} : { isActive: true };
+    const plans = await SubscriptionPlan.find(query).sort({ order: 1, price: 1 });
     res.status(200).json({
       success: true,
       count: plans.length,
