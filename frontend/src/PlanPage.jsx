@@ -156,8 +156,9 @@ const PlanPage = ({ onUpdateUser }) => {
   };
 
   const handleTrial = () => {
-    if (selectedPlanId) {
-      handleSubscribe(selectedPlanId, true);
+    const trialPlan = plans.find(p => p.duration === 'monthly' || p.price === 149);
+    if (trialPlan) {
+      handleSubscribe(trialPlan._id, true);
     } else if (plans.length > 0) {
       handleSubscribe(plans[0]._id, true);
     } else {

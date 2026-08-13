@@ -92,6 +92,10 @@ exports.createSubscription = async (req, res) => {
     if (!plan) plan = await SubscriptionPlan.findOne({ isActive: true });
     if (!plan) return res.status(404).json({ success: false, message: 'No active plans found' });
 
+    if (isTrial && plan.duration !== 'monthly' && plan.price !== 149) {
+      return res.status(400).json({ success: false, message: 'Trial is only available for the monthly plan.' });
+    }
+
     // Self-healing for Plan ID
     if (!plan.razorpayPlanId) {
       if (plan.duration !== 'lifetime') {
@@ -158,6 +162,8 @@ exports.createSubscription = async (req, res) => {
       // --- PAID TRIAL + AUTOPAY MANDATE ---
       const trialDurationDays = parseInt(subSettings.trialDurationDays) || 4;
       const trialPrice = parseFloat(subSettings.trialPrice) || 9;
+
+      options.notes.trialDays = trialDurationDays.toString();
 
       options.addons = [{
         item: {
