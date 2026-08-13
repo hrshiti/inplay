@@ -156,7 +156,9 @@ const PlanPage = ({ onUpdateUser }) => {
   };
 
   const handleTrial = () => {
-    if (plans.length > 0) {
+    if (selectedPlanId) {
+      handleSubscribe(selectedPlanId, true);
+    } else if (plans.length > 0) {
       handleSubscribe(plans[0]._id, true);
     } else {
       alert('No plans available to start trial. Please contact support.');
