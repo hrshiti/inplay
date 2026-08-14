@@ -1,5 +1,5 @@
 // Dev testing numbers that always get treated as subscribed
-const BYPASS_TEST_PHONES = ['6268204871', '6268455485', '6260491554'];
+const BYPASS_TEST_PHONES = ['6268204871', '6268455485'];
 
 const isUserSubscribed = (user) => {
   if (!user) return false;

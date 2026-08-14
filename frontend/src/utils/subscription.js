@@ -1,5 +1,5 @@
 // Dev testing numbers that always get treated as subscribed (mirrors backend/utils/subscriptionAccess.js)
-const BYPASS_TEST_PHONES = ['6268204871', '6268455485', '6260491554'];
+const BYPASS_TEST_PHONES = ['6268204871', '6268455485'];
 
 export function isUserSubscribed(user) {
   if (!user) return false;
