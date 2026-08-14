@@ -214,7 +214,15 @@ exports.verifySubscription = async (req, res) => {
     const rzp = razorpayService.getInstance();
     
     // --- LIFETIME ORDER VERIFICATION ---
-    if (razorpay_order_id || isLifetime) {
+    // A genuine one-time Lifetime purchase has an order_id but NO subscription_id
+    // (it's created via rzp.orders.create, never rzp.subscriptions.create).
+    // Addon-bearing subscription checkouts (e.g. the paid trial's "Trial Access Fee"
+    // addon) ALSO get a real razorpay_order_id back from Checkout, because Razorpay
+    // bills the addon through a backing order - but those always carry a
+    // subscription_id too. Require order_id AND the absence of subscription_id so
+    // trial/regular subscription payments aren't misrouted into order-signature
+    // verification (which uses a different HMAC formula and always mismatches).
+    if (isLifetime || (razorpay_order_id && !razorpay_subscription_id)) {
       const secret = process.env.RAZORPAY_KEY_SECRET;
       const signData = (razorpay_order_id || "") + "|" + razorpay_payment_id;
 
