@@ -209,20 +209,26 @@ exports.createSubscription = async (req, res) => {
 // @route   POST /api/user/subscription/verify
 exports.verifySubscription = async (req, res) => {
   try {
-    const { razorpay_payment_id, razorpay_subscription_id, razorpay_order_id, razorpay_signature, isLifetime } = req.body;
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, isLifetime } = req.body;
     const crypto = require('crypto');
     const rzp = razorpayService.getInstance();
-    
+
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // The subscription id Razorpay actually signs with is not reliably present in
+    // the client's checkout response for UPI Autopay mandate payments - Checkout
+    // hands back only order-style fields for that transaction even though it used
+    // the subscription id internally to compute the signature. We already know the
+    // subscription id from createSubscription() (it's on the user's own record), so
+    // use that as the source of truth instead of trusting req.body for it.
+    const storedSubscriptionId = user.subscription?.razorpay_subscription_id;
+
     // --- LIFETIME ORDER VERIFICATION ---
-    // A genuine one-time Lifetime purchase has an order_id but NO subscription_id
+    // A genuine one-time Lifetime purchase never has a stored subscription id
     // (it's created via rzp.orders.create, never rzp.subscriptions.create).
-    // Addon-bearing subscription checkouts (e.g. the paid trial's "Trial Access Fee"
-    // addon) ALSO get a real razorpay_order_id back from Checkout, because Razorpay
-    // bills the addon through a backing order - but those always carry a
-    // subscription_id too. Require order_id AND the absence of subscription_id so
-    // trial/regular subscription payments aren't misrouted into order-signature
-    // verification (which uses a different HMAC formula and always mismatches).
-    if (isLifetime || (razorpay_order_id && !razorpay_subscription_id)) {
+    if (isLifetime || !storedSubscriptionId) {
       const secret = process.env.RAZORPAY_KEY_SECRET;
       const signData = (razorpay_order_id || "") + "|" + razorpay_payment_id;
 
@@ -235,10 +241,6 @@ exports.verifySubscription = async (req, res) => {
         console.error('Signature Mismatch for Lifetime Order:', { expectedSignature, razorpay_signature });
         return res.status(400).json({ success: false, message: 'Invalid payment signature' });
       }
-
-      const User = require('../models/User');
-      const user = await User.findById(req.user.id);
-      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
       let order = null;
       try {
@@ -277,10 +279,12 @@ exports.verifySubscription = async (req, res) => {
       return res.status(200).json({ success: true, message: 'Payment verified and Lifetime access granted' });
     }
 
-    // --- REGULAR SUBSCRIPTION VERIFICATION ---
-    // 1. Verify Signature
+    // --- SUBSCRIPTION VERIFICATION (regular plans + trial) ---
+    // 1. Verify Signature - using the subscription id we stored ourselves at
+    // creation time, not whatever (if anything) the client's checkout response
+    // happened to include.
     const secret = process.env.RAZORPAY_KEY_SECRET;
-    const signData = razorpay_payment_id + "|" + razorpay_subscription_id;
+    const signData = razorpay_payment_id + "|" + storedSubscriptionId;
 
     const expectedSignature = crypto
       .createHmac('sha256', secret)
@@ -292,16 +296,11 @@ exports.verifySubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }
 
-    // 2. Fetch User & Update Access
-    const User = require('../models/User');
-    const user = await User.findOne({ 'subscription.razorpay_subscription_id': razorpay_subscription_id });
-    if (!user) return res.status(404).json({ success: false, message: 'User not found for this subscription' });
-
-    // 3. Check if it was a trial creation
-    const sub = await rzp.subscriptions.fetch(razorpay_subscription_id);
+    // 2. Check if it was a trial creation
+    const sub = await rzp.subscriptions.fetch(storedSubscriptionId);
     const isTrial = sub.notes && sub.notes.isTrial === "true";
-    
-    // 4. Activate Access
+
+    // 3. Activate Access
     if (isTrial) {
       // --- TRIAL ACTIVATION ---
       const AppSetting = require('../models/AppSetting');
@@ -327,7 +326,7 @@ exports.verifySubscription = async (req, res) => {
         endDate: user.subscription.endDate,
         trialPrice: trialPrice,
         paymentStatus: 'Success',
-        razorpaySubscriptionId: razorpay_subscription_id
+        razorpaySubscriptionId: storedSubscriptionId
       });
     } else {
       // --- REGULAR PLAN ACTIVATION ---
@@ -346,7 +345,7 @@ exports.verifySubscription = async (req, res) => {
       // Record in CustomerSubscription
       const CustomerSubscription = require('../models/CustomerSubscription');
       await CustomerSubscription.findOneAndUpdate(
-        { razorpaySubscriptionId: razorpay_subscription_id },
+        { razorpaySubscriptionId: storedSubscriptionId },
         {
           user: user._id,
           plan: user.subscription.plan || plan?._id,
