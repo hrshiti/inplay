@@ -101,6 +101,7 @@ const PlanPage = ({ onUpdateUser }) => {
           ondismiss: () => setLoading(false)
         },
         handler: async function (response) {
+          // STEP 1: Verify payment — critical. If this fails, it's a real activation failure.
           try {
             await subscriptionService.verifySubscription({
               razorpay_payment_id: response.razorpay_payment_id,
@@ -109,42 +110,54 @@ const PlanPage = ({ onUpdateUser }) => {
               razorpay_signature: response.razorpay_signature,
               isLifetime: subData.isLifetime
             });
+          } catch (verifyErr) {
+            console.error('Payment verification failed on server:', verifyErr);
+            alert('Payment verified, but activation failed. Refreshing...');
+            window.location.reload();
+            return;
+          }
 
-            const isRenewal = Boolean(
-              currentUser?.subscription?.plan ||
-              currentUser?.subscription?.endDate ||
-              currentUser?.subscription?.razorpay_subscription_id ||
-              currentUser?.subscription?.isTrialUsed ||
-              currentUser?.subscription?.trialEndedAt
-            );
+          // STEP 2: Analytics — payment is already confirmed at this point.
+          const isRenewal = Boolean(
+            currentUser?.subscription?.plan ||
+            currentUser?.subscription?.endDate ||
+            currentUser?.subscription?.razorpay_subscription_id ||
+            currentUser?.subscription?.isTrialUsed ||
+            currentUser?.subscription?.trialEndedAt
+          );
 
-            if (isTrial) {
-              if (isRenewal) {
-                trackTrialRenewed({ planId, price: subData.amount });
-              } else {
-                trackTrialPurchase({ planId, price: subData.amount });
-              }
+          if (isTrial) {
+            if (isRenewal) {
+              trackTrialRenewed({ planId, price: subData.amount });
             } else {
-              if (isRenewal) {
-                trackSubscriptionRenewed({ planId, price: subData.amount });
-              } else {
-                trackSubscriptionPurchase({ planId, price: subData.amount });
-              }
+              trackTrialPurchase({ planId, price: subData.amount });
             }
+          } else {
+            if (isRenewal) {
+              trackSubscriptionRenewed({ planId, price: subData.amount });
+            } else {
+              trackSubscriptionPurchase({ planId, price: subData.amount });
+            }
+          }
 
+          // STEP 3: Refresh profile (non-critical). Even if getProfile fails
+          // (network blip), payment already succeeded — we still navigate to home.
+          try {
             const updatedProfile = await authService.getProfile();
             localStorage.setItem('inplay_current_user', JSON.stringify(updatedProfile));
             // Keep App's in-memory user in sync immediately — otherwise the app-level
             // subscription check would still see the stale pre-payment state.
             onUpdateUser?.(updatedProfile);
-            const dest = consumePendingDestination();
-            navigate(dest || '/', { replace: true });
-          } catch (err) {
-            console.error('Verification failed:', err);
-            alert('Payment verified, but activation failed. Refreshing...');
-            window.location.reload();
+          } catch (profileErr) {
+            console.warn('Profile refresh after payment failed (non-critical):', profileErr.message);
+            // Clear stale cached user so the app re-fetches fresh on home load
+            localStorage.removeItem('inplay_current_user');
           }
+
+          const dest = consumePendingDestination();
+          navigate(dest || '/', { replace: true });
         }
+
       });
 
     } catch (err) {

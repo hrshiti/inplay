@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { MoreVertical, Edit, Trash2, Eye, Search } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Eye, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const ROWS_PER_PAGE = 50;
 
 export default function DataTable({
   data,
@@ -9,10 +11,12 @@ export default function DataTable({
   onEdit,
   onDelete,
   onView,
+  loading,
   emptyMessage = "No data available"
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredData = data.filter(item =>
     Object.values(item).some(value =>
@@ -30,11 +34,21 @@ export default function DataTable({
     return 0;
   });
 
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / ROWS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedData = sortedData.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+
   const handleSort = (key) => {
+    setCurrentPage(1);
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+  };
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
   };
 
   const getStatusBadge = (status) => {
@@ -73,7 +87,7 @@ export default function DataTable({
               type="text"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               style={{
                 width: '100%',
                 padding: '10px 12px 10px 40px',
@@ -124,14 +138,20 @@ export default function DataTable({
             </tr>
           </thead>
           <tbody>
-            {sortedData.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length + (onEdit || onDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
+                  Loading...
+                </td>
+              </tr>
+            ) : pagedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length + (onEdit || onDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              sortedData.map((item, index) => (
+              pagedData.map((item, index) => (
                 <tr key={item.id || index} style={{
                   borderBottom: '1px solid #e5e7eb',
                   transition: 'background-color 0.15s ease'
@@ -222,6 +242,54 @@ export default function DataTable({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 20px',
+          borderTop: '1px solid #e5e7eb',
+          background: '#f9fafb'
+        }}>
+          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+            Showing {((safePage - 1) * ROWS_PER_PAGE) + 1}–{Math.min(safePage * ROWS_PER_PAGE, sortedData.length)} of {sortedData.length}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px',
+                background: 'white', color: '#374151', fontSize: '0.8rem',
+                cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                opacity: safePage === 1 ? 0.5 : 1
+              }}
+            >
+              <ChevronLeft size={14} /> Prev
+            </button>
+            <span style={{ fontSize: '0.8rem', color: '#374151', padding: '0 4px' }}>
+              {safePage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px',
+                background: 'white', color: '#374151', fontSize: '0.8rem',
+                cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                opacity: safePage === totalPages ? 0.5 : 1
+              }}
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
