@@ -108,7 +108,8 @@ const PlanPage = ({ onUpdateUser }) => {
               razorpay_subscription_id: response.razorpay_subscription_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
-              isLifetime: subData.isLifetime
+              isLifetime: subData.isLifetime,
+              planId: planId
             });
           } catch (verifyErr) {
             console.error('Payment verification failed on server:', verifyErr);

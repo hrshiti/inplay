@@ -157,9 +157,6 @@ exports.createSubscription = async (req, res) => {
       });
 
       const User = require('../models/User');
-      await User.findByIdAndUpdate(req.user.id, {
-        'subscription.plan': plan._id
-      });
 
       return res.status(200).json({
         success: true,
@@ -185,7 +182,8 @@ exports.createSubscription = async (req, res) => {
       quantity: 1,
       notes: {
         userId: req.user.id.toString(),
-        isTrial: isTrial ? "true" : "false"
+        isTrial: isTrial ? "true" : "false",
+        planId: plan._id.toString()
       }
     };
 
@@ -214,8 +212,7 @@ exports.createSubscription = async (req, res) => {
     // Link user
     const User = require('../models/User');
     await User.findByIdAndUpdate(req.user.id, {
-      'subscription.razorpay_subscription_id': subscription.id,
-      'subscription.plan': plan._id
+      'subscription.razorpay_subscription_id': subscription.id
     });
 
     return res.status(200).json({
@@ -240,7 +237,7 @@ exports.createSubscription = async (req, res) => {
 // @route   POST /api/user/subscription/verify
 exports.verifySubscription = async (req, res) => {
   try {
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, isLifetime } = req.body;
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, isLifetime, planId: reqPlanId } = req.body;
     const crypto = require('crypto');
     const rzp = razorpayService.getInstance();
 
@@ -278,7 +275,7 @@ exports.verifySubscription = async (req, res) => {
         if (razorpay_order_id) order = await rzp.orders.fetch(razorpay_order_id);
       } catch (e) {}
 
-      const planId = order?.notes?.planId || user.subscription?.plan;
+      const planId = order?.notes?.planId || reqPlanId || user.subscription?.plan;
       const SubscriptionPlan = require('../models/SubscriptionPlan');
       const plan = await SubscriptionPlan.findById(planId);
 
@@ -342,6 +339,7 @@ exports.verifySubscription = async (req, res) => {
       user.isActive = true;
       user.subscription.isActive = true;
       user.subscription.isTrialUsed = true;
+      user.subscription.plan = sub.notes?.planId || reqPlanId || user.subscription.plan;
       user.subscription.startDate = new Date();
       user.subscription.status = 'active';
       // End date: 14, 15, 16, 17 (Total 4 days). Ends on 17th.
@@ -362,10 +360,12 @@ exports.verifySubscription = async (req, res) => {
     } else {
       // --- REGULAR PLAN ACTIVATION ---
       const SubscriptionPlan = require('../models/SubscriptionPlan');
-      const plan = await SubscriptionPlan.findById(user.subscription.plan);
+      const planId = sub.notes?.planId || reqPlanId || user.subscription.plan;
+      const plan = await SubscriptionPlan.findById(planId);
       
       user.isActive = true;
       user.subscription.isActive = true;
+      user.subscription.plan = plan ? plan._id : user.subscription.plan;
       user.subscription.startDate = new Date();
       
       const duration = plan ? plan.duration : 'monthly';
@@ -565,6 +565,7 @@ exports.handleWebhook = async (req, res) => {
         // --- TRIAL HANDLING ---
         const trialDays = parseInt(notes.trialDays) || 4;
         user.subscription.isTrialUsed = true;
+        user.subscription.plan = notes.planId || user.subscription.plan;
         // End date: 14, 15, 16, 17 (Total 4 days). Ends on 17th.
         user.subscription.endDate = new Date(Date.now() + ((trialDays - 1) * 24 * 60 * 60 * 1000));
         await user.save();
@@ -587,6 +588,7 @@ exports.handleWebhook = async (req, res) => {
         // --- LIFETIME HANDLING ---
         user.subscription.endDate = new Date('2099-12-31'); // Never expires
         user.subscription.razorpay_subscription_id = null;
+        user.subscription.plan = notes.planId || user.subscription.plan;
         await user.save();
 
         const CustomerSubscription = require('../models/CustomerSubscription');
@@ -608,9 +610,10 @@ exports.handleWebhook = async (req, res) => {
       } else {
         // --- PLAN HANDLING ---
         const SubscriptionPlan = require('../models/SubscriptionPlan');
-        const plan = await SubscriptionPlan.findById(user.subscription.plan);
+        const plan = await SubscriptionPlan.findById(notes.planId || user.subscription.plan);
         const duration = plan ? plan.duration : 'monthly';
 
+        user.subscription.plan = plan ? plan._id : user.subscription.plan;
         user.subscription.endDate = calculateEndDate(user.subscription.startDate, duration);
         await user.save();
 
