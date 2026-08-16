@@ -46,6 +46,24 @@ const calculateEndDate = (startDate, duration) => {
   return date;
 };
 
+// How many recurring billing cycles a new subscription mandate should be set
+// up for. Razorpay bills the ₹1 trial/addon fee as part of the authorisation
+// transaction - it is NOT one of the counted cycles (confirmed against a real
+// subscription: paid_count stayed 0 after the addon was captured), so this
+// only needs to cover the real recurring charges. Memberships should keep
+// renewing until the user cancels or a payment fails, not stop after a
+// short, duration-blind cycle count - but Razorpay requires a finite
+// total_count (their documented ceiling is a 100-year subscription
+// duration). We approximate "until cancelled" with one fixed real-world time
+// horizon, converted into however many cycles THIS plan's period/interval
+// need to cover it - so it scales automatically for any duration (monthly,
+// half-yearly, yearly, or anything added later) without new cases here.
+const RECURRING_HORIZON_MONTHS = 240; // 20 years - well inside Razorpay's 100-year cap
+const getTotalCountForPlan = (rpDetails) => {
+  const cycleMonths = rpDetails.period === 'yearly' ? rpDetails.interval * 12 : rpDetails.interval;
+  return Math.max(1, Math.ceil(RECURRING_HORIZON_MONTHS / cycleMonths));
+};
+
 // @desc    Get all subscription plans (for both Admin and User)
 exports.getPlans = async (req, res) => {
   try {
@@ -86,20 +104,33 @@ exports.createSubscription = async (req, res) => {
     const settings = await AppSetting.findOne();
     const subSettings = settings?.subscriptionSettings || { trialPrice: 9, trialDurationDays: 4 };
 
-    // 2. Fetch Plan
+    // 2. Fetch Plan - must be exactly the plan the user selected. An invalid
+    // or missing planId is a hard error now, never a silent fallback to
+    // "any active plan" (that used to happen here, and could route a
+    // purchase - trial or not - onto a plan the user never chose).
     const SubscriptionPlan = require('../models/SubscriptionPlan');
-    let plan = await SubscriptionPlan.findById(planId);
-    if (!plan) plan = await SubscriptionPlan.findOne({ isActive: true });
-    if (!plan) return res.status(404).json({ success: false, message: 'No active plans found' });
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' });
+    if (!plan.isActive) return res.status(400).json({ success: false, message: 'This plan is not currently available.' });
 
-    if (isTrial && plan.duration !== 'monthly' && plan.price !== 149) {
-      return res.status(400).json({ success: false, message: 'Trial is only available for the monthly plan.' });
+    // Trial eligibility is by plan TYPE (recurring vs one-time), never by a
+    // specific duration name or price - so any current or future recurring
+    // plan (monthly, half-yearly, yearly, or anything added later) is
+    // automatically trial-eligible without touching this check again.
+    // Lifetime is the only one-time (non-recurring) plan type, so it's the
+    // only one excluded.
+    if (isTrial && plan.duration === 'lifetime') {
+      return res.status(400).json({ success: false, message: 'Trial is not available for the Lifetime plan.' });
     }
+
+    // Razorpay period/interval for this plan's duration - computed once and
+    // reused below both for self-healing the Razorpay Plan and for sizing
+    // total_count, so both stay in sync automatically for any duration.
+    const rpDetails = getRazorpayPlanDetails(plan.duration);
 
     // Self-healing for Plan ID
     if (!plan.razorpayPlanId) {
       if (plan.duration !== 'lifetime') {
-        const rpDetails = getRazorpayPlanDetails(plan.duration);
         const newRpPlan = await rzp.plans.create({
           period: rpDetails.period,
           interval: rpDetails.interval,
@@ -150,7 +181,7 @@ exports.createSubscription = async (req, res) => {
     const options = {
       plan_id: plan.razorpayPlanId,
       customer_notify: 1, // Let Razorpay notify user
-      total_count: 12,    // 1 Year cycle
+      total_count: getTotalCountForPlan(rpDetails), // ongoing membership - see getTotalCountForPlan above
       quantity: 1,
       notes: {
         userId: req.user.id.toString(),

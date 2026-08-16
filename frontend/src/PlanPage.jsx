@@ -169,11 +169,21 @@ const PlanPage = ({ onUpdateUser }) => {
   };
 
   const handleTrial = () => {
-    const trialPlan = plans.find(p => p.duration === 'monthly' || p.price === 149);
+    // The trial follows whatever plan the user has actually selected - it no
+    // longer searches for "the monthly plan". Lifetime is a one-time
+    // purchase, not a recurring plan, so it's the only type the trial can
+    // never attach to (mirrors the backend's isTrial + duration==='lifetime'
+    // check). If nothing recurring is selected yet (e.g. the page just
+    // loaded with the featured Lifetime card selected by default), fall
+    // back to the first available recurring plan rather than block the
+    // "Claim" button.
+    const selectedPlan = plans.find(p => p._id === selectedPlanId);
+    const trialPlan = (selectedPlan && selectedPlan.duration !== 'lifetime')
+      ? selectedPlan
+      : plans.find(p => p.duration !== 'lifetime');
+
     if (trialPlan) {
       handleSubscribe(trialPlan._id, true);
-    } else if (plans.length > 0) {
-      handleSubscribe(plans[0]._id, true);
     } else {
       alert('No plans available to start trial. Please contact support.');
     }
