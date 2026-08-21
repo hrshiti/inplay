@@ -1,6 +1,8 @@
+const path = require('path');
 const QuickByte = require('../models/QuickByte');
 const Comment = require('../models/Comment');
 const mediaService = require('../services/mediaService');
+const s3Service = require('../services/s3Service');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 const { notifyAllUsers } = require('../utils/notificationHelper');
 const { hydrateHlsUrl } = require('../utils/hlsUrl');
@@ -189,11 +191,11 @@ const createQuickByteHandler = async (req, res) => {
 
         // Async HLS Processing in the background
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLSWithDuration(files.video[0].path, quickByte._id, 'quickbyte').then(async ({ hlsUrl, duration }) => {
+            mediaService.handleVideoHLSWithDuration(files.video[0].path, quickByte._id, 'quickbyte').then(async ({ hlsUrl, duration, originalS3Url }) => {
                 if (hlsUrl) {
                     await QuickByte.findByIdAndUpdate(
-                        quickByte._id, 
-                        { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration }
+                        quickByte._id,
+                        { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }
                     ).exec();
                     console.log(`HLS master playlist generated and S3 synced for QuickByte: ${quickByte.title}`);
                 }
@@ -208,17 +210,17 @@ const createQuickByteHandler = async (req, res) => {
                     const epFile = files.videos[i];
                     if (epFile) {
                         try {
-                            const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(epFile.path, ep._id, 'quickbyte_episode');
+                            const { hlsUrl, duration, originalS3Url } = await mediaService.handleVideoHLSWithDuration(epFile.path, ep._id, 'quickbyte_episode');
                             if (hlsUrl) {
                                 await QuickByte.updateOne(
                                     { _id: quickByte._id, "episodes._id": ep._id },
-                                    { $set: { "episodes.$.hls_url": hlsUrl, "episodes.$.duration": duration } }
+                                    { $set: { "episodes.$.hls_url": hlsUrl, "episodes.$.duration": duration, ...(originalS3Url ? { "episodes.$.s3_url": originalS3Url } : {}) } }
                                 ).exec();
-                                
+
                                 // Sync to main video if applicable
                                 const doc = await QuickByte.findById(quickByte._id);
                                 if (doc && doc.video && doc.video.url === ep.url) {
-                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
+                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published', ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }).exec();
                                 }
                                 console.log(`[HLS] Synced episode ${i+1}: ${hlsUrl}`);
                             }
@@ -374,9 +376,9 @@ const updateQuickByteHandler = async (req, res) => {
 
         // Async HLS Processing for Updates
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLSWithDuration(files.video[0].path, quickByte._id, 'quickbyte').then(async ({ hlsUrl, duration }) => {
+            mediaService.handleVideoHLSWithDuration(files.video[0].path, quickByte._id, 'quickbyte').then(async ({ hlsUrl, duration, originalS3Url }) => {
                 if (hlsUrl) {
-                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
+                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published', ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }).exec();
                 }
             });
         }
@@ -385,24 +387,24 @@ const updateQuickByteHandler = async (req, res) => {
         if (files.videos && files.videos.length > 0) {
             const numNew = files.videos.length;
             const newEpisodes = quickByte.episodes.slice(-numNew);
-            
+
             (async () => {
                 for (let i = 0; i < newEpisodes.length; i++) {
                     const ep = newEpisodes[i];
                     const epFile = files.videos[i];
                     if (epFile) {
                         try {
-                            const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(epFile.path, ep._id, 'quickbyte_episode');
+                            const { hlsUrl, duration, originalS3Url } = await mediaService.handleVideoHLSWithDuration(epFile.path, ep._id, 'quickbyte_episode');
                             if (hlsUrl) {
                                 await QuickByte.updateOne(
                                     { _id: quickByte._id, "episodes._id": ep._id },
-                                    { $set: { "episodes.$.hls_url": hlsUrl, "episodes.$.duration": duration } }
+                                    { $set: { "episodes.$.hls_url": hlsUrl, "episodes.$.duration": duration, ...(originalS3Url ? { "episodes.$.s3_url": originalS3Url } : {}) } }
                                 ).exec();
-                                
+
                                 // Sync to main video if applicable
                                 const doc = await QuickByte.findById(quickByte._id);
                                 if (doc && doc.video && doc.video.url === ep.url) {
-                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
+                                    await QuickByte.findByIdAndUpdate(quickByte._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published', ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }).exec();
                                 }
                             }
                         } catch (err) {
@@ -451,6 +453,29 @@ const deleteQuickByte = async (req, res) => {
         if (quickByte.audio?.url) {
             const path = getFilePathFromUrl(quickByte.audio.url);
             deleteFile(path);
+        }
+        // Episode videos were previously never cleaned up here - each one is its
+        // own local file distinct from the primary `video` field above.
+        if (Array.isArray(quickByte.episodes)) {
+            quickByte.episodes.forEach(ep => {
+                if (ep?.url) deleteFile(getFilePathFromUrl(ep.url));
+            });
+        }
+
+        // Best-effort S3 cleanup (HLS renditions + any migrated original). Never
+        // blocks the record delete below - a failed cloud cleanup should not
+        // prevent removing the DB record the admin asked to delete.
+        s3Service.deleteFolder(`videos/quickbyte/${quickByte._id}`).catch(() => {});
+        if (quickByte.video?.s3_url) {
+            s3Service.deleteObject(`originals/quickbyte/${quickByte._id}/${path.basename(getFilePathFromUrl(quickByte.video.url) || '')}`).catch(() => {});
+        }
+        if (Array.isArray(quickByte.episodes)) {
+            quickByte.episodes.forEach(ep => {
+                s3Service.deleteFolder(`videos/quickbyte_episode/${ep._id}`).catch(() => {});
+                if (ep?.s3_url && ep?.url) {
+                    s3Service.deleteObject(`originals/quickbyte_episode/${ep._id}/${path.basename(getFilePathFromUrl(ep.url) || '')}`).catch(() => {});
+                }
+            });
         }
 
         await QuickByte.findByIdAndDelete(req.params.id);

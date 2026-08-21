@@ -10,6 +10,7 @@ const analyticsController = require('../controllers/analyticsController');
 
 // Import middlewares
 const { protect, authorize } = require('../middlewares/auth');
+const { requireFreeDiskSpace } = require('../utils/diskSpace');
 
 // Import validators
 const { validateAdminLogin } = require('../validators/authValidators');
@@ -31,8 +32,8 @@ router.post('/auth/logout', adminAuthController.adminLogout);
 router.get('/content', contentController.getAllContent);
 router.get('/content/analytics', contentController.getContentAnalytics);
 router.get('/content/:id', contentController.getContent);
-router.post('/content', contentController.createContent);
-router.put('/content/:id', contentController.updateContent);
+router.post('/content', requireFreeDiskSpace, contentController.createContent);
+router.put('/content/:id', requireFreeDiskSpace, contentController.updateContent);
 router.patch('/content/:id/status', contentController.toggleContentStatus);
 router.delete('/content/:id', contentController.deleteContent);
 

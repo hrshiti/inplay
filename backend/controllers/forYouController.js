@@ -1,6 +1,8 @@
+const nodePath = require('path');
 const ForYou = require('../models/ForYou');
 const Comment = require('../models/Comment');
 const mediaService = require('../services/mediaService');
+const s3Service = require('../services/s3Service');
 const { hydrateHlsUrl } = require('../utils/hlsUrl');
 const { deleteFile, getFilePathFromUrl, transformFileToResponse, uploadMixed } = require('../config/multerStorage');
 
@@ -105,9 +107,9 @@ const createForYouHandler = async (req, res) => {
 
         // Async HLS Processing
         if (files.video && files.video[0]) {
-            mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(async (hlsUrl) => {
+            mediaService.handleVideoHLSWithOriginal(files.video[0].path, forYou._id, 'foryou').then(async ({ hlsUrl, originalS3Url }) => {
                 if (hlsUrl) {
-                    await ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, status: 'published' }).exec();
+                    await ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, status: 'published', ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }).exec();
                     console.log(`HLS Master synced and Published for Reel: ${forYou.title}`);
                     
                     const { notifyAllUsers } = require('../utils/notificationHelper');
@@ -175,6 +177,12 @@ const deleteForYou = async (req, res) => {
         if (forYou.audio?.url) {
             const path = getFilePathFromUrl(forYou.audio.url);
             deleteFile(path);
+        }
+
+        // Best-effort S3 cleanup - never blocks the record delete below.
+        s3Service.deleteFolder(`videos/foryou/${forYou._id}`).catch(() => {});
+        if (forYou.video?.s3_url) {
+            s3Service.deleteObject(`originals/foryou/${forYou._id}/${nodePath.basename(getFilePathFromUrl(forYou.video.url) || '')}`).catch(() => {});
         }
 
         await ForYou.findByIdAndDelete(req.params.id);
@@ -348,13 +356,15 @@ const updateForYouHandler = async (req, res) => {
             if (forYou.video?.url) {
                 deleteFile(getFilePathFromUrl(forYou.video.url));
             }
+            // Best-effort cleanup of the S3 copies the old video may already have
+            s3Service.deleteFolder(`videos/foryou/${forYou._id}`).catch(() => {});
             const result = transformFileToResponse(files.video[0]);
             forYou.video = result;
 
             // Trigger HLS Processing for new video
-            mediaService.handleVideoHLS(files.video[0].path, forYou._id, 'foryou').then(hlsUrl => {
+            mediaService.handleVideoHLSWithOriginal(files.video[0].path, forYou._id, 'foryou').then(({ hlsUrl, originalS3Url }) => {
                 if (hlsUrl) {
-                    ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl }).exec();
+                    ForYou.findByIdAndUpdate(forYou._id, { 'video.hls_url': hlsUrl, ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }).exec();
                 }
             });
         }

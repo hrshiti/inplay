@@ -2,6 +2,7 @@ const Content = require('../models/Content');
 const { deleteFile, getFilePathFromUrl } = require('../config/multerStorage');
 const { CONTENT_STATUS, FILE_SIZE_LIMITS } = require('../constants');
 const mediaService = require('./mediaService');
+const s3Service = require('./s3Service');
 const fs = require('fs');
 const path = require('path');
 const { hydrateHlsUrl } = require('../utils/hlsUrl');
@@ -139,11 +140,11 @@ const createContent = async (contentData, adminId, files = {}) => {
     // START ASYNC HLS PROCESSING
     // 1. Process main video
     if (files.video) {
-      mediaService.handleVideoHLSWithDuration(files.video.path, content._id, 'movie').then(async ({ hlsUrl, duration }) => {
+      mediaService.handleVideoHLSWithDuration(files.video.path, content._id, 'movie').then(async ({ hlsUrl, duration, originalS3Url }) => {
         if (hlsUrl) {
           const updatedContent = await Content.findByIdAndUpdate(
             content._id,
-            { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' },
+            { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published', ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) },
             { new: true }
           ).exec();
 
@@ -177,11 +178,11 @@ const createContent = async (contentData, adminId, files = {}) => {
             const fileField = `season_${sIdx}_episode_${eIdx}_video`;
             if (files[fileField]) {
               try {
-                const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(files[fileField].path, episode._id, 'episode');
+                const { hlsUrl, duration, originalS3Url } = await mediaService.handleVideoHLSWithDuration(files[fileField].path, episode._id, 'episode');
                 if (hlsUrl) {
                   await Content.updateOne(
                     { _id: content._id, "seasons.episodes._id": episode._id },
-                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl, "seasons.$[s].episodes.$[e].duration": duration } },
+                    { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl, "seasons.$[s].episodes.$[e].duration": duration, ...(originalS3Url ? { "seasons.$[s].episodes.$[e].video.s3_url": originalS3Url } : {}) } },
                     { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
                   ).exec();
                 }
@@ -192,6 +193,16 @@ const createContent = async (contentData, adminId, files = {}) => {
           }
         }
       })();
+    }
+
+    // 3. Upload trailer original to S3, best-effort (trailer is never HLS-transcoded
+    // in this codebase - this is the only durable, non-local copy it ever gets).
+    if (files.trailer) {
+      mediaService.uploadOriginalToS3(files.trailer.path, content._id, 'trailer').then(async (originalS3Url) => {
+        if (originalS3Url) {
+          await Content.findByIdAndUpdate(content._id, { 'trailer.s3_url': originalS3Url }).exec();
+        }
+      });
     }
 
     // Send immediate notification for Web Series or Content without a main video upload
@@ -225,11 +236,36 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
   const { transformFileToResponse } = require('../config/multerStorage');
   const mediaUrls = {};
 
+  // Capture what's about to be replaced BEFORE Object.assign overwrites it -
+  // this is what updateContent never did before, leaking every replaced
+  // poster/backdrop/video/trailer/episode file permanently.
+  const previous = {
+    poster: content.poster?.url,
+    backdrop: content.backdrop?.url,
+    video: content.video?.url,
+    videoHadS3: !!content.video?.s3_url,
+    trailer: content.trailer?.url
+  };
+  const previousEpisodeVideos = new Map(); // "sIdx_eIdx" -> { url, id }
+
   try {
     if (files.poster) mediaUrls.poster = transformFileToResponse(files.poster);
     if (files.backdrop) mediaUrls.backdrop = transformFileToResponse(files.backdrop);
     if (files.video) mediaUrls.video = transformFileToResponse(files.video);
     if (files.trailer) mediaUrls.trailer = transformFileToResponse(files.trailer);
+
+    // Capture the old video for every episode about to be overwritten
+    Object.keys(files).forEach(key => {
+      const match = key.match(/^season_(\d+)_episode_(\d+)_video$/);
+      if (match) {
+        const sIdx = parseInt(match[1]);
+        const eIdx = parseInt(match[2]);
+        const oldEpisode = content.seasons?.[sIdx]?.episodes?.[eIdx];
+        if (oldEpisode?.video?.url) {
+          previousEpisodeVideos.set(`${sIdx}_${eIdx}`, { url: oldEpisode.video.url, id: oldEpisode._id });
+        }
+      }
+    });
 
     // Capture admin's intended status before Object.assign can override it
     const intendedUpdateStatus = updateData.status || content.status;
@@ -240,11 +276,40 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
     content.updatedBy = adminId;
     await content.save();
 
+    // Clean up whatever was just replaced - local disk first, S3 best-effort
+    if (files.poster && previous.poster) deleteFile(getFilePathFromUrl(previous.poster));
+    if (files.backdrop && previous.backdrop) deleteFile(getFilePathFromUrl(previous.backdrop));
+    if (files.trailer && previous.trailer) {
+      deleteFile(getFilePathFromUrl(previous.trailer));
+      s3Service.deleteObject(`originals/trailer/${content._id}/${path.basename(getFilePathFromUrl(previous.trailer) || '')}`).catch(() => {});
+    }
+    if (files.video && previous.video) {
+      deleteFile(getFilePathFromUrl(previous.video));
+      s3Service.deleteFolder(`videos/movie/${content._id}`).catch(() => {});
+      if (previous.videoHadS3) {
+        s3Service.deleteObject(`originals/movie/${content._id}/${path.basename(getFilePathFromUrl(previous.video) || '')}`).catch(() => {});
+      }
+    }
+    previousEpisodeVideos.forEach(({ url, id }) => {
+      deleteFile(getFilePathFromUrl(url));
+      s3Service.deleteFolder(`videos/episode/${id}`).catch(() => {});
+      s3Service.deleteObject(`originals/episode/${id}/${path.basename(getFilePathFromUrl(url) || '')}`).catch(() => {});
+    });
+
     // Process main video HLS if updated
     if (files.video) {
-      mediaService.handleVideoHLSWithDuration(files.video.path, content._id, 'movie').then(async ({ hlsUrl, duration }) => {
+      mediaService.handleVideoHLSWithDuration(files.video.path, content._id, 'movie').then(async ({ hlsUrl, duration, originalS3Url }) => {
         if (hlsUrl) {
-          await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published' }).exec();
+          await Content.findByIdAndUpdate(content._id, { 'video.hls_url': hlsUrl, 'video.duration': duration, duration: duration, status: 'published', ...(originalS3Url ? { 'video.s3_url': originalS3Url } : {}) }).exec();
+        }
+      });
+    }
+
+    // Trailer original upload to S3, best-effort (never HLS-transcoded)
+    if (files.trailer) {
+      mediaService.uploadOriginalToS3(files.trailer.path, content._id, 'trailer').then(async (originalS3Url) => {
+        if (originalS3Url) {
+          await Content.findByIdAndUpdate(content._id, { 'trailer.s3_url': originalS3Url }).exec();
         }
       });
     }
@@ -261,11 +326,11 @@ const updateContent = async (contentId, updateData, adminId, files = {}) => {
           const episode = season?.episodes?.[eIdx];
           if (episode) {
             try {
-              const { hlsUrl, duration } = await mediaService.handleVideoHLSWithDuration(files[key].path, episode._id, 'episode');
+              const { hlsUrl, duration, originalS3Url } = await mediaService.handleVideoHLSWithDuration(files[key].path, episode._id, 'episode');
               if (hlsUrl) {
                 await Content.updateOne(
                   { _id: content._id },
-                  { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl, "seasons.$[s].episodes.$[e].duration": duration } },
+                  { $set: { "seasons.$[s].episodes.$[e].video.hls_url": hlsUrl, "seasons.$[s].episodes.$[e].duration": duration, ...(originalS3Url ? { "seasons.$[s].episodes.$[e].video.s3_url": originalS3Url } : {}) } },
                   { arrayFilters: [{ "s._id": season._id }, { "e._id": episode._id }] }
                 ).exec();
               }
@@ -289,7 +354,45 @@ const deleteContent = async (contentId) => {
   const content = await Content.findById(contentId);
   if (!content) throw new Error('Content not found');
 
-  // local cleanup logic omitted for brevity as per user focus on HLS/S3
+  // Local + S3 cleanup - this was previously never implemented at all (the
+  // highest-severity finding of the storage audit): every deleted Movie or
+  // Series permanently orphaned its poster, backdrop, trailer, main video,
+  // and every episode's video, on both local disk and S3, forever.
+  if (content.poster?.url) deleteFile(getFilePathFromUrl(content.poster.url));
+  if (content.backdrop?.url) deleteFile(getFilePathFromUrl(content.backdrop.url));
+
+  if (content.trailer?.url) {
+    const trailerPath = getFilePathFromUrl(content.trailer.url);
+    deleteFile(trailerPath);
+    if (content.trailer.s3_url && trailerPath) {
+      s3Service.deleteObject(`originals/trailer/${content._id}/${path.basename(trailerPath)}`).catch(() => {});
+    }
+  }
+
+  if (content.video?.url) {
+    const videoPath = getFilePathFromUrl(content.video.url);
+    deleteFile(videoPath);
+    s3Service.deleteFolder(`videos/movie/${content._id}`).catch(() => {});
+    if (content.video.s3_url && videoPath) {
+      s3Service.deleteObject(`originals/movie/${content._id}/${path.basename(videoPath)}`).catch(() => {});
+    }
+  }
+
+  if (Array.isArray(content.seasons)) {
+    content.seasons.forEach(season => {
+      (season.episodes || []).forEach(episode => {
+        if (episode.video?.url) {
+          const epPath = getFilePathFromUrl(episode.video.url);
+          deleteFile(epPath);
+          s3Service.deleteFolder(`videos/episode/${episode._id}`).catch(() => {});
+          if (episode.video.s3_url && epPath) {
+            s3Service.deleteObject(`originals/episode/${episode._id}/${path.basename(epPath)}`).catch(() => {});
+          }
+        }
+      });
+    });
+  }
+
   await Content.findByIdAndDelete(contentId);
   return { message: 'Content deleted successfully' };
 };

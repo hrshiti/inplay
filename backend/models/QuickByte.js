@@ -12,6 +12,7 @@ const quickByteSchema = new mongoose.Schema({
         url: String,
         secure_url: String,
         hls_url: String,
+        s3_url: String, // Original master MP4 uploaded to S3 (fallback tier between hls_url and local url)
         duration: Number
     },
     episodes: [{
@@ -19,6 +20,7 @@ const quickByteSchema = new mongoose.Schema({
         url: String,
         secure_url: String,
         hls_url: String,
+        s3_url: String,
         duration: Number,
         title: String,
         order: Number

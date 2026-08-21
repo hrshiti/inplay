@@ -52,6 +52,8 @@ const { convertImagesToWebpMiddleware } = require('./config/multerStorage');
 const { getFreeBytes, formatBytes } = require('./utils/diskSpace');
 const { logServerError } = require('./utils/errorLog');
 const { sweepStaleTempHls } = require('./utils/tempHlsSweeper');
+const cron = require('node-cron');
+const cleanupOrphanedMedia = require('./scripts/cleanupOrphanedMedia');
 
 // Security middleware
 app.use(helmet({
@@ -509,6 +511,44 @@ const startScheduledTasks = () => {
       console.error('Error cleaning expired downloads:', error);
     }
   }, 6 * 60 * 60 * 1000); // 6 hours
+
+  // Automatic orphaned/verified-original media cleanup (Step 7 of the storage
+  // migration). Runs daily by default, schedule configurable via
+  // AUTO_CLEANUP_SCHEDULE (standard cron syntax).
+  //
+  // SAFETY DEFAULT: this runs in REPORT-ONLY (dry-run) mode unless
+  // AUTO_CLEANUP_DELETE=true is explicitly set in the environment. It never
+  // deletes an original whose HLS rendition and separately-migrated S3 copy
+  // are not BOTH independently verified reachable first (deleteVerifiedOriginals
+  // mode - see cleanupOrphanedMedia.js). Orphan-file deletion (files with no DB
+  // reference at all) is always safe and runs for real once AUTO_CLEANUP_DELETE
+  // is enabled, same as running the script manually with --delete.
+  // Set AUTO_CLEANUP_ENABLED=false to disable this scheduled job entirely.
+  if (process.env.AUTO_CLEANUP_ENABLED !== 'false') {
+    const schedule = process.env.AUTO_CLEANUP_SCHEDULE || '0 3 * * *'; // daily at 03:00 server time
+    if (cron.validate(schedule)) {
+      cron.schedule(schedule, async () => {
+        const deleteEnabled = process.env.AUTO_CLEANUP_DELETE === 'true';
+        console.log(`[auto-cleanup] Starting scheduled media cleanup (mode: ${deleteEnabled ? 'DELETE' : 'report-only'})...`);
+        try {
+          const summary = await cleanupOrphanedMedia.run({
+            dryRun: !deleteEnabled,
+            deleteSources: false,
+            deleteVerifiedOriginals: true,
+            skipHlsCheck: false,
+            force: false
+          });
+          const totalFreed = (summary.orphanBytesFreed || 0) + (summary.verifiedOriginalBytesFreed || 0);
+          console.log(`[auto-cleanup] Done. Orphans removed: ${summary.orphansDeleted}, verified originals removed: ${summary.verifiedOriginalsDeleted}, storage reclaimed: ${formatBytes(totalFreed)}`);
+        } catch (error) {
+          console.error('[auto-cleanup] Scheduled cleanup failed:', error);
+        }
+      });
+      console.log(`[auto-cleanup] Scheduled (${schedule}), delete mode: ${process.env.AUTO_CLEANUP_DELETE === 'true' ? 'ENABLED' : 'report-only (set AUTO_CLEANUP_DELETE=true to enable real deletion)'}`);
+    } else {
+      console.error(`[auto-cleanup] Invalid AUTO_CLEANUP_SCHEDULE cron expression: "${schedule}" - scheduled cleanup NOT started.`);
+    }
+  }
 
 };
 

@@ -1,9 +1,11 @@
+const path = require('path');
 const Banner = require('../models/Banner');
 const Content = require('../models/Content');
 const QuickByte = require('../models/QuickByte');
 const AudioSeries = require('../models/AudioSeries');
 const mediaService = require('../services/mediaService');
-const { getFilePathFromUrl } = require('../config/multerStorage');
+const s3Service = require('../services/s3Service');
+const { getFilePathFromUrl, deleteFile } = require('../config/multerStorage');
 const fs = require('fs');
 
 const populateBannerContent = async (banners) => {
@@ -90,9 +92,9 @@ const createBanner = async (req, res) => {
       const localPath = getFilePathFromUrl(mediaUrl);
       if (localPath && fs.existsSync(localPath)) {
         // Start processing asynchronously
-        mediaService.handleVideoHLS(localPath, createdBanner._id, 'banner').then(async (hlsUrl) => {
+        mediaService.handleVideoHLSWithOriginal(localPath, createdBanner._id, 'banner').then(async ({ hlsUrl, originalS3Url }) => {
           if (hlsUrl) {
-             await Banner.findByIdAndUpdate(createdBanner._id, { hlsUrl });
+             await Banner.findByIdAndUpdate(createdBanner._id, { hlsUrl, ...(originalS3Url ? { originalS3Url } : {}) });
              console.log(`[HLS] Banner video processed successfully: ${createdBanner._id}`);
           }
         }).catch(err => {
@@ -119,9 +121,15 @@ const updateBanner = async (req, res) => {
     }
 
     const { category, mediaType, mediaUrl, isActive, order, contentId } = req.body;
-    
+
     // Check if media changed and needs new HLS processing
     const needNewHls = mediaType === 'video' && mediaUrl && mediaUrl !== banner.mediaUrl;
+
+    // The previous media file was never cleaned up here before - if it's being
+    // replaced, remove the old local file (and any S3 copies) now that we have
+    // its path, before the record is overwritten below.
+    const oldMediaUrl = banner.mediaUrl;
+    const mediaChanged = mediaUrl !== undefined && mediaUrl !== oldMediaUrl;
 
     if (category !== undefined) banner.category = category;
     if (mediaType !== undefined) banner.mediaType = mediaType;
@@ -132,16 +140,26 @@ const updateBanner = async (req, res) => {
 
     if (needNewHls) {
        banner.hlsUrl = null; // reset while processing
+       banner.originalS3Url = null;
     }
 
     const updatedBanner = await banner.save();
 
+    if (mediaChanged && oldMediaUrl) {
+      const oldLocalPath = getFilePathFromUrl(oldMediaUrl);
+      if (oldLocalPath) deleteFile(oldLocalPath);
+      s3Service.deleteFolder(`videos/banner/${updatedBanner._id}`).catch(() => {});
+      if (oldLocalPath) {
+        s3Service.deleteObject(`originals/banner/${updatedBanner._id}/${path.basename(oldLocalPath)}`).catch(() => {});
+      }
+    }
+
     if (needNewHls) {
       const localPath = getFilePathFromUrl(mediaUrl);
       if (localPath && fs.existsSync(localPath)) {
-        mediaService.handleVideoHLS(localPath, updatedBanner._id, 'banner').then(async (hlsUrl) => {
+        mediaService.handleVideoHLSWithOriginal(localPath, updatedBanner._id, 'banner').then(async ({ hlsUrl, originalS3Url }) => {
           if (hlsUrl) {
-             await Banner.findByIdAndUpdate(updatedBanner._id, { hlsUrl });
+             await Banner.findByIdAndUpdate(updatedBanner._id, { hlsUrl, ...(originalS3Url ? { originalS3Url } : {}) });
           }
         }).catch(err => {
              console.error(`[HLS] Failed to process banner video:`, err);
@@ -164,6 +182,17 @@ const deleteBanner = async (req, res) => {
     const banner = await Banner.findById(req.params.id);
     if (!banner) {
       return res.status(404).json({ success: false, message: 'Banner not found' });
+    }
+
+    // Local cleanup - previously this deleted nothing at all, leaking every
+    // banner image/video permanently.
+    const localPath = getFilePathFromUrl(banner.mediaUrl);
+    if (localPath) deleteFile(localPath);
+
+    // Best-effort S3 cleanup - never blocks the record delete below.
+    s3Service.deleteFolder(`videos/banner/${banner._id}`).catch(() => {});
+    if (banner.originalS3Url && localPath) {
+      s3Service.deleteObject(`originals/banner/${banner._id}/${path.basename(localPath)}`).catch(() => {});
     }
 
     await Banner.findByIdAndDelete(req.params.id);
