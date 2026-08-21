@@ -9,16 +9,17 @@ const {
 
 // We use the auth middlewares from admin routes
 const { protect, authorize } = require('../middlewares/auth');
+const { requireFreeDiskSpace } = require('../utils/diskSpace');
 
 router.use(protect);
 router.use(authorize('admin'));
 
 router.route('/')
   .get(getAllBanners)
-  .post(createBanner);
+  .post(requireFreeDiskSpace, createBanner);
 
 router.route('/:id')
-  .put(updateBanner)
+  .put(requireFreeDiskSpace, updateBanner)
   .delete(deleteBanner);
 
 module.exports = router;

@@ -59,12 +59,18 @@ export default function VideoPlayer({ movie, episode, onClose, onToggleMyList, o
     };
 
     // Helper to get URL dynamically
+    // Fallback order: HLS (S3/CDN) -> original master on S3 -> local /uploads
+    // file (legacy records only, from before originals were migrated to S3).
     const getVideoUrl = (item) => {
         if (!item) return '';
 
         // Prioritize HLS Streaming URL if available (proxied to avoid CDN CORS issues)
         if (item.hls_url) return getProxiedHlsUrl(item.hls_url);
         if (item.video?.hls_url) return getProxiedHlsUrl(item.video.hls_url);
+
+        // Next, the original master file if it's been migrated to S3
+        if (item.s3_url) return item.s3_url;
+        if (item.video?.s3_url) return item.video.s3_url;
 
         let url = '';
         // QuickByte episode (direct url field)

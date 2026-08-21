@@ -17,6 +17,10 @@ const promotionSchema = new mongoose.Schema({
         type: String,
         required: false
     },
+    originalS3Url: {
+        type: String, // Original master MP4 uploaded to S3
+        required: false
+    },
     displayLocation: {
         type: String,
         enum: ['home', 'popular', 'both', 'audio'],

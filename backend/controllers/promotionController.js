@@ -1,4 +1,7 @@
+const path = require('path');
 const Promotion = require('../models/Promotion');
+const s3Service = require('../services/s3Service');
+const { getFilePathFromUrl, deleteFile } = require('../config/multerStorage');
 
 // @desc    Create a new promotion
 // @route   POST /api/promotions
@@ -21,13 +24,12 @@ const createPromotion = async (req, res) => {
 
         // Async HLS Processing for Promotion Video
         if (promoVideoUrl && promoVideoUrl.startsWith('/uploads')) {
-            const { getFilePathFromUrl } = require('../config/multerStorage');
             const mediaService = require('../services/mediaService');
             const localPath = getFilePathFromUrl(promoVideoUrl);
 
-            mediaService.handleVideoHLS(localPath, promotion._id, 'promotion').then(async (hlsUrl) => {
+            mediaService.handleVideoHLSWithOriginal(localPath, promotion._id, 'promotion').then(async ({ hlsUrl, originalS3Url }) => {
                 if (hlsUrl) {
-                    await Promotion.findByIdAndUpdate(promotion._id, { hls_url: hlsUrl, isActive: intendedActive }).exec();
+                    await Promotion.findByIdAndUpdate(promotion._id, { hls_url: hlsUrl, isActive: intendedActive, ...(originalS3Url ? { originalS3Url } : {}) }).exec();
                     console.log(`HLS synced and Activated for Promotion: ${promotion.title}`);
                 }
             });
@@ -77,7 +79,7 @@ const getAllPromotions = async (req, res) => {
 // @access  Private/Admin
 const updatePromotion = async (req, res) => {
     try {
-        const { promoVideoUrl } = req.body;
+        const { promoVideoUrl, posterImageUrl } = req.body;
         const oldPromotion = await Promotion.findById(req.params.id);
 
         if (!oldPromotion) {
@@ -90,15 +92,30 @@ const updatePromotion = async (req, res) => {
             { new: true }
         );
 
+        // The previous media files were never cleaned up here before - remove
+        // whichever ones are actually being replaced, now that we still have
+        // their old paths.
+        if (promoVideoUrl !== undefined && promoVideoUrl !== oldPromotion.promoVideoUrl && oldPromotion.promoVideoUrl) {
+            const oldVideoPath = getFilePathFromUrl(oldPromotion.promoVideoUrl);
+            if (oldVideoPath) {
+                deleteFile(oldVideoPath);
+                s3Service.deleteFolder(`videos/promotion/${oldPromotion._id}`).catch(() => {});
+                s3Service.deleteObject(`originals/promotion/${oldPromotion._id}/${path.basename(oldVideoPath)}`).catch(() => {});
+            }
+        }
+        if (posterImageUrl !== undefined && posterImageUrl !== oldPromotion.posterImageUrl && oldPromotion.posterImageUrl) {
+            const oldPosterPath = getFilePathFromUrl(oldPromotion.posterImageUrl);
+            if (oldPosterPath) deleteFile(oldPosterPath);
+        }
+
         // Process HLS if video changed
         if (promoVideoUrl && promoVideoUrl !== oldPromotion.promoVideoUrl && promoVideoUrl.startsWith('/uploads')) {
-            const { getFilePathFromUrl } = require('../config/multerStorage');
             const mediaService = require('../services/mediaService');
             const localPath = getFilePathFromUrl(promoVideoUrl);
 
-            mediaService.handleVideoHLS(localPath, updatedPromotion._id, 'promotion').then(hlsUrl => {
+            mediaService.handleVideoHLSWithOriginal(localPath, updatedPromotion._id, 'promotion').then(({ hlsUrl, originalS3Url }) => {
                 if (hlsUrl) {
-                    Promotion.findByIdAndUpdate(updatedPromotion._id, { hls_url: hlsUrl }).exec();
+                    Promotion.findByIdAndUpdate(updatedPromotion._id, { hls_url: hlsUrl, ...(originalS3Url ? { originalS3Url } : {}) }).exec();
                 }
             });
         }
@@ -118,6 +135,19 @@ const deletePromotion = async (req, res) => {
 
         if (!promotion) {
             return res.status(404).json({ message: 'Promotion not found' });
+        }
+
+        // Local cleanup - previously this deleted nothing at all, leaking the
+        // poster image and promo video for every deleted promotion.
+        const videoPath = getFilePathFromUrl(promotion.promoVideoUrl);
+        if (videoPath) deleteFile(videoPath);
+        const posterPath = getFilePathFromUrl(promotion.posterImageUrl);
+        if (posterPath) deleteFile(posterPath);
+
+        // Best-effort S3 cleanup - never blocks the record delete below.
+        s3Service.deleteFolder(`videos/promotion/${promotion._id}`).catch(() => {});
+        if (promotion.originalS3Url && videoPath) {
+            s3Service.deleteObject(`originals/promotion/${promotion._id}/${path.basename(videoPath)}`).catch(() => {});
         }
 
         await promotion.deleteOne();

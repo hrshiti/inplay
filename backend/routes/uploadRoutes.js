@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth');
+const { requireFreeDiskSpace } = require('../utils/diskSpace');
 const { uploadMixed, transformFileToResponse } = require('../config/multerStorage');
 
 // @desc    Upload file (image, video, or audio)
 // @route   POST /api/upload
 // @access  Private/Admin
-router.post('/', protect, authorize('admin'), uploadMixed.single('file'), async (req, res, next) => {
+router.post('/', protect, authorize('admin'), requireFreeDiskSpace, uploadMixed.single('file'), async (req, res, next) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });

@@ -19,6 +19,9 @@ const bannerSchema = new mongoose.Schema({
   hlsUrl: {
     type: String, // Only populated for video banners
   },
+  originalS3Url: {
+    type: String, // Original master MP4 uploaded to S3 (only populated for video banners)
+  },
   contentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Content',
