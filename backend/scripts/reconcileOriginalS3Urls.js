@@ -193,7 +193,7 @@ const collectWorkItems = async () => {
                 s3Type:      S3_PREFIX.quickbyte,
                 filename:    cls === 'local' ? filenameFromUrl(qb.video.url) : null,
                 urlClass:    cls,
-                alreadyDone: !!qb.video.s3_url,
+                alreadyDone: !!(qb.video?.s3_url || qb.video?.original_s3_url),
                 apply:       async (url) => QuickByte.updateOne(
                     { _id: qb._id },
                     { $set: { 'video.s3_url': url } }
@@ -211,7 +211,7 @@ const collectWorkItems = async () => {
                     s3Type:      S3_PREFIX.quickbyte_episode,
                     filename:    cls === 'local' ? filenameFromUrl(ep.url) : null,
                     urlClass:    cls,
-                    alreadyDone: !!ep.s3_url,
+                    alreadyDone: !!(ep.s3_url || ep.original_s3_url),
                     apply:       async (url) => QuickByte.updateOne(
                         { _id: qb._id, 'episodes._id': ep._id },
                         { $set: { 'episodes.$.s3_url': url } }
@@ -233,7 +233,7 @@ const collectWorkItems = async () => {
                 s3Type:      S3_PREFIX.foryou,
                 filename:    cls === 'local' ? filenameFromUrl(r.video.url) : null,
                 urlClass:    cls,
-                alreadyDone: !!r.video.s3_url,
+                alreadyDone: !!(r.video?.s3_url || r.video?.original_s3_url),
                 apply:       async (url) => ForYou.updateOne(
                     { _id: r._id },
                     { $set: { 'video.s3_url': url } }
@@ -255,7 +255,7 @@ const collectWorkItems = async () => {
                 s3Type:      S3_PREFIX.movie,
                 filename:    cls === 'local' ? filenameFromUrl(c.video.url) : null,
                 urlClass:    cls,
-                alreadyDone: !!c.video.s3_url,
+                alreadyDone: !!(c.video?.s3_url || c.video?.original_s3_url),
                 apply:       async (url) => Content.updateOne(
                     { _id: c._id },
                     { $set: { 'video.s3_url': url } }
@@ -272,7 +272,7 @@ const collectWorkItems = async () => {
                 s3Type:      S3_PREFIX.trailer,
                 filename:    cls === 'local' ? filenameFromUrl(c.trailer.url) : null,
                 urlClass:    cls,
-                alreadyDone: !!c.trailer.s3_url,
+                alreadyDone: !!(c.trailer?.s3_url || c.trailer?.original_s3_url),
                 apply:       async (url) => Content.updateOne(
                     { _id: c._id },
                     { $set: { 'trailer.s3_url': url } }
@@ -291,7 +291,7 @@ const collectWorkItems = async () => {
                         s3Type:      S3_PREFIX.episode,
                         filename:    cls === 'local' ? filenameFromUrl(ep.video.url) : null,
                         urlClass:    cls,
-                        alreadyDone: !!ep.video.s3_url,
+                        alreadyDone: !!(ep.video?.s3_url || ep.video?.original_s3_url),
                         apply:       async (url) => Content.updateOne(
                             { _id: c._id },
                             { $set: { 'seasons.$[s].episodes.$[e].video.s3_url': url } },
