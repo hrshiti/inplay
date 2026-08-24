@@ -31,7 +31,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
-const { S3Client, HeadObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, HeadObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const { UPLOAD_BASE, getFilePathFromUrl } = require('../config/multerStorage');
 const mediaService = require('../services/mediaService');
 const { formatBytes } = require('../utils/diskSpace');
@@ -60,6 +60,51 @@ const s3Client = new S3Client({
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     }
 });
+
+// S3 prefix map — single source of truth for the {type} segment in
+// originals/{type}/{id}/{filename}. Must match what mediaService uses.
+const S3_PREFIX = {
+    quickbyte:         'quickbyte',
+    quickbyte_episode: 'quickbyte_episode',
+    foryou:            'foryou',
+    banner:            'banner',
+    promotion:         'promotion',
+    movie:             'movie',
+    trailer:           'trailer',
+    episode:           'episode',
+};
+
+/**
+ * Build a Map<"type/filename" → full s3Key> by listing originals/ once.
+ * Prevents duplicate uploads for the 195 files already in S3 without issuing
+ * a per-file HeadObject call (which would cost 195 extra round-trips).
+ */
+const buildS3Index = async () => {
+    const BUCKET = process.env.AWS_S3_BUCKET;
+    console.log(`Pre-scanning S3 s3://${BUCKET}/originals/ …`);
+    const index = new Map(); // 'type/filename' → full s3Key
+    let ContinuationToken;
+    let total = 0;
+    do {
+        const res = await s3Client.send(new ListObjectsV2Command({
+            Bucket: BUCKET,
+            Prefix: 'originals/',
+            ContinuationToken,
+        }));
+        for (const obj of (res.Contents || [])) {
+            const key      = obj.Key;
+            const parts    = key.split('/');
+            const type     = parts[1] || 'unknown';
+            const basename = path.basename(key);
+            const mapKey   = `${type}/${basename}`;
+            if (!index.has(mapKey)) index.set(mapKey, key);
+            total++;
+        }
+        ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (ContinuationToken);
+    console.log(`  → ${total} S3 objects indexed (keyed by type/filename).\n`);
+    return index;
+};
 
 const generateS3Url = (s3Key) => {
     const cloudFrontUrl = process.env.CLOUDFRONT_URL;
@@ -106,222 +151,234 @@ const normalizeVideoUrl = (url) => {
     return normalized;
 };
 
-// One work item = one video-bearing field somewhere in the database.
-// `apply` writes the verified S3 URL back to the exact right place once
-// uploadOriginalToS3 has confirmed (via S3 HEAD, inside mediaService) that
-// the object actually exists.
-const collectWorkItems = async () => {
-    const items = [];
+// collectWorkItems now accepts the pre-built S3 index so it can classify
+// every record into exactly one bucket without issuing any extra AWS calls.
+//
+// Returned object:
+//   alreadyMigrated  – Mongo s3_url / original_s3_url already set → skip
+//   mongoNeedsUpdate – file exists in S3, Mongo field missing     → patch only
+//   toUpload         – neither in Mongo nor in S3                 → upload
+//   localMissing     – local file absent and not in S3            → report only
+//   hlsOnly          – HLS / CloudFront URL                       → skip
+const collectWorkItems = async (s3Index) => {
+    const buckets = {
+        alreadyMigrated:  [],
+        mongoNeedsUpdate: [],
+        toUpload:         [],
+        localMissing:     [],
+        hlsOnly:          [],
+    };
 
     const wantsType = (type) => !ONLY_TYPES || ONLY_TYPES.includes(type);
 
+    // ── helper: classify one video field into the right bucket ─────────────
+    const classify = ({ label, title, id, rawUrl, localPath, s3Type, apply }) => {
+        // HLS / non-local URL?
+        const normalizedUrl = normalizeVideoUrl(rawUrl);
+        if (!normalizedUrl) {
+            buckets.hlsOnly.push({ label, title, id, originalUrl: rawUrl, isHlsOnly: true });
+            return;
+        }
+        const resolvedPath = localPath || getFilePathFromUrl(normalizedUrl);
+        const filename     = resolvedPath ? path.basename(resolvedPath) : null;
+        const mapKey       = filename ? `${s3Type}/${filename}` : null;
+        const s3Key        = mapKey ? s3Index.get(mapKey) : null;
+
+        if (s3Key) {
+            // File exists in S3 — just needs Mongo patched.
+            const url = generateS3Url(s3Key);
+            buckets.mongoNeedsUpdate.push({ label, title, id, originalUrl: rawUrl, resolvedPath, s3Type, url, apply });
+        } else if (resolvedPath && fs.existsSync(resolvedPath)) {
+            // File on disk but not in S3 — must upload.
+            buckets.toUpload.push({
+                label, title, id,
+                originalUrl: rawUrl,
+                localPath: resolvedPath,
+                s3Type,
+                alreadyMigrated: false,
+                apply,
+            });
+        } else {
+            // Not in S3, not on disk — orphan.
+            buckets.localMissing.push({ label, title, id, originalUrl: rawUrl, resolvedPath });
+        }
+    };
+
+    // ── QuickByte ─────────────────────────────────────────────────────────
     if (wantsType('quickbyte')) {
         const quickBytes = await QuickByte.find({}).lean(false);
         for (const qb of quickBytes) {
             if (qb.video?.url) {
-                if (!qb.video.s3_url) {
-                    items.push({
-                        label: `QuickByte "${qb.title}" (${qb._id}) - main video`,
-                        title: qb.title,
-                        originalUrl: qb.video.url,
-                        localPath: getFilePathFromUrl(normalizeVideoUrl(qb.video.url)),
-                        id: qb._id, type: 'quickbyte',
-                        alreadyMigrated: false,
-                        apply: async (url) => QuickByte.updateOne({ _id: qb._id }, { $set: { 'video.s3_url': url } })
-                    });
+                if (qb.video.s3_url || qb.video.original_s3_url) {
+                    buckets.alreadyMigrated.push({ label: `QuickByte "${qb.title}" (${qb._id}) - main video`, title: qb.title });
                 } else {
-                    items.push({ label: `QuickByte "${qb.title}" (${qb._id}) - main video`, title: qb.title, alreadyMigrated: true });
+                    classify({
+                        label:    `QuickByte "${qb.title}" (${qb._id}) - main video`,
+                        title:    qb.title,
+                        id:       qb._id,
+                        rawUrl:   qb.video.url,
+                        localPath: getFilePathFromUrl(normalizeVideoUrl(qb.video.url)),
+                        s3Type:   S3_PREFIX.quickbyte,
+                        apply:    async (url) => QuickByte.updateOne({ _id: qb._id }, { $set: { 'video.s3_url': url } }),
+                    });
                 }
             }
-            (qb.episodes || []).forEach(ep => {
+            for (const ep of (qb.episodes || [])) {
                 if (ep.url) {
-                    if (!ep.s3_url) {
-                        items.push({
-                            label: `QuickByte "${qb.title}" (${qb._id}) - episode ${ep._id}`,
-                            title: qb.title,
-                            originalUrl: ep.url,
+                    if (ep.s3_url || ep.original_s3_url) {
+                        buckets.alreadyMigrated.push({ label: `QuickByte "${qb.title}" (${qb._id}) - episode ${ep._id}`, title: qb.title });
+                    } else {
+                        classify({
+                            label:    `QuickByte "${qb.title}" (${qb._id}) - episode ${ep._id}`,
+                            title:    qb.title,
+                            id:       ep._id,
+                            rawUrl:   ep.url,
                             localPath: getFilePathFromUrl(normalizeVideoUrl(ep.url)),
-                            id: ep._id, type: 'quickbyte_episode',
-                            alreadyMigrated: false,
-                            apply: async (url) => QuickByte.updateOne(
+                            s3Type:   S3_PREFIX.quickbyte_episode,
+                            apply:    async (url) => QuickByte.updateOne(
                                 { _id: qb._id, 'episodes._id': ep._id },
                                 { $set: { 'episodes.$.s3_url': url } }
-                            )
+                            ),
                         });
-                    } else {
-                        items.push({ label: `QuickByte "${qb.title}" (${qb._id}) - episode ${ep._id}`, title: qb.title, alreadyMigrated: true });
                     }
                 }
-            });
+            }
         }
     }
 
+    // ── ForYou ────────────────────────────────────────────────────────────
     if (wantsType('foryou')) {
         const reels = await ForYou.find({}).lean(false);
         for (const reel of reels) {
             if (reel.video?.url) {
-                if (!reel.video.s3_url) {
-                    items.push({
-                        label: `ForYou "${reel.title}" (${reel._id})`,
-                        title: reel.title,
-                        originalUrl: reel.video.url,
-                        localPath: getFilePathFromUrl(normalizeVideoUrl(reel.video.url)),
-                        id: reel._id, type: 'foryou',
-                        alreadyMigrated: false,
-                        apply: async (url) => ForYou.updateOne({ _id: reel._id }, { $set: { 'video.s3_url': url } })
-                    });
+                if (reel.video.s3_url || reel.video.original_s3_url) {
+                    buckets.alreadyMigrated.push({ label: `ForYou "${reel.title}" (${reel._id})`, title: reel.title });
                 } else {
-                    items.push({ label: `ForYou "${reel.title}" (${reel._id})`, title: reel.title, alreadyMigrated: true });
+                    classify({
+                        label:    `ForYou "${reel.title}" (${reel._id})`,
+                        title:    reel.title,
+                        id:       reel._id,
+                        rawUrl:   reel.video.url,
+                        localPath: getFilePathFromUrl(normalizeVideoUrl(reel.video.url)),
+                        s3Type:   S3_PREFIX.foryou,
+                        apply:    async (url) => ForYou.updateOne({ _id: reel._id }, { $set: { 'video.s3_url': url } }),
+                    });
                 }
             }
         }
     }
 
+    // ── Content (movie / trailer / episode) ───────────────────────────────
     if (wantsType('movie') || wantsType('episode') || wantsType('trailer')) {
         const contentItems = await Content.find({}).lean(false);
         for (const c of contentItems) {
             if (wantsType('movie') && c.video?.url) {
-                if (!c.video.s3_url) {
-                    items.push({
-                        label: `Content "${c.title}" (${c._id}) - main video`,
-                        title: c.title,
-                        originalUrl: c.video.url,
-                        localPath: getFilePathFromUrl(normalizeVideoUrl(c.video.url)),
-                        id: c._id, type: 'movie',
-                        alreadyMigrated: false,
-                        apply: async (url) => Content.updateOne({ _id: c._id }, { $set: { 'video.s3_url': url } })
-                    });
+                if (c.video.s3_url || c.video.original_s3_url) {
+                    buckets.alreadyMigrated.push({ label: `Content "${c.title}" (${c._id}) - main video`, title: c.title });
                 } else {
-                    items.push({ label: `Content "${c.title}" (${c._id}) - main video`, title: c.title, alreadyMigrated: true });
+                    classify({
+                        label:    `Content "${c.title}" (${c._id}) - main video`,
+                        title:    c.title,
+                        id:       c._id,
+                        rawUrl:   c.video.url,
+                        localPath: getFilePathFromUrl(normalizeVideoUrl(c.video.url)),
+                        s3Type:   S3_PREFIX.movie,
+                        apply:    async (url) => Content.updateOne({ _id: c._id }, { $set: { 'video.s3_url': url } }),
+                    });
                 }
             }
             if (wantsType('trailer') && c.trailer?.url) {
-                if (!c.trailer.s3_url) {
-                    items.push({
-                        label: `Content "${c.title}" (${c._id}) - trailer`,
-                        title: c.title,
-                        originalUrl: c.trailer.url,
-                        localPath: getFilePathFromUrl(normalizeVideoUrl(c.trailer.url)),
-                        id: c._id, type: 'trailer',
-                        alreadyMigrated: false,
-                        apply: async (url) => Content.updateOne({ _id: c._id }, { $set: { 'trailer.s3_url': url } })
-                    });
+                if (c.trailer.s3_url || c.trailer.original_s3_url) {
+                    buckets.alreadyMigrated.push({ label: `Content "${c.title}" (${c._id}) - trailer`, title: c.title });
                 } else {
-                    items.push({ label: `Content "${c.title}" (${c._id}) - trailer`, title: c.title, alreadyMigrated: true });
+                    classify({
+                        label:    `Content "${c.title}" (${c._id}) - trailer`,
+                        title:    c.title,
+                        id:       c._id,
+                        rawUrl:   c.trailer.url,
+                        localPath: getFilePathFromUrl(normalizeVideoUrl(c.trailer.url)),
+                        s3Type:   S3_PREFIX.trailer,
+                        apply:    async (url) => Content.updateOne({ _id: c._id }, { $set: { 'trailer.s3_url': url } }),
+                    });
                 }
             }
             if (wantsType('episode')) {
-                (c.seasons || []).forEach(season => {
-                    (season.episodes || []).forEach(ep => {
+                for (const season of (c.seasons || [])) {
+                    for (const ep of (season.episodes || [])) {
                         if (ep.video?.url) {
-                            if (!ep.video.s3_url) {
-                                items.push({
-                                    label: `Content "${c.title}" (${c._id}) - S${season.seasonNumber}E${ep.episodeNumber} (${ep._id})`,
-                                    title: c.title,
-                                    originalUrl: ep.video.url,
+                            if (ep.video.s3_url || ep.video.original_s3_url) {
+                                buckets.alreadyMigrated.push({ label: `Content "${c.title}" (${c._id}) - S${season.seasonNumber}E${ep.episodeNumber}`, title: c.title });
+                            } else {
+                                classify({
+                                    label:    `Content "${c.title}" (${c._id}) - S${season.seasonNumber}E${ep.episodeNumber} (${ep._id})`,
+                                    title:    c.title,
+                                    id:       ep._id,
+                                    rawUrl:   ep.video.url,
                                     localPath: getFilePathFromUrl(normalizeVideoUrl(ep.video.url)),
-                                    id: ep._id, type: 'episode',
-                                    alreadyMigrated: false,
-                                    apply: async (url) => Content.updateOne(
+                                    s3Type:   S3_PREFIX.episode,
+                                    apply:    async (url) => Content.updateOne(
                                         { _id: c._id },
                                         { $set: { 'seasons.$[s].episodes.$[e].video.s3_url': url } },
                                         { arrayFilters: [{ 's._id': season._id }, { 'e._id': ep._id }] }
-                                    )
+                                    ),
                                 });
-                            } else {
-                                items.push({ label: `Content "${c.title}" (${c._id}) - S${season.seasonNumber}E${ep.episodeNumber} (${ep._id})`, title: c.title, alreadyMigrated: true });
                             }
                         }
-                    });
-                });
+                    }
+                }
             }
         }
     }
 
+    // ── Banner ────────────────────────────────────────────────────────────
     if (wantsType('banner')) {
         const banners = await Banner.find({ mediaType: 'video' }).lean(false);
         for (const b of banners) {
             if (b.mediaUrl) {
-                // Already migrated — schema field is set
                 if (b.originalS3Url) {
-                    items.push({ label: `Banner (${b._id})`, title: `Banner ${b._id}`, alreadyMigrated: true });
-                    continue;
-                }
-                const normalizedBanner = normalizeVideoUrl(b.mediaUrl);
-                if (!normalizedBanner) {
-                    // URL is CloudFront/HLS/non-local — treat as HLS-only, not a failure
-                    items.push({
-                        label: `Banner (${b._id})`,
-                        title: `Banner ${b._id}`,
-                        originalUrl: b.mediaUrl,
-                        isHlsOnly: true
-                    });
+                    buckets.alreadyMigrated.push({ label: `Banner (${b._id})`, title: `Banner ${b._id}` });
                 } else {
-                    items.push({
-                        label: `Banner (${b._id})`,
-                        title: `Banner ${b._id}`,
-                        originalUrl: b.mediaUrl,
-                        localPath: getFilePathFromUrl(normalizedBanner),
-                        id: b._id, type: 'banner',
-                        alreadyMigrated: false,
-                        apply: async (url) => Banner.updateOne({ _id: b._id }, { $set: { originalS3Url: url } })
+                    classify({
+                        label:    `Banner (${b._id})`,
+                        title:    `Banner ${b._id}`,
+                        id:       b._id,
+                        rawUrl:   b.mediaUrl,
+                        localPath: null,
+                        s3Type:   S3_PREFIX.banner,
+                        apply:    async (url) => Banner.updateOne({ _id: b._id }, { $set: { originalS3Url: url } }),
                     });
                 }
             }
         }
     }
 
+    // ── Promotion ─────────────────────────────────────────────────────────
     if (wantsType('promotion')) {
         const promotions = await Promotion.find({}).lean(false);
         for (const p of promotions) {
             if (p.promoVideoUrl) {
-                // Already migrated — schema field is set
                 if (p.originalS3Url) {
-                    items.push({ label: `Promotion "${p.title}" (${p._id})`, title: p.title, alreadyMigrated: true });
-                    continue;
-                }
-                const normalizedPromo = normalizeVideoUrl(p.promoVideoUrl);
-                if (!normalizedPromo) {
-                    // CloudFront/HLS URL — treat as HLS-only, not a failure
-                    items.push({
-                        label: `Promotion "${p.title}" (${p._id})`,
-                        title: p.title,
-                        originalUrl: p.promoVideoUrl,
-                        isHlsOnly: true
-                    });
+                    buckets.alreadyMigrated.push({ label: `Promotion "${p.title}" (${p._id})`, title: p.title });
                 } else {
-                    items.push({
-                        label: `Promotion "${p.title}" (${p._id})`,
-                        title: p.title,
-                        originalUrl: p.promoVideoUrl,
-                        localPath: getFilePathFromUrl(normalizedPromo),
-                        id: p._id, type: 'promotion',
-                        alreadyMigrated: false,
-                        apply: async (url) => Promotion.updateOne({ _id: p._id }, { $set: { originalS3Url: url } })
+                    classify({
+                        label:    `Promotion "${p.title}" (${p._id})`,
+                        title:    p.title,
+                        id:       p._id,
+                        rawUrl:   p.promoVideoUrl,
+                        localPath: null,
+                        s3Type:   S3_PREFIX.promotion,
+                        apply:    async (url) => Promotion.updateOne({ _id: p._id }, { $set: { originalS3Url: url } }),
                     });
                 }
             }
         }
     }
 
-    // Mark HLS items (catch-all for any model whose originalUrl slipped through)
-    items.forEach(item => {
-        if (!item.isHlsOnly && item.originalUrl && typeof item.originalUrl === 'string' && item.originalUrl.includes('.m3u8')) {
-            item.isHlsOnly = true;
-        }
-    });
-
-    // Fix 1: Return ALL items. The worker decides what to do with each one.
-    // Missing-file records must appear in the report — do NOT silently drop them here.
-    return items;
+    return buckets;
 };
 
 const run = async () => {
     let isShuttingDown = false;
-    process.on('SIGINT', () => {
-        console.log('\n[!] Caught SIGINT. Stopping further processing (generating final report and exiting gracefully)...');
-        isShuttingDown = true;
-    });
 
     await mongoose.connect(process.env.MONGODB_URI);
     const { host, name } = mongoose.connection;
@@ -332,130 +389,119 @@ const run = async () => {
     if (ONLY_TYPES) console.log(`Restricted to types: ${ONLY_TYPES.join(', ')}`);
     console.log('');
 
-    console.log('Scanning for legacy local-only videos...');
-    const items = await collectWorkItems();
-    console.log(`Found ${items.length} file(s) overall to process.\n`);
+    // Build S3 index once up-front — avoids 195 individual HeadObject calls
+    // for files already uploaded, and gives us a collision-safe type/filename key.
+    const s3Index = await buildS3Index();
 
-    if (items.length === 0) {
-        console.log('Nothing to migrate.');
-        await mongoose.disconnect();
-        return;
-    }
-
-    let totalBytes = 0;
-    items.forEach(i => {
-        if (!i.alreadyMigrated && !i.isHlsOnly && i.localPath) {
-            try { totalBytes += fs.statSync(i.localPath).size; } catch { /* gone */ }
-        }
+    process.on('SIGINT', () => {
+        console.log('\n[!] Caught SIGINT — stopping after current items finish …');
+        isShuttingDown = true;
     });
-    console.log(`Total size to upload (excluding skipped): ${formatBytes(totalBytes)}\n`);
 
-    const results = { uploaded: [], skipped: [], failed: [], skippedHls: [], mongoUpdated: [] };
+    console.log('Scanning MongoDB …');
+    const buckets = await collectWorkItems(s3Index);
+    const totalScanned = buckets.alreadyMigrated.length + buckets.mongoNeedsUpdate.length +
+                         buckets.toUpload.length + buckets.localMissing.length + buckets.hlsOnly.length;
+    console.log(`Scanned ${totalScanned} record(s):`);
+    console.log(`  Already Migrated (Mongo)    : ${buckets.alreadyMigrated.length}`);
+    console.log(`  S3 Exists → Mongo Needs Patch: ${buckets.mongoNeedsUpdate.length}`);
+    console.log(`  Would Upload                : ${buckets.toUpload.length}`);
+    console.log(`  Local Missing               : ${buckets.localMissing.length}`);
+    console.log(`  HLS Only                    : ${buckets.hlsOnly.length}`);
+    console.log('');
+
+    let totalUploadBytes = 0;
+    for (const i of buckets.toUpload) {
+        try { totalUploadBytes += fs.statSync(i.localPath).size; } catch { /* gone */ }
+    }
+    console.log(`Total size to upload: ${formatBytes(totalUploadBytes)}\n`);
+
+    const results = {
+        skipped:          [...buckets.alreadyMigrated],
+        s3Exists:         [],   // mongoNeedsUpdate applied during execute
+        uploaded:         [],
+        hlsOnly:          [...buckets.hlsOnly],
+        s3Missing:        [...buckets.localMissing],
+        failed:           [],
+    };
 
     if (DRY_RUN) {
-        items.forEach(i => {
-            if (i.alreadyMigrated) {
-                console.log(`  would skip   : ${i.label}`);
-            } else if (i.isHlsOnly) {
-                console.log(`  would skip HLS: ${i.label}`);
-            } else {
-                console.log(`  would migrate: ${i.label}`);
-            }
-        });
-        console.log('\nDry run - re-run with --execute to actually upload these originals to S3.');
+        console.log('=== DRY RUN — no uploads, no DB writes ===\n');
+        if (buckets.alreadyMigrated.length) {
+            console.log(`--- Already Migrated (${buckets.alreadyMigrated.length}) ---`);
+            buckets.alreadyMigrated.forEach(i => console.log(`  ${i.label}`));
+        }
+        if (buckets.mongoNeedsUpdate.length) {
+            console.log(`\n--- S3 Exists → Mongo Update Needed (${buckets.mongoNeedsUpdate.length}) ---`);
+            buckets.mongoNeedsUpdate.forEach(i => console.log(`  ${i.label}`));
+        }
+        if (buckets.toUpload.length) {
+            console.log(`\n--- Would Upload (${buckets.toUpload.length}) ---`);
+            buckets.toUpload.forEach(i => console.log(`  ${i.label}`));
+        }
+        if (buckets.localMissing.length) {
+            console.log(`\n--- Local Missing (${buckets.localMissing.length}) ---`);
+            buckets.localMissing.forEach(i => console.log(`  ${i.label}`));
+        }
+        if (buckets.hlsOnly.length) {
+            console.log(`\n--- HLS Only (${buckets.hlsOnly.length}) ---`);
+            buckets.hlsOnly.forEach(i => console.log(`  ${i.label}`));
+        }
+        console.log('\nDry run complete — re-run with --execute to apply changes.');
         await mongoose.disconnect();
         return;
     }
 
-    // Fix 5: Atomic index pointer prevents duplicate processing under concurrency
-    // and survives SIGINT cleanly without a shared mutable array.
+    // ── Execute path ──────────────────────────────────────────────────────
+
+    // Step 1: Apply Mongo patches for files already in S3 (no upload).
+    console.log(`Patching Mongo for ${buckets.mongoNeedsUpdate.length} record(s) already in S3 …`);
+    for (const item of buckets.mongoNeedsUpdate) {
+        try {
+            await item.apply(item.url);
+            results.s3Exists.push(item);
+            console.log(`  MONGO_PATCHED → ${item.label}`);
+        } catch (dbErr) {
+            results.failed.push({ ...item, reason: `Mongo patch failed: ${dbErr.message}` });
+            console.log(`  MONGO_FAILED  → ${dbErr.message} → ${item.label}`);
+        }
+    }
+
+    // Step 2: Upload only the files genuinely missing from S3.
+    if (buckets.toUpload.length === 0) {
+        console.log('\nNo files to upload — all originals already exist in S3.');
+    } else {
+        console.log(`\nUploading ${buckets.toUpload.length} file(s) missing from S3 …`);
+    }
+
     let cursor = 0;
     let processed = 0;
 
     const worker = async () => {
         while (!isShuttingDown) {
-            // Atomically claim the next item
             const idx = cursor++;
-            if (idx >= items.length) break;
+            if (idx >= buckets.toUpload.length) break;
 
-            const item = items[idx];
-            const itemNum = ++processed;
-            const progress = `[${itemNum}/${items.length}]`;
+            const item         = buckets.toUpload[idx];
+            const itemNum      = ++processed;
+            const progress     = `[${itemNum}/${buckets.toUpload.length}]`;
             const displayTitle = item.title || item.label;
-
-            // 1. If already migrated in Mongo, skip.
-            if (item.alreadyMigrated) {
-                results.skipped.push(item);
-                console.log(`${progress} SKIP (Already Migrated) → ${displayTitle}`);
-                continue;
-            }
-
-            // 2. If HLS-only, skip.
-            if (item.isHlsOnly) {
-                results.skippedHls.push(item);
-                console.log(`${progress} SKIP (Already HLS) → ${displayTitle}`);
-                continue;
-            }
-
-            // Fix 1: Local file check is here in the worker, not in collectWorkItems.
-            // Missing records are counted and reported — never silently dropped.
-            if (!item.localPath || !fs.existsSync(item.localPath)) {
-                results.failed.push({ ...item, reason: 'Local file missing' });
-                console.log(`${progress} ISSUE → Local file missing → ${displayTitle}`);
-                continue;
-            }
-
-            // 3. Derive expected S3 key (same structure mediaService uses)
-            const filename = path.basename(item.localPath);
-            const s3Key = `originals/${item.type}/${item.id}/${filename}`;
-
-            // 4. HeadObject — detect files already on S3 from a previous interrupted run
-            let objectExistsInS3 = false;
-            try {
-                await s3Client.send(new HeadObjectCommand({
-                    Bucket: process.env.AWS_S3_BUCKET,
-                    Key: s3Key
-                }));
-                objectExistsInS3 = true;
-            } catch (err) {
-                // 404 / NotFound is expected — anything else is a real AWS error
-                if (err.name !== 'NotFound' && err.$metadata?.httpStatusCode !== 404) {
-                    console.error(`${progress} S3 HeadObject error for ${item.label}: ${err.message}`);
-                }
-            }
-
-            // 5. Fix 4: Object already exists — repair Mongo using generateS3Url (HeadObject repair path only)
-            if (objectExistsInS3) {
-                const url = generateS3Url(s3Key);
-                try {
-                    await item.apply(url);
-                    results.mongoUpdated.push({ ...item, url });
-                    console.log(`${progress} S3 EXISTS → Mongo Updated → ${displayTitle}`);
-                } catch (dbError) {
-                    results.failed.push({ ...item, reason: `Mongo update failed: ${dbError.message}` });
-                    console.log(`${progress} ISSUE → Mongo update failed: ${dbError.message} → ${displayTitle}`);
-                }
-                continue;
-            }
 
             console.log(`${progress} UPLOADING → ${displayTitle}`);
 
-            // 6. Fix 4: Fresh uploads — mediaService is the source of truth for the returned URL.
-            //    Do NOT build the URL manually here; mediaService constructs and returns it.
             let attempt = 1;
-            const maxAttempts = 4; // 1 initial + 3 retries
+            const maxAttempts = 4;
             let uploadedUrl = null;
-            let lastError = null;
+            let lastError   = null;
 
             while (attempt <= maxAttempts) {
                 if (attempt > 1) {
-                    const delay = Math.pow(2, attempt - 1) * 1000; // 2s, 4s, 8s
+                    const delay = Math.pow(2, attempt - 1) * 1000;
                     console.log(`${progress} Retry ${attempt - 1}/3 → ${displayTitle}`);
                     await sleep(delay);
                 }
-
                 try {
-                    uploadedUrl = await mediaService.uploadOriginalToS3(item.localPath, item.id, item.type);
+                    uploadedUrl = await mediaService.uploadOriginalToS3(item.localPath, item.id || item.label, item.s3Type);
                     if (uploadedUrl) break;
                     throw new Error('uploadOriginalToS3 returned null without throwing');
                 } catch (error) {
@@ -469,29 +515,38 @@ const run = async () => {
                 try {
                     await item.apply(uploadedUrl);
                     results.uploaded.push({ ...item, url: uploadedUrl });
-                    console.log(`${progress} SUCCESS → ${displayTitle}`);
-                } catch (dbError) {
-                    results.failed.push({ ...item, reason: `Mongo update failed: ${dbError.message}` });
-                    console.log(`${progress} ISSUE → Mongo update failed: ${dbError.message} → ${displayTitle}`);
+                    console.log(`${progress} UPLOADED → ${displayTitle}`);
+                } catch (dbErr) {
+                    results.failed.push({ ...item, reason: `Mongo update failed: ${dbErr.message}` });
+                    console.log(`${progress} MONGO_FAILED → ${dbErr.message} → ${displayTitle}`);
                 }
             } else {
                 results.failed.push({ ...item, reason: lastError ? lastError.message : 'Unknown upload error' });
-                console.log(`${progress} ISSUE → ${lastError ? lastError.message : 'Unknown upload error'} → ${displayTitle}`);
+                console.log(`${progress} UPLOAD_FAILED → ${lastError ? lastError.message : 'Unknown'} → ${displayTitle}`);
             }
         }
     };
 
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
+    const totalProcessed = results.skipped.length + results.s3Exists.length +
+                           results.uploaded.length + results.hlsOnly.length +
+                           results.s3Missing.length + results.failed.length;
+
     // Summary Report
     console.log(`\n========== MIGRATION SUMMARY ==========`);
-    console.log(`Already Migrated : ${results.skipped.length}`);
-    console.log(`Mongo Updated    : ${results.mongoUpdated.length}`);
-    console.log(`Uploaded         : ${results.uploaded.length}`);
-    console.log(`Skipped HLS      : ${results.skippedHls.length}`);
-    console.log(`Failed           : ${results.failed.length}`);
-    console.log(`Total Processed  : ${processed}`);
-    console.log(`\n`);
+    console.log(`Already Migrated (Mongo)     : ${results.skipped.length}`);
+    console.log(`S3 Exists → Mongo Updated    : ${results.s3Exists.length}`);
+    console.log(`Uploaded                     : ${results.uploaded.length}`);
+    console.log(`HLS Only                     : ${results.hlsOnly.length}`);
+    console.log(`Local Missing                : ${results.s3Missing.length}`);
+    console.log(`Failed                       : ${results.failed.length}`);
+    console.log(`Total                        : ${totalProcessed}`);
+    console.log('');
+
+    if (isShuttingDown) {
+        console.log('[!] Script was interrupted via SIGINT — re-run to process remaining items.');
+    }
 
     // Full report, same convention as cleanupOrphanedMedia.js - never rely on
     // a truncated console scroll for something this consequential.
@@ -505,28 +560,40 @@ const run = async () => {
         
         // JSON Migration Summary
         const summary = {
-            totalFound: items.length,
-            uploaded: results.uploaded.length,
-            skipped: results.skipped.length,
-            skippedHls: results.skippedHls.length,
-            mongoUpdated: results.mongoUpdated.length,
-            failed: results.failed.length,
-            timestamp: new Date().toISOString(),
-            failures: results.failed
+            timestamp:        new Date().toISOString(),
+            mode:             DRY_RUN ? 'dry-run' : 'execute',
+            database:         `${name} @ ${host}`,
+            alreadyMigrated:  results.skipped.length,
+            s3ExistsMongoPatch: results.s3Exists.length,
+            uploaded:         results.uploaded.length,
+            hlsOnly:          results.hlsOnly.length,
+            localMissing:     results.s3Missing.length,
+            failed:           results.failed.length,
+            total:            totalProcessed,
+            uploadedDetails:    results.uploaded.map(r => ({ label: r.label, url: r.url })),
+            s3ExistsDetails:    results.s3Exists.map(r => ({ label: r.label, url: r.url })),
+            localMissingDetails: results.s3Missing.map(r => ({ label: r.label })),
+            failures:           results.failed,
         };
         fs.writeFileSync(jsonReportPath, JSON.stringify(summary, null, 2));
 
-        // Output Traditional TXT Report
         const lines = [
-            `Migration report - ${new Date().toISOString()}`,
-            `Database: ${name} @ ${host}`,
-            `Total Found: ${items.length}, Processed: ${processed}, Uploaded: ${results.uploaded.length}, Skipped: ${results.skipped.length}, Skipped HLS: ${results.skippedHls.length}, Mongo Updated: ${results.mongoUpdated.length}, Failed: ${results.failed.length}`,
+            `Migration report — ${new Date().toISOString()}`,
+            `Mode     : ${DRY_RUN ? 'DRY RUN' : 'EXECUTE'}`,
+            `Database : ${name} @ ${host}`,
+            `Already Migrated: ${results.skipped.length}, S3 Exists→Mongo: ${results.s3Exists.length}, Uploaded: ${results.uploaded.length}, HLS Only: ${results.hlsOnly.length}, Local Missing: ${results.s3Missing.length}, Failed: ${results.failed.length}`,
             '',
-            '=== SUCCEEDED ===',
-            ...results.uploaded.map(r => `${r.label}\t${r.url}`),
+            '=== UPLOADED ===',
+            ...results.uploaded.map(r => `  ${r.label}\t${r.url}`),
             '',
-            '=== FAILED (local file kept, needs investigation, safe to re-run) ===',
-            ...results.failed.map(r => `${r.label}\t${r.reason}`)
+            '=== S3 EXISTS → MONGO UPDATED ===',
+            ...results.s3Exists.map(r => `  ${r.label}\t${r.url}`),
+            '',
+            '=== LOCAL FILE MISSING ===',
+            ...results.s3Missing.map(r => `  ${r.label}`),
+            '',
+            '=== FAILED ===',
+            ...results.failed.map(r => `  ${r.label}\t${r.reason}`),
         ];
         fs.writeFileSync(txtReportPath, lines.join('\n') + '\n');
         
@@ -537,9 +604,9 @@ const run = async () => {
     }
 
     if (results.failed.length > 0) {
-        console.log('\nSome files failed to migrate - their local originals were NOT touched. Re-running this script later will retry only the failed/remaining ones.');
+        console.log('\nSome files failed — local originals were NOT touched. Re-run to retry.');
     }
-    console.log('\nLocal files were NOT deleted by this script. Run scripts/verifyMediaIntegrity.js next, then scripts/cleanupOrphanedMedia.js --delete-verified-originals only once you are satisfied.');
+    console.log('\nLocal files were NOT deleted. Run verifyMediaIntegrity.js then cleanupOrphanedMedia.js --delete-verified-originals only after review.');
 
     await mongoose.disconnect();
 };
@@ -551,4 +618,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { collectWorkItems, run };
+module.exports = { collectWorkItems, buildS3Index, run };
