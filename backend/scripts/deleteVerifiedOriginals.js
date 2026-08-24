@@ -188,6 +188,7 @@ const run = async () => {
     // Map: localBasename -> Array of record candidate descriptors
     const mongoMap = new Map();
     const contentCandidates = [];
+    const quickbyteEpisodeMap = new Map();
 
     const addRecordCandidate = (candidate) => {
         // Content movies/trailers store HLS playlist in Mongo.
@@ -239,18 +240,28 @@ const run = async () => {
             });
         }
         for (const ep of (qb.episodes || [])) {
+            const epCandidate = {
+                model: 'QuickByte',
+                type: 'quickbyte_episode',
+                docId: qb._id.toString(),
+                subId: ep._id?.toString(),
+                title: `${qb.title || 'QuickByte'} - Episode ${ep._id}`,
+                label: `QuickByte "${qb.title}" (${qb._id}) - episode ${ep._id}`,
+                localUrl: ep.url,
+                s3Url: ep.s3_url || ep.original_s3_url || null,
+                hlsUrl: ep.hls_url || null,
+            };
+
+            addRecordCandidate(epCandidate);
+
+            // Secondary lookup for QuickByte episodes (PATCH 1)
             if (ep.url) {
-                addRecordCandidate({
-                    model: 'QuickByte',
-                    type: 'quickbyte_episode',
-                    docId: qb._id.toString(),
-                    subId: ep._id?.toString(),
-                    title: `${qb.title || 'QuickByte'} - Episode ${ep._id}`,
-                    label: `QuickByte "${qb.title}" (${qb._id}) - episode ${ep._id}`,
-                    localUrl: ep.url,
-                    s3Url: ep.s3_url || ep.original_s3_url || null,
-                    hlsUrl: ep.hls_url || null,
-                });
+                const rawBase = extractBasename(ep.url);
+                if (rawBase) quickbyteEpisodeMap.set(rawBase, epCandidate);
+            }
+            if (ep.s3_url || ep.original_s3_url) {
+                const s3Base = extractBasename(ep.s3_url || ep.original_s3_url);
+                if (s3Base) quickbyteEpisodeMap.set(s3Base, epCandidate);
             }
         }
     }
@@ -393,8 +404,18 @@ const run = async () => {
         const s3Entry = s3Inventory.get(localFileBasename);
 
         // PATCH 2: Content originals are verified using HLS + S3 inventory.
-        const contentCandidate = (candidates && candidates.find(c => c.model === 'Content')) ||
-                                 contentCandidates.find(c => (c.hlsUrl && c.hlsUrl.includes('.m3u8')) && s3Entry);
+        const contentCandidate =
+            (candidates && candidates.find(c => c.model === "Content")) ||
+            contentCandidates.find(c => {
+                const s3Base = extractBasename(c.s3Url);
+
+                return (
+                    c.hlsUrl &&
+                    c.hlsUrl.includes(".m3u8") &&
+                    s3Base &&
+                    s3Base === localFileBasename
+                );
+            });
 
         if (
             contentCandidate &&
@@ -414,10 +435,31 @@ const run = async () => {
                     reason: 'Verified via HLS + S3 inventory',
                 });
                 safeToDeleteBytes += fileSize;
-                verifiedCategoryCounts.content_movie++;
+                if (verifiedCategoryCounts[contentCandidate.type] !== undefined) {
+                    verifiedCategoryCounts[contentCandidate.type]++;
+                }
                 recoveredFromInventoryCount++;
                 continue;
             }
+        }
+
+        // Secondary fallback check for QuickByte episodes (PATCH 2)
+        const qbEpCandidate = quickbyteEpisodeMap.get(localFileBasename);
+        if (qbEpCandidate && s3Entry) {
+            verifiedDeleteList.push({
+                filePath,
+                basename: localFileBasename,
+                fileSize,
+                status: 'VERIFIED_DELETE',
+                verificationSource: 'QUICKBYTE_EPISODE_MAP',
+                s3Key: s3Entry,
+                candidate: qbEpCandidate,
+                reason: 'Recovered from S3 inventory via QuickByteEpisodeMap',
+            });
+            safeToDeleteBytes += fileSize;
+            verifiedCategoryCounts.quickbyte_episode++;
+            recoveredFromInventoryCount++;
+            continue;
         }
 
         // Check A: If file exists in S3 Inventory directly (Source of truth)
