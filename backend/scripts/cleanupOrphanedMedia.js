@@ -35,6 +35,13 @@ const { UPLOAD_BASE } = require('../config/multerStorage');
 const { formatBytes } = require('../utils/diskSpace');
 const { sweepStaleTempHls } = require('../utils/tempHlsSweeper');
 
+// Mongoose Models
+const Content = require('../models/Content');
+const QuickByte = require('../models/QuickByte');
+const ForYou = require('../models/ForYou');
+const Banner = require('../models/Banner');
+const Promotion = require('../models/Promotion');
+
 const argvOptions = () => {
     const args = process.argv.slice(2);
     return {
@@ -62,45 +69,132 @@ const listFiles = (dir) => {
     return out;
 };
 
-const toAbsolute = (uploadsPath) =>
-    path.join(UPLOAD_BASE, uploadsPath.replace('/uploads/', '').replace(/\//g, path.sep));
+/**
+ * Shared helper to normalize any media reference or filesystem path.
+ * Handles:
+ *   - /uploads/videos/...
+ *   - uploads/videos/...
+ *   - undefined/uploads/videos/...
+ *   - undefinedundefined/uploads/videos/...
+ *   - CloudFront HLS URLs (e.g. https://.../videos/movie/123/master.m3u8 -> videos/movie/123/master.m3u8)
+ *   - S3 URLs (e.g. https://.../originals/quickbyte/123/xyz.mp4 -> originals/quickbyte/123/xyz.mp4)
+ *   - Absolute disk paths (e.g. H:\inplay\backend\uploads\videos\xyz.mp4 -> videos/xyz.mp4)
+ */
+const normalizeMediaPath = (input) => {
+    if (!input || typeof input !== 'string') return null;
+
+    let str = decodeURIComponentSafe(input).trim();
+
+    // If it's an absolute path under UPLOAD_BASE
+    if (str.startsWith(UPLOAD_BASE)) {
+        return path.relative(UPLOAD_BASE, str).replace(/\\/g, '/');
+    }
+
+    // Strip http(s)://domain/ prefix if present
+    if (str.startsWith('http://') || str.startsWith('https://')) {
+        try {
+            str = new URL(str).pathname;
+        } catch {
+            // keep str as-is
+        }
+    }
+
+    // Strip query strings and hash fragments
+    str = str.split('?')[0].split('#')[0];
+
+    // Check for uploads/
+    const uploadsIndex = str.indexOf('uploads/');
+    if (uploadsIndex !== -1) {
+        return str.substring(uploadsIndex + 'uploads/'.length).replace(/^\/+/, '').replace(/\\/g, '/');
+    }
+
+    // Check for originals/ (S3 URLs)
+    const originalsIndex = str.indexOf('originals/');
+    if (originalsIndex !== -1) {
+        return str.substring(originalsIndex).replace(/\\/g, '/');
+    }
+
+    // Check for videos/ (HLS or direct video paths)
+    const videosIndex = str.indexOf('videos/');
+    if (videosIndex !== -1) {
+        return str.substring(videosIndex).replace(/\\/g, '/');
+    }
+
+    // Check for images/ (poster/backdrop/thumbnail/avatar/banner)
+    const imagesIndex = str.indexOf('images/');
+    if (imagesIndex !== -1) {
+        return str.substring(imagesIndex).replace(/\\/g, '/');
+    }
+
+    // Check for audio/
+    const audioIndex = str.indexOf('audio/');
+    if (audioIndex !== -1) {
+        return str.substring(audioIndex).replace(/\\/g, '/');
+    }
+
+    return str.replace(/^\/+/, '').replace(/\\/g, '/');
+};
+
+const toAbsolute = (uploadsPath) => {
+    if (!uploadsPath || typeof uploadsPath !== 'string') return null;
+    if (path.isAbsolute(uploadsPath) && uploadsPath.startsWith(UPLOAD_BASE)) {
+        return uploadsPath;
+    }
+    const normalized = normalizeMediaPath(uploadsPath);
+    if (!normalized) return null;
+    return path.join(UPLOAD_BASE, normalized.replace(/\//g, path.sep));
+};
+
+const registerReference = (val, into, basenames) => {
+    if (!val || typeof val !== 'string') return;
+    const clean = val.trim();
+    if (!clean) return;
+
+    // 1. Extract basename (filename safety net)
+    const urlClean = clean.split('?')[0].split('#')[0];
+    const base = path.basename(urlClean);
+    if (base && base !== '.' && base !== '/' && base !== '\\') {
+        basenames.add(base);
+        basenames.add(decodeURIComponentSafe(base));
+    }
+
+    // 2. Normalize media path & register absolute / relative paths
+    const norm = normalizeMediaPath(clean);
+    if (norm) {
+        const abs = toAbsolute(norm);
+        if (abs) {
+            into.add(abs);
+            into.add(path.resolve(abs));
+        }
+        into.add(norm);
+    }
+};
 
 /**
- * Pull every /uploads/... path referenced anywhere in a document.
- *
- * Filenames are not always safe to regex out of a string: the generic /upload
- * route keeps the original name, so spaces are common ("My Image 1.webp").
- * A whitespace-terminated match would truncate those and mark a live file as
- * orphaned. So we record several candidates per occurrence, and additionally
- * track basenames as a conservative safety net - keeping a little junk is fine,
- * deleting a referenced file is not.
+ * Pull every media path / filename referenced anywhere in a document.
  */
 const collectReferences = (value, into, basenames) => {
     if (!value) return;
 
     if (typeof value === 'string') {
-        let index = value.indexOf('/uploads/');
+        registerReference(value, into, basenames);
 
+        // Also search for any embedded uploads/ substrings
+        let index = value.indexOf('uploads/');
         while (index !== -1) {
             const tail = value.slice(index);
-
             const candidates = [
-                tail,                                    // rest of the string (handles spaces)
-                tail.split(/["'?]/)[0],                  // up to a quote or query string
-                tail.split(/\s/)[0]                      // up to whitespace
+                tail,
+                tail.split(/["'?]/)[0],
+                tail.split(/\s/)[0]
             ];
-
             for (const candidate of candidates) {
                 const cleaned = candidate.trim().replace(/[),\]]+$/, '');
-                if (!cleaned || cleaned === '/uploads/') continue;
-
-                for (const variant of new Set([cleaned, decodeURIComponentSafe(cleaned)])) {
-                    into.add(toAbsolute(variant));
-                    basenames.add(path.basename(variant));
+                if (cleaned && cleaned !== 'uploads/' && cleaned !== '/uploads/') {
+                    registerReference(cleaned, into, basenames);
                 }
             }
-
-            index = value.indexOf('/uploads/', index + 1);
+            index = value.indexOf('uploads/', index + 1);
         }
         return;
     }
@@ -189,24 +283,153 @@ const run = async (options = {}) => {
     const referenced = new Set();
     const referencedBasenames = new Set();
 
+    let qbMainCount = 0;
+    let qbEpCount = 0;
+    let contentCount = 0;
+    let bannerCount = 0;
+    let promoCount = 0;
+    let foryouCount = 0;
+
+    // 1. Explicit core model field extraction using imported Mongoose models
+    try {
+        const quickbytes = await QuickByte.find({}).lean(true);
+        for (const qb of quickbytes) {
+            if (qb.video) {
+                registerReference(qb.video.url, referenced, referencedBasenames);
+                registerReference(qb.video.hls_url, referenced, referencedBasenames);
+                registerReference(qb.video.s3_url, referenced, referencedBasenames);
+                registerReference(qb.video.original_s3_url, referenced, referencedBasenames);
+                qbMainCount++;
+            }
+            for (const ep of (qb.episodes || [])) {
+                registerReference(ep.url, referenced, referencedBasenames);
+                registerReference(ep.hls_url, referenced, referencedBasenames);
+                registerReference(ep.s3_url, referenced, referencedBasenames);
+                registerReference(ep.original_s3_url, referenced, referencedBasenames);
+                qbEpCount++;
+            }
+            collectReferences(qb, referenced, referencedBasenames);
+        }
+
+        const contents = await Content.find({}).lean(true);
+        for (const c of contents) {
+            if (c.video) {
+                registerReference(c.video.url, referenced, referencedBasenames);
+                registerReference(c.video.hls_url, referenced, referencedBasenames);
+                registerReference(c.video.s3_url, referenced, referencedBasenames);
+                registerReference(c.video.original_s3_url, referenced, referencedBasenames);
+                contentCount++;
+            }
+            if (c.trailer) {
+                registerReference(c.trailer.url, referenced, referencedBasenames);
+                registerReference(c.trailer.hls_url, referenced, referencedBasenames);
+                registerReference(c.trailer.s3_url, referenced, referencedBasenames);
+                registerReference(c.trailer.original_s3_url, referenced, referencedBasenames);
+                contentCount++;
+            }
+            for (const season of (c.seasons || [])) {
+                for (const ep of (season.episodes || [])) {
+                    if (ep.video) {
+                        registerReference(ep.video.url, referenced, referencedBasenames);
+                        registerReference(ep.video.hls_url, referenced, referencedBasenames);
+                        registerReference(ep.video.s3_url, referenced, referencedBasenames);
+                        registerReference(ep.video.original_s3_url, referenced, referencedBasenames);
+                        contentCount++;
+                    }
+                }
+            }
+            collectReferences(c, referenced, referencedBasenames);
+        }
+
+        const banners = await Banner.find({}).lean(true);
+        for (const b of banners) {
+            registerReference(b.mediaUrl, referenced, referencedBasenames);
+            registerReference(b.hlsUrl, referenced, referencedBasenames);
+            registerReference(b.originalS3Url, referenced, referencedBasenames);
+            bannerCount++;
+            collectReferences(b, referenced, referencedBasenames);
+        }
+
+        const promos = await Promotion.find({}).lean(true);
+        for (const p of promos) {
+            registerReference(p.promoVideoUrl, referenced, referencedBasenames);
+            registerReference(p.promoVideoHlsUrl, referenced, referencedBasenames);
+            registerReference(p.originalS3Url, referenced, referencedBasenames);
+            promoCount++;
+            collectReferences(p, referenced, referencedBasenames);
+        }
+
+        const foryous = await ForYou.find({}).lean(true);
+        for (const r of foryous) {
+            if (r.video) {
+                registerReference(r.video.url, referenced, referencedBasenames);
+                registerReference(r.video.hls_url, referenced, referencedBasenames);
+                registerReference(r.video.s3_url, referenced, referencedBasenames);
+                registerReference(r.video.original_s3_url, referenced, referencedBasenames);
+                foryouCount++;
+            }
+            collectReferences(r, referenced, referencedBasenames);
+        }
+    } catch (err) {
+        console.warn('Model scan warning:', err.message);
+    }
+
+    // 2. Generic traversal across all collections & documents
     for (const { name: collectionName } of collections) {
         const docs = await mongoose.connection.db.collection(collectionName).find({}).toArray();
         docs.forEach(doc => collectReferences(doc, referenced, referencedBasenames));
     }
-    // Note: `referenced` holds several candidate spellings per occurrence, so its
-    // raw size is not a media count. Report what is actually verifiable instead.
-    console.log(`Scanned ${collections.length} collections for media references\n`);
+
+    console.log(`QuickByte Episode References Collected : ${qbEpCount}`);
+    console.log(`QuickByte Main References Collected    : ${qbMainCount}`);
+    console.log(`Content References Collected           : ${contentCount}`);
+    console.log(`Banner References Collected            : ${bannerCount}`);
+    console.log(`Promotion References Collected         : ${promoCount}`);
+    console.log(`ForYou References Collected            : ${foryouCount}\n`);
 
     const onDisk = listFiles(UPLOAD_BASE);
 
-    // A file is only junk when neither its full path nor its filename is
-    // referenced anywhere. The basename check is the guard against paths this
-    // script failed to extract cleanly from a string.
-    const orphans = onDisk.filter(f => !referenced.has(f) && !referencedBasenames.has(path.basename(f)));
+    // A file is only junk when neither its full path, relative path, nor its filename is referenced anywhere.
+    const isReferenced = (filePath) => {
+        const abs = path.resolve(filePath);
+        const rel = normalizeMediaPath(filePath);
+        const base = path.basename(filePath);
 
-    // Report how many files the basename net saved - if this is non-zero, the
-    // path extraction missed something and is worth looking at.
-    const savedByBasename = onDisk.filter(f => !referenced.has(f) && referencedBasenames.has(path.basename(f)));
+        return (
+            referenced.has(abs) ||
+            referenced.has(filePath) ||
+            (rel && referenced.has(rel)) ||
+            referencedBasenames.has(base) ||
+            referencedBasenames.has(decodeURIComponentSafe(base))
+        );
+    };
+
+    const referenceMatchFailed = [];
+    const orphans = [];
+
+    for (const f of onDisk) {
+        if (isReferenced(f)) continue;
+
+        const base = path.basename(f);
+        const rel = normalizeMediaPath(f) || '';
+
+        // Safety check: if this is a video file (starts with video_ or under videos/ or video ext)
+        // do not mark it as orphan deletion candidate; surface under REFERENCE_MATCH_FAILED
+        if (base.startsWith('video_') || rel.startsWith('videos/') || /\.(mp4|m4v|mov|webm|mkv|avi|3gp|ts)$/i.test(base)) {
+            referenceMatchFailed.push(f);
+        } else {
+            orphans.push(f);
+        }
+    }
+
+    if (referenceMatchFailed.length > 0) {
+        console.log(`\n⚠️  REFERENCE_MATCH_FAILED (${referenceMatchFailed.length} video file(s) protected from deletion):`);
+        referenceMatchFailed.forEach(f => console.log(`     ${path.relative(UPLOAD_BASE, f)}`));
+        console.log('');
+    }
+
+    // Report how many files the basename net saved
+    const savedByBasename = onDisk.filter(f => !referenced.has(f) && !referenced.has(path.resolve(f)) && referencedBasenames.has(path.basename(f)));
     if (savedByBasename.length > 0) {
         console.log(`ℹ️  ${savedByBasename.length} file(s) kept by the filename safety net (path was not matched exactly):`);
         savedByBasename.slice(0, 5).forEach(f => console.log(`     ${path.relative(UPLOAD_BASE, f)}`));
@@ -219,17 +442,34 @@ const run = async (options = {}) => {
         try { orphanBytes += fs.statSync(f).size; } catch { /* gone */ }
     });
 
-    console.log(`Files on disk    : ${onDisk.length}`);
-    console.log(`Still referenced : ${onDisk.length - orphans.length}`);
-    console.log(`Orphaned         : ${orphans.length} (${formatBytes(orphanBytes)})`);
+    const protectedVideos = referenceMatchFailed.length;
+
+    console.log(`Files on disk      : ${onDisk.length}`);
+    console.log(`Still referenced   : ${onDisk.length - orphans.length - protectedVideos}`);
+    console.log(`Protected videos   : ${protectedVideos}`);
+    console.log(`Orphaned           : ${orphans.length} (${formatBytes(orphanBytes)})`);
 
     orphans.slice(0, 20).forEach(f => console.log(`  - ${path.relative(UPLOAD_BASE, f)}`));
     if (orphans.length > 20) console.log(`  ... and ${orphans.length - 20} more`);
 
+    const reportDir = path.join(__dirname, '../logs');
+
+    // Write protected video entries if any
+    if (referenceMatchFailed.length > 0) {
+        const refFailPath = path.join(reportDir, `reference-match-failed-${new Date().toISOString().slice(0, 10)}.txt`);
+        try {
+            fs.mkdirSync(reportDir, { recursive: true });
+            const refFailLines = referenceMatchFailed.map(f => path.relative(UPLOAD_BASE, f).replace(/\\/g, '/'));
+            fs.writeFileSync(refFailPath, `${refFailLines.join('\n')}\n`);
+            console.log(`\nProtected video list written to: ${refFailPath}`);
+        } catch (error) {
+            console.error(`Could not write reference-match-failed report: ${error.message}`);
+        }
+    }
+
     // Always write the complete list somewhere reviewable - deleting 200+ files
     // off a 20-line preview is not something anyone should have to do.
     if (orphans.length > 0) {
-        const reportDir = path.join(__dirname, '../logs');
         const reportPath = path.join(reportDir, `orphaned-media-${new Date().toISOString().slice(0, 10)}.txt`);
         try {
             fs.mkdirSync(reportDir, { recursive: true });
@@ -445,4 +685,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { collectReferences, listFiles, toAbsolute, run, argvOptions };
+module.exports = { collectReferences, normalizeMediaPath, listFiles, toAbsolute, run, argvOptions };
