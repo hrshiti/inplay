@@ -881,6 +881,21 @@ const Users = () => {
     }
   };
 
+  const handleCreateUser = async (newUserData) => {
+    try {
+      setIsModalLoading(true);
+      await adminUserService.createUser(newUserData);
+      await fetchUsers();
+      setSelectedUser(null);
+      setModalMode(null);
+      alert('New user created successfully!');
+    } catch (err) {
+      alert(err.message || 'Failed to create user');
+    } finally {
+      setIsModalLoading(false);
+    }
+  };
+
   const handleUpdateUser = async (updatedData) => {
     try {
       setIsModalLoading(true);
@@ -1057,6 +1072,10 @@ const Users = () => {
             <LogOut size={18} /> Force Logout All
           </button>
           <button
+            onClick={() => {
+              setSelectedUser(null);
+              setModalMode('add');
+            }}
             style={{
               background: '#46d369',
               color: 'white',
@@ -1128,8 +1147,7 @@ const Users = () => {
         </div>
       )}
 
-      {/* User Modal */}
-      {selectedUser && (
+      {(selectedUser || modalMode === 'add') && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1138,24 +1156,21 @@ const Users = () => {
           bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)',
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'center',
+          alignItems: 'center',
           zIndex: 1000,
-          padding: '20px'
+          backdropFilter: 'blur(4px)'
         }}>
-          <div
-            className="admin-modal-scroll"
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-              position: 'relative'
-            }}
-          >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            position: 'relative'
+          }}>
             <div style={{
               padding: '20px 24px',
               borderBottom: '1px solid #f3f4f6',
@@ -1164,7 +1179,7 @@ const Users = () => {
               alignItems: 'center'
             }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', margin: 0 }}>
-                {modalMode === 'edit' ? 'Edit User Details' : 'User Information'}
+                {modalMode === 'add' ? 'Add New User' : modalMode === 'edit' ? 'Edit User Details' : 'User Information'}
               </h2>
               <button
                 onClick={() => { setSelectedUser(null); setModalMode(null); }}
@@ -1175,28 +1190,160 @@ const Users = () => {
             </div>
 
             <div style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                <img
-                  src={getImageUrl(selectedUser.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=random&color=fff`}
-                  alt="User"
-                  style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #46d369' }}
-                />
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#111827' }}>{selectedUser.name}</h3>
-                  <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.9rem' }}>{selectedUser.email}</p>
-                </div>
-              </div>
+              {modalMode === 'add' ? (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  handleCreateUser({
+                    name: formData.get('name'),
+                    phone: formData.get('phone'),
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    planId: formData.get('plan'),
+                    isActive: formData.get('status') === 'true'
+                  });
+                }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                      Full Name
+                    </label>
+                    <input
+                      name="name"
+                      type="text"
+                      placeholder="e.g. Rahul Sharma"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                    />
+                  </div>
 
-              {modalMode === 'view' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <InfoItem label="Status" value={selectedUser.isActive ? 'Active' : 'Inactive'} color={selectedUser.isActive ? '#059669' : '#dc2626'} />
-                  <InfoItem label="Role" value={selectedUser.role} />
-                  <InfoItem label="Plan" value={selectedUser.subscription?.plan?.name || 'Free'} />
-                  <InfoItem label="Joined On" value={new Date(selectedUser.createdAt).toLocaleDateString()} />
-                  <InfoItem label="Last Login" value={selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleDateString() : 'Never'} />
-                  <InfoItem label="Phone" value={selectedUser.phone || 'N/A'} />
-                </div>
-              ) : (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                      Phone Number *
+                    </label>
+                    <input
+                      name="phone"
+                      type="text"
+                      required
+                      placeholder="e.g. 9876543210"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                      Email Address (Optional)
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="e.g. rahul@example.com"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                      Password (Optional)
+                    </label>
+                    <input
+                      name="password"
+                      type="password"
+                      placeholder="Default: InPlay@123"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                      Subscription Plan
+                    </label>
+                    <select
+                      name="plan"
+                      defaultValue=""
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                    >
+                      <option value="">Free (No Plan)</option>
+                      {plans.map(plan => (
+                        <option key={plan._id} value={plan._id}>{plan.name} (₹{plan.price})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                      Account Status
+                    </label>
+                    <select
+                      name="status"
+                      defaultValue="true"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                    <button
+                      type="submit"
+                      disabled={isModalLoading}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        backgroundColor: '#46d369',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        cursor: isModalLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {isModalLoading ? 'Creating User...' : <><Save size={18} /> Create User</>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalMode(null)}
+                      style={{
+                        padding: '12px 20px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : selectedUser && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                    <img
+                      src={getImageUrl(selectedUser.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=random&color=fff`}
+                      alt="User"
+                      style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #46d369' }}
+                    />
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#111827' }}>{selectedUser.name}</h3>
+                      <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.9rem' }}>{selectedUser.email}</p>
+                    </div>
+                  </div>
+
+                  {modalMode === 'view' ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <InfoItem label="Status" value={selectedUser.isActive ? 'Active' : 'Inactive'} color={selectedUser.isActive ? '#059669' : '#dc2626'} />
+                      <InfoItem label="Role" value={selectedUser.role} />
+                      <InfoItem label="Plan" value={selectedUser.subscription?.plan?.name || 'Free'} />
+                      <InfoItem label="Joined On" value={new Date(selectedUser.createdAt).toLocaleDateString()} />
+                      <InfoItem label="Last Login" value={selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleDateString() : 'Never'} />
+                      <InfoItem label="Phone" value={selectedUser.phone || 'N/A'} />
+                    </div>
+                  ) : (
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
@@ -1279,10 +1426,12 @@ const Users = () => {
                   </div>
                 </form>
               )}
-            </div>
-          </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
+    </div>
+  )}
     </div>
   );
 };

@@ -40,6 +40,27 @@ const adminUserService = {
         return data.data;
     },
 
+    async createUser(userData) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/users`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to create user');
+        }
+
+        return data.data;
+    },
+
     async updateUserStatus(userId, isActive) {
         const token = localStorage.getItem('adminToken');
         if (!token) throw new Error('No admin token found');

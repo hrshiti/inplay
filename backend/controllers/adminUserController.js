@@ -193,12 +193,56 @@ const forceLogoutUser = async (req, res) => {
   }
 };
 
+// @desc    Update user subscription plan
+// @route   PUT /api/admin/users/:id/subscription
+// @access  Private (Admin only)
+const updateUserSubscription = async (req, res) => {
+  try {
+    const user = await adminUserService.updateUserSubscription(req.params.id, req.body);
+
+    res.status(200).json({
+      success: true,
+      message: 'User subscription updated successfully',
+      data: user
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Create new user
+// @route   POST /api/admin/users
+// @access  Private (Admin only)
+const createUser = async (req, res) => {
+  try {
+    const user = await adminUserService.createUser(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: user
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUser,
+  createUser,
   updateUserStatus,
+  updateUserSubscription,
   getUserAnalytics,
   deleteUser,
   forceLogoutAll,
   forceLogoutUser
 };
+
+

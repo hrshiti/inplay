@@ -40,9 +40,11 @@ router.delete('/content/:id', contentController.deleteContent);
 
 // User management routes
 router.get('/users', adminUserController.getAllUsers);
+router.post('/users', adminUserController.createUser);
 router.get('/users/analytics', adminUserController.getUserAnalytics);
 router.get('/users/:id', adminUserController.getUser);
 router.patch('/users/:id/status', adminUserController.updateUserStatus);
+router.put('/users/:id/subscription', adminUserController.updateUserSubscription);
 router.post('/users/force-logout-all', adminUserController.forceLogoutAll);
 router.post('/users/:id/force-logout', adminUserController.forceLogoutUser);
 router.delete('/users/:id', adminUserController.deleteUser);
