@@ -184,12 +184,14 @@ app.use(cors((req, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return originCallback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      const cleanOrigin = origin.replace(/\/$/, '');
+
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes(cleanOrigin)) {
         originCallback(null, true);
       } else {
-        console.error(`❌ BLOCKED BY CORS: '${origin}'`); // Use console.error to ensure it shows in logs
+        console.error(`❌ BLOCKED BY CORS: '${origin}'`);
         console.error(`   - Allowed: ${JSON.stringify(allowedOrigins)}`);
-        originCallback(new Error(`Not allowed by CORS (Origin: ${origin})`));
+        originCallback(null, false);
       }
     },
     credentials: true
