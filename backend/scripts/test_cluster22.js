@@ -3,10 +3,11 @@
  * 
  * READ ONLY - Checks user count on cluster22 database
  */
-const { MongoClient } = require('mongodb');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 async function main() {
-  const uri = "mongodb+srv://bhatiabhishek597_db_user:bhatiabhishek597_db_user@cluster22.pwaaksa.mongodb.net/inplay";
+  const uri = process.env.MONGODB_URI;
   const client = new MongoClient(uri);
   await client.connect();
   console.log('✅ Connected to cluster22 MongoDB\n');

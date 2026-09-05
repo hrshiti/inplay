@@ -3,10 +3,11 @@
  * 
  * READ ONLY - Checks user count on cluster1 with live password
  */
-const { MongoClient } = require('mongodb');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 async function main() {
-  const uri = "mongodb+srv://inplayott_db_user:xy3yWz7KlB29QBPI@cluster1.43ac8dg.mongodb.net/inplay";
+  const uri = process.env.MONGODB_URI;
   const client = new MongoClient(uri);
   await client.connect();
   console.log('✅ Connected to cluster1 MongoDB\n');

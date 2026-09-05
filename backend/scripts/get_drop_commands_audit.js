@@ -6,7 +6,9 @@
  */
 const { MongoClient } = require('mongodb');
 
-const MONGODB_URI = "mongodb+srv://inplayott_db_user:xy3yWz7KlB29QBPI@cluster1.43ac8dg.mongodb.net/local";
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function main() {
   const client = new MongoClient(MONGODB_URI);

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const SubscriptionPlan = require('../models/SubscriptionPlan');
 
 // Get all users with filters and pagination
 const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
@@ -20,6 +21,11 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
 
   const users = await User.find(query)
     .select('-password')
+    .populate({
+      path: 'subscription.plan',
+      // populate works even for soft-deleted (isActive:false) plans since the doc still exists
+      select: 'name price duration isActive'
+    })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
@@ -27,7 +33,7 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
 
   const total = await User.countDocuments(query);
 
-  // Hydrate users
+  // Hydrate users with graceful plan fallback
   const hydratedUsers = users.map(user => hydrateUser(user));
 
   return {
@@ -48,6 +54,19 @@ const hydrateUser = (doc) => {
   const backendUrl = process.env.BACKEND_URL;
   if (user.avatar && user.avatar.startsWith('/')) {
     user.avatar = `${backendUrl}${user.avatar}`;
+  }
+  // ✅ Graceful fallback: if subscription.plan was hard-deleted in the past,
+  // inject a safe placeholder so frontend never renders 'undefined'
+  if (
+    user.subscription &&
+    user.subscription.isActive &&
+    user.subscription.plan === null
+  ) {
+    user.subscription.plan = {
+      name: 'Legacy Plan (Archived)',
+      price: 0,
+      duration: 'unknown'
+    };
   }
   return user;
 };

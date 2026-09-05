@@ -433,32 +433,56 @@ exports.createPlan = async (req, res) => {
 
 exports.updatePlan = async (req, res) => {
   try {
-    const { name, price, duration, description } = req.body;
+    // ✅ Whitelist only safe fields — never pass raw req.body to findByIdAndUpdate
+    const { name, price, duration, description, isActive, order } = req.body;
     let plan = await SubscriptionPlan.findById(req.params.id);
     if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' });
 
     const rzp = razorpayService.getInstance();
 
-    if (price !== plan.price || duration !== plan.duration) {
-      if (duration !== 'lifetime') {
-        const rpDetails = getRazorpayPlanDetails(duration);
+    // Build a clean update object with only the fields we allow
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name;
+    if (description !== undefined) updateFields.description = description;
+    if (isActive !== undefined) updateFields.isActive = isActive;
+    if (order !== undefined) updateFields.order = order;
+
+    // If price or duration changed, we need a new Razorpay plan id
+    const priceChanged = price !== undefined && price !== plan.price;
+    const durationChanged = duration !== undefined && duration !== plan.duration;
+
+    if (priceChanged || durationChanged) {
+      const newDuration = duration !== undefined ? duration : plan.duration;
+      const newPrice = price !== undefined ? price : plan.price;
+      const newName = name !== undefined ? name : plan.name;
+      const newDescription = description !== undefined ? description : plan.description;
+
+      updateFields.price = newPrice;
+      updateFields.duration = newDuration;
+
+      if (newDuration !== 'lifetime') {
+        const rpDetails = getRazorpayPlanDetails(newDuration);
         const rpPlan = await rzp.plans.create({
           period: rpDetails.period,
           interval: rpDetails.interval,
           item: {
-            name: name || plan.name,
-            amount: price * 100,
+            name: newName,
+            amount: newPrice * 100,
             currency: 'INR',
-            description: description || plan.description
+            description: newDescription
           }
         });
-        req.body.razorpayPlanId = rpPlan.id;
+        updateFields.razorpayPlanId = rpPlan.id;
       } else {
-        req.body.razorpayPlanId = 'LIFETIME_PLAN';
+        updateFields.razorpayPlanId = 'LIFETIME_PLAN';
       }
+    } else {
+      // Price/duration not changed — just carry them over if provided
+      if (price !== undefined) updateFields.price = price;
+      if (duration !== undefined) updateFields.duration = duration;
     }
 
-    plan = await SubscriptionPlan.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    plan = await SubscriptionPlan.findByIdAndUpdate(req.params.id, updateFields, { new: true, runValidators: true });
     res.status(200).json({ success: true, data: plan });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -469,22 +493,55 @@ exports.deletePlan = async (req, res) => {
   try {
     const plan = await SubscriptionPlan.findById(req.params.id);
     if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' });
-    await plan.deleteOne();
-    res.status(200).json({ success: true, message: 'Deleted' });
+
+    // Safety: Count users who are actively on this plan
+    const User = require('../models/User');
+    const activeUserCount = await User.countDocuments({
+      'subscription.plan': plan._id,
+      'subscription.isActive': true
+    });
+
+    // ✅ SOFT DELETE: Set isActive=false instead of deleteOne()
+    // This preserves the document in DB so existing subscribers' .populate() still works.
+    // Hard deleting would make all those users' plan field return null → "undefined" on frontend.
+    plan.isActive = false;
+    await plan.save();
+
+    const message = activeUserCount > 0
+      ? `Plan archived successfully. ${activeUserCount} existing active subscriber(s) will keep their access until their expiry date.`
+      : 'Plan archived successfully.';
+
+    res.status(200).json({ success: true, message });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Error' });
+    console.error('deletePlan error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Error archiving plan' });
   }
 };
 exports.getActiveSubscriptions = async (req, res) => {
   try {
     const User = require('../models/User');
     const users = await User.find({ 'subscription.isActive': true })
-      .populate('subscription.plan')
+      .populate('subscription.plan') // Works even for soft-deleted (isActive:false) plans
       .select('name email subscription phone createdAt')
       .sort({ 'subscription.startDate': -1 })
-      .limit(2000);
+      .limit(2000)
+      .lean();
 
-    res.status(200).json({ success: true, count: users.length, data: users });
+    // ✅ Graceful fallback: if plan was somehow hard-deleted in the past,
+    // return a placeholder so frontend never sees undefined
+    const safeUsers = users.map(u => {
+      if (u.subscription && u.subscription.isActive && !u.subscription.plan) {
+        u.subscription.plan = {
+          _id: u.subscription.plan,
+          name: 'Legacy Plan (Archived)',
+          price: 0,
+          duration: 'unknown'
+        };
+      }
+      return u;
+    });
+
+    res.status(200).json({ success: true, count: safeUsers.length, data: safeUsers });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -672,12 +729,18 @@ exports.getSubscriptionDetails = async (req, res) => {
       });
     }
 
+    // ✅ Graceful fallback when plan was hard-deleted in the past
+    // User still has valid subscription.isActive=true and valid endDate
+    const plan = user.subscription.plan;
+    const planName = plan?.name || 'Premium Plan';
+    const planPrice = plan?.price ?? 0;
+
     res.status(200).json({
       success: true,
       data: {
         isActive: true,
-        planName: user.subscription.plan?.name || 'Premium Plan',
-        price: user.subscription.plan?.price || 699,
+        planName,
+        price: planPrice,
         startDate: user.subscription.startDate,
         endDate: user.subscription.endDate,
         razorpaySubscriptionId: user.subscription.razorpay_subscription_id,
