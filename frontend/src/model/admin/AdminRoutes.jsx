@@ -792,6 +792,7 @@ const Users = () => {
         avatar: getImageUrl(user.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
         name: user.name,
         email: user.email,
+        phone: user.phone || 'N/A',
         plan: user.subscription?.plan?.name || 'Free',
         status: user.isActive ? 'active' : 'inactive',
         totalWatchTime: ((user.watchHistory?.reduce((acc, entry) => acc + (entry.watchedSeconds || 0), 0) || 0) / 3600).toFixed(1),
@@ -830,6 +831,7 @@ const Users = () => {
     },
     { key: 'name', label: 'Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
+    { key: 'phone', label: 'Phone', sortable: true },
     { key: 'plan', label: 'Plan', sortable: true },
     { key: 'status', label: 'Status', sortable: true },
     { key: 'totalWatchTime', label: 'Watch Time (hrs)', sortable: true },
@@ -1009,7 +1011,7 @@ const Users = () => {
               <span style={{ color: '#b91c1c' }}>{error}</span>
             ) : (
               <strong style={{ color: '#064e3b' }}>
-                Real-time Data: {users.length} users ({users.filter(u => u.status === 'active').length} active, {users.filter(u => u.status === 'inactive').length} inactive) - Page {currentPage} of {Math.max(1, totalPages)}
+                Real-time Data: {users.length} users ({users.filter(u => u.status === 'active').length} active, {users.filter(u => u.status === 'inactive').length} inactive)
               </strong>
             )}
           </div>
@@ -1096,7 +1098,7 @@ const Users = () => {
       </div>
 
       <DataTable
-        data={paginatedUsers}
+        data={users}
         columns={columns}
         title="All Users"
         onEdit={handleEdit}
@@ -1106,46 +1108,6 @@ const Users = () => {
         error={error}
         emptyMessage={isLoading ? "Loading..." : "No users found."}
       />
-      
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px', paddingBottom: '24px' }}>
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(prev => prev - 1)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              background: currentPage === 1 ? '#f3f4f6' : 'white',
-              color: currentPage === 1 ? '#9ca3af' : '#374151',
-              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: '500'
-            }}
-          >
-            Previous
-          </button>
-          <div style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: '500' }}>
-            Page <span style={{ color: '#111827' }}>{currentPage}</span> of {totalPages}
-          </div>
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(prev => prev + 1)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              background: currentPage === totalPages ? '#f3f4f6' : 'white',
-              color: currentPage === totalPages ? '#9ca3af' : '#374151',
-              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: '500'
-            }}
-          >
-            Next
-          </button>
-        </div>
-      )}
 
       {(selectedUser || modalMode === 'add') && (
         <div style={{
@@ -1711,6 +1673,7 @@ const Subscriptions = () => {
   const columns = [
     { key: 'name', label: 'User Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
+    { key: 'phone', label: 'Phone', sortable: true, render: (_, row) => row.phone || 'N/A' },
     { key: 'subscription_plan', label: 'Plan', sortable: true, render: (_, row) => row.subscription?.plan?.name || 'Unknown' },
     { key: 'subscription_start', label: 'Starts', sortable: true, render: (_, row) => row.subscription?.startDate ? new Date(row.subscription.startDate).toLocaleDateString() : 'N/A' },
     { key: 'subscription_end', label: 'Expires', sortable: true, render: (_, row) => row.subscription?.endDate ? new Date(row.subscription.endDate).toLocaleDateString() : 'N/A' },

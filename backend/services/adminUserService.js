@@ -12,7 +12,8 @@ const getAllUsers = async (filters = {}, page = 1, limit = 10) => {
   if (filters.search) {
     query.$or = [
       { name: { $regex: filters.search, $options: 'i' } },
-      { email: { $regex: filters.search, $options: 'i' } }
+      { email: { $regex: filters.search, $options: 'i' } },
+      { phone: { $regex: filters.search, $options: 'i' } }
     ];
   }
 
