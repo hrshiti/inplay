@@ -99,6 +99,96 @@ const adminAuthService = {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminUser');
         localStorage.removeItem('adminAuthenticated');
+    },
+
+    async getDailyCode() {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/auth/daily-code`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to fetch daily access code');
+        return data;
+    },
+
+    async verifyDailyCode(code) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/auth/verify-daily-code`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ code })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Verification failed');
+        return data;
+    },
+
+    async getSubAdmins() {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/sub-admins`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to fetch sub-admins');
+        return data.data;
+    },
+
+    async createSubAdmin(subAdminData) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/sub-admins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(subAdminData)
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to create sub-admin');
+        return data.data;
+    },
+
+    async updateSubAdmin(id, subAdminData) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/sub-admins/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(subAdminData)
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to update sub-admin');
+        return data.data;
+    },
+
+    async deleteSubAdmin(id) {
+        const token = localStorage.getItem('adminToken');
+        if (!token) throw new Error('No admin token found');
+
+        const response = await fetch(`${API_URL}/admin/sub-admins/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Failed to delete sub-admin');
+        return data;
     }
 };
 

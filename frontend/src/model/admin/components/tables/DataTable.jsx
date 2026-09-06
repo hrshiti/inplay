@@ -17,6 +17,9 @@ export default function DataTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
+  const currentUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const canUserDelete = currentUser.role === 'super_admin' || currentUser.role === 'admin' || currentUser.canDelete === true;
+  const allowDelete = onDelete && canUserDelete;
 
   const filteredData = data.filter(item =>
     Object.values(item).some(value =>
@@ -130,7 +133,7 @@ export default function DataTable({
                   </div>
                 </th>
               ))}
-              {(onEdit || onDelete || onView) && (
+              {(onEdit || allowDelete || onView) && (
                 <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: '0.75rem', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>
                   Actions
                 </th>
@@ -140,13 +143,13 @@ export default function DataTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (onEdit || onDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
+                <td colSpan={columns.length + (onEdit || allowDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
                   Loading...
                 </td>
               </tr>
             ) : pagedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (onEdit || onDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
+                <td colSpan={columns.length + (onEdit || allowDelete || onView ? 1 : 0)} style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
                   {emptyMessage}
                 </td>
               </tr>
@@ -175,7 +178,7 @@ export default function DataTable({
                       )}
                     </td>
                   ))}
-                  {(onEdit || onDelete || onView) && (
+                  {(onEdit || allowDelete || onView) && (
                     <td style={{ padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                         {onView && (
@@ -214,7 +217,7 @@ export default function DataTable({
                           <Edit size={16} />
                         </button>
                       )}
-                      {onDelete && (
+                      {allowDelete && (
                         <button
                           onClick={() => onDelete(item)}
                           style={{

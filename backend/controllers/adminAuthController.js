@@ -131,10 +131,94 @@ const adminLogout = async (req, res) => {
   }
 };
 
+// @desc    Get or generate today's daily access code (Super Admin only)
+// @route   GET /api/admin/auth/daily-code
+// @access  Private (Super Admin)
+const getDailyCode = async (req, res) => {
+  try {
+    const DailyAccessCode = require('../models/DailyAccessCode');
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let accessDoc = await DailyAccessCode.findOne({ date: todayStr });
+    if (!accessDoc) {
+      const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+      accessDoc = await DailyAccessCode.create({
+        date: todayStr,
+        code: randomCode,
+        generatedBy: req.user._id
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      date: todayStr,
+      code: accessDoc.code
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Verify today's daily access code (Sub Admin)
+// @route   POST /api/admin/auth/verify-daily-code
+// @access  Private
+const verifyDailyCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Daily access code is required'
+      });
+    }
+
+    const DailyAccessCode = require('../models/DailyAccessCode');
+    const Admin = require('../models/Admin');
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let accessDoc = await DailyAccessCode.findOne({ date: todayStr });
+    if (!accessDoc) {
+      // Auto generate if super admin hasn't visited page yet
+      const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+      accessDoc = await DailyAccessCode.create({
+        date: todayStr,
+        code: randomCode
+      });
+    }
+
+    if (accessDoc.code !== String(code).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid access code. Please get today\'s code from Super Admin.'
+      });
+    }
+
+    await Admin.findByIdAndUpdate(req.user._id, {
+      'dailyVerification.lastVerifiedDate': todayStr
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Daily access code verified successfully!',
+      date: todayStr
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   adminLogin,
   getAdminProfile,
   updateAdminProfile,
   changeAdminPassword,
-  adminLogout
+  adminLogout,
+  getDailyCode,
+  verifyDailyCode
 };

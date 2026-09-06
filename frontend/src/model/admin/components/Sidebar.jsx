@@ -15,28 +15,41 @@ import {
   Megaphone
 } from 'lucide-react';
 
+import { UserCheck } from 'lucide-react';
+
 const navigation = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Content', href: '/admin/content/library', icon: Film },
-  { name: 'Promotions', href: '/admin/promotions', icon: Megaphone },
-  { name: 'Banner Management', href: '/admin/banners', icon: Layout },
-  { name: 'Quick Bites', href: '/admin/quick-bytes', icon: Zap },
-  { name: 'For You', href: '/admin/for-you', icon: Smartphone },
-  { name: 'Darmaa Sections', href: '/admin/darmaa-sections', icon: Film },
-  { name: 'Bhojpuri Sections', href: '/admin/bhojpuri-sections', icon: Film },
-  { name: 'Cinema Sections', href: '/admin/cinema-sections', icon: Film },
-  { name: 'Audio Series', href: '/admin/audio-series', icon: Film },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Plan', href: '/admin/monetization/plans', icon: CreditCard },
-  { name: 'Subscription', href: '/admin/monetization/subscriptions', icon: Repeat },
-  { name: 'Legal Pages', href: '/admin/legal', icon: Shield },
-  { name: 'Tab Management', href: '/admin/tabs', icon: Layout },
-  { name: 'Notifications', href: '/admin/notifications', icon: Megaphone },
-  { name: 'Settings', href: '/admin/settings', icon: Settings }
+  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, tabId: 'dashboard' },
+  { name: 'Content', href: '/admin/content/library', icon: Film, tabId: 'content_library' },
+  { name: 'Promotions', href: '/admin/promotions', icon: Megaphone, tabId: 'promotions' },
+  { name: 'Banner Management', href: '/admin/banners', icon: Layout, tabId: 'banner_management' },
+  { name: 'Quick Bites', href: '/admin/quick-bytes', icon: Zap, tabId: 'quick_bites' },
+  { name: 'For You', href: '/admin/for-you', icon: Smartphone, tabId: 'for_you' },
+  { name: 'Darmaa Sections', href: '/admin/darmaa-sections', icon: Film, tabId: 'darmaa_sections' },
+  { name: 'Bhojpuri Sections', href: '/admin/bhojpuri-sections', icon: Film, tabId: 'bhojpuri_sections' },
+  { name: 'Cinema Sections', href: '/admin/cinema-sections', icon: Film, tabId: 'cinema_sections' },
+  { name: 'Audio Series', href: '/admin/audio-series', icon: Film, tabId: 'audio_series' },
+  { name: 'Users', href: '/admin/users', icon: Users, tabId: 'users' },
+  { name: 'Plan', href: '/admin/monetization/plans', icon: CreditCard, tabId: 'subscriptions' },
+  { name: 'Subscription', href: '/admin/monetization/subscriptions', icon: Repeat, tabId: 'subscriptions' },
+  { name: 'Legal Pages', href: '/admin/legal', icon: Shield, tabId: 'legal_pages' },
+  { name: 'Tab Management', href: '/admin/tabs', icon: Layout, tabId: 'tab_management' },
+  { name: 'Staff & Access', href: '/admin/staff-access', icon: UserCheck, superAdminOnly: true },
+  { name: 'Notifications', href: '/admin/notifications', icon: Megaphone, tabId: 'dashboard' },
+  { name: 'Settings', href: '/admin/settings', icon: Settings, tabId: 'dashboard' }
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
+
+  const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const userRole = user.role || 'super_admin';
+  const permittedTabs = user.permittedTabs || [];
+
+  const visibleNav = navigation.filter(item => {
+    if (userRole === 'super_admin' || userRole === 'admin') return true;
+    if (item.superAdminOnly) return false;
+    return permittedTabs.includes(item.tabId);
+  });
 
   return (
     <div className="admin-sidebar" style={{
@@ -86,7 +99,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Navigation */}
       <nav className="custom-scrollbar" data-lenis-prevent="true" style={{ flex: 1, padding: '20px 0', overflowY: 'auto', overflowX: 'hidden' }}>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {navigation.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = location.pathname.startsWith(item.href);
             return (
               <li key={item.name}>

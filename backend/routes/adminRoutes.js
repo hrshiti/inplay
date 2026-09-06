@@ -22,11 +22,23 @@ router.post('/auth/login', validateAdminLogin, adminAuthController.adminLogin);
 router.use(protect); // All routes below require authentication
 router.use(authorize('admin')); // All routes below require admin role
 
+const subAdminController = require('../controllers/subAdminController');
+
 // Auth routes (protected)
 router.get('/auth/profile', adminAuthController.getAdminProfile);
 router.put('/auth/profile', adminAuthController.updateAdminProfile);
 router.put('/auth/change-password', adminAuthController.changeAdminPassword);
 router.post('/auth/logout', adminAuthController.adminLogout);
+
+// Daily Access Code Verification routes
+router.get('/auth/daily-code', adminAuthController.getDailyCode);
+router.post('/auth/verify-daily-code', adminAuthController.verifyDailyCode);
+
+// Sub-Admin Management routes (Super Admin)
+router.get('/sub-admins', subAdminController.getSubAdmins);
+router.post('/sub-admins', subAdminController.createSubAdmin);
+router.put('/sub-admins/:id', subAdminController.updateSubAdmin);
+router.delete('/sub-admins/:id', subAdminController.deleteSubAdmin);
 
 // Content management routes
 router.get('/content', contentController.getAllContent);

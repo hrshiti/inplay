@@ -107,9 +107,10 @@ export default function Topbar({ onMenuClick }) {
               </span>
               <span style={{
                 fontSize: '0.75rem',
-                color: '#666'
+                color: adminUser.role === 'sub_admin' ? '#2563eb' : '#16a34a',
+                fontWeight: '600'
               }}>
-                Super Admin
+                {adminUser.role === 'sub_admin' ? 'Sub-Admin Staff' : 'Super Admin'}
               </span>
             </div>
           </div>

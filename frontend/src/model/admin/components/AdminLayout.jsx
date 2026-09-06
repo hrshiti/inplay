@@ -5,8 +5,29 @@ import Topbar from './Topbar';
 import '../../../App.css';
 import '../styles/admin.css';
 
+import DailyCodeModal from './DailyCodeModal';
+import adminAuthService from '../../../services/api/adminAuthService';
+
 export default function AdminLayout({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const isSubAdmin = user.role === 'sub_admin';
+  const isDailyVerified = isSubAdmin
+    ? user.dailyVerification?.lastVerifiedDate === todayStr || user.isDailyVerified === true
+    : true;
+
+  const handleDailySuccess = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleLogout = () => {
+    adminAuthService.logout();
+    window.location.href = '/admin/login';
+  };
 
   return (
     <div className="admin-layout" style={{
@@ -15,6 +36,7 @@ export default function AdminLayout({ children }) {
       display: 'flex'
     }}>
       <Sidebar
+        key={refreshKey}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
@@ -35,6 +57,14 @@ export default function AdminLayout({ children }) {
         }}>
           {children || <Outlet />}
         </main>
+
+        {isSubAdmin && (
+          <DailyCodeModal
+            isOpen={!isDailyVerified}
+            onSuccess={handleDailySuccess}
+            onLogout={handleLogout}
+          />
+        )}
       </div>
     </div>
   );

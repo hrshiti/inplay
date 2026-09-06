@@ -22,6 +22,7 @@ import DarmaaSectionsPage from './pages/DarmaaSectionsPage';
 import BhojpuriSectionsPage from './pages/BhojpuriSectionsPage';
 import CinemaSectionsPage from './pages/CinemaSectionsPage';
 import BannerManagementPage from './pages/BannerManagementPage';
+import SubAdminManagementPage from './pages/SubAdminManagementPage';
 const getImageUrl = (path) => {
   if (!path) return "https://placehold.co/300x450/111/FFF?text=No+Image";
   // Fallback to the utility if available, or just use the same logic
@@ -2937,6 +2938,7 @@ export default function AdminRoutes() {
         <Route path="bhojpuri-sections" element={<BhojpuriSectionsPage />} />
         <Route path="cinema-sections" element={<CinemaSectionsPage />} />
         <Route path="banners" element={<BannerManagementPage />} />
+        <Route path="staff-access" element={<SubAdminManagementPage />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

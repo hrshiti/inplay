@@ -188,16 +188,22 @@ const AudioSeriesPage = () => {
                                     >
                                         <Edit2 size={16} /> Edit
                                     </button>
-                                    <button
-                                        onClick={() => handleDelete(series._id)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            padding: '8px', border: '1px solid #fee2e2', borderRadius: '6px',
-                                            background: '#fef2f2', color: '#ef4444', cursor: 'pointer'
-                                        }}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    {(() => {
+                                         const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+                                         const canUserDelete = user.role === 'super_admin' || user.role === 'admin' || user.canDelete === true;
+                                         return canUserDelete ? (
+                                             <button
+                                                 onClick={() => handleDelete(series._id)}
+                                                 style={{
+                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                     padding: '8px', border: '1px solid #fee2e2', borderRadius: '6px',
+                                                     background: '#fef2f2', color: '#ef4444', cursor: 'pointer'
+                                                 }}
+                                             >
+                                                 <Trash2 size={16} />
+                                             </button>
+                                         ) : null;
+                                     })()}
                                 </div>
                             </div>
                         </div>

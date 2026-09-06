@@ -70,8 +70,27 @@ const protect = async (req, res, next) => {
         }
       }
 
+      // Calculate daily verification status
+      const todayStr = new Date().toISOString().split('T')[0];
+      const userObj = user.toObject ? user.toObject() : user;
+
+      if (userObj.role === 'super_admin' || userObj.role === 'admin' || !userObj.role) {
+        userObj.isDailyVerified = true;
+      } else if (userObj.role === 'sub_admin') {
+        userObj.isDailyVerified = userObj.dailyVerification?.lastVerifiedDate === todayStr;
+      }
+
       // Add user to request
-      req.user = user;
+      req.user = userObj;
+
+      // Block DELETE operations for sub-admins without explicit canDelete permission
+      if (req.method === 'DELETE' && req.user.role === 'sub_admin' && !req.user.canDelete) {
+        return res.status(403).json({
+          success: false,
+          message: 'Sub-admins are not authorized to delete items. Please contact Super Admin.'
+        });
+      }
+
       next();
     } catch (error) {
       return res.status(401).json({
@@ -97,10 +116,17 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    const userRole = req.user.role || 'admin';
+    if (roles.includes('admin') || roles.includes('super_admin')) {
+      if (['admin', 'super_admin', 'sub_admin'].includes(userRole)) {
+        return next();
+      }
+    }
+
+    if (!roles.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`
+        message: `User role ${userRole} is not authorized to access this route`
       });
     }
 

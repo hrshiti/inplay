@@ -30,7 +30,22 @@ const adminSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        default: 'admin'
+        enum: ['super_admin', 'sub_admin', 'admin'],
+        default: 'super_admin'
+    },
+    permittedTabs: {
+        type: [String],
+        default: []
+    },
+    canDelete: {
+        type: Boolean,
+        default: false
+    },
+    dailyVerification: {
+        lastVerifiedDate: {
+            type: String,
+            default: ''
+        }
     },
     isActive: {
         type: Boolean,
