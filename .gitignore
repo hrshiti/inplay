@@ -2,6 +2,8 @@ branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
 backend/uploads/
+backend/public/uploads/
+uploads/
 node_modules/
 backend/scratch_hls_temp/
 backend/scratch_test_direct_hls/
