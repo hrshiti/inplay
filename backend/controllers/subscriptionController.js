@@ -519,29 +519,45 @@ exports.deletePlan = async (req, res) => {
 };
 exports.getActiveSubscriptions = async (req, res) => {
   try {
-    const User = require('../models/User');
-    const users = await User.find({ 'subscription.isActive': true })
-      .populate('subscription.plan') // Works even for soft-deleted (isActive:false) plans
-      .select('name email subscription phone createdAt')
-      .sort({ 'subscription.startDate': -1 })
+    const CustomerSubscription = require('../models/CustomerSubscription');
+
+    // Query directly from CustomerSubscription — the ground truth for all real paid subscriptions
+    const subs = await CustomerSubscription.find({
+      status: { $in: ['active', 'authenticated', 'created'] }
+    })
+      .populate('user', 'name email phone createdAt')
+      .populate('plan', 'name price duration')
+      .sort({ createdAt: -1 })
       .limit(2000)
       .lean();
 
-    // ✅ Graceful fallback: if plan was somehow hard-deleted in the past,
-    // return a placeholder so frontend never sees undefined
-    const safeUsers = users.map(u => {
-      if (u.subscription && u.subscription.isActive && !u.subscription.plan) {
-        u.subscription.plan = {
-          _id: u.subscription.plan,
-          name: 'Legacy Plan (Archived)',
-          price: 0,
-          duration: 'unknown'
-        };
-      }
-      return u;
-    });
+    // Map to a clean structure matching what the frontend expects
+    const result = subs
+      .filter(s => s.user) // skip orphaned records where user doc is missing
+      .map(s => {
+        const isLifetime = s.price >= 999 || (s.razorpaySubscriptionId && s.razorpaySubscriptionId.includes('LIFETIME'));
+        const endDate = isLifetime ? new Date('2099-12-31T23:59:59.000Z') : (s.endDate || null);
 
-    res.status(200).json({ success: true, count: safeUsers.length, data: safeUsers });
+        return {
+          _id: s.user._id,
+          name: s.user.name || 'Unknown',
+          email: s.user.email || 'N/A',
+          phone: s.user.phone || 'N/A',
+          subscription: {
+            isActive: true,
+            status: s.status,
+            startDate: s.startDate || s.createdAt,
+            endDate: endDate,
+            plan: s.plan
+              ? { _id: s.plan._id, name: s.plan.name, price: s.plan.price, duration: s.plan.duration }
+              : { name: 'Legacy Plan (Archived)', price: s.price, duration: 'unknown' },
+            razorpaySubscriptionId: s.razorpaySubscriptionId
+          },
+          createdAt: s.user.createdAt
+        };
+      });
+
+    res.status(200).json({ success: true, count: result.length, data: result });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
