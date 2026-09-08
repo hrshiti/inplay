@@ -578,6 +578,15 @@ const startServer = async () => {
     console.log('Scheduled tasks started');
   });
 
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use by another process!`);
+      process.exit(1);
+    } else {
+      console.error('❌ Server error:', err);
+    }
+  });
+
   // Increase timeout to 4 hours for large file uploads (10GB)
   server.setTimeout(4 * 60 * 60 * 1000);
 
@@ -625,8 +634,25 @@ const startServer = async () => {
   const { setIO } = require('./utils/socketIO');
   setIO(io);
 
+  // Handle graceful shutdown for PM2 restarts
+  const gracefulShutdown = (signal) => {
+    console.log(`Received ${signal}, closing HTTP server...`);
+    server.close(() => {
+      console.log('HTTP server closed cleanly.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      process.exit(1);
+    }, 5000);
+  };
+
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
 };
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;
