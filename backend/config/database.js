@@ -10,33 +10,40 @@ if (!process.env.MONGODB_URI) {
   process.exit(1);
 }
 
-// Connect to MongoDB with proper error handling
-mongoose.connect(process.env.MONGODB_URI, {
-  // Modern Mongoose doesn't need these deprecated options
-})
-  .then(() => {
-    console.log('✅ MongoDB Connected Successfully');
-    console.log(`📍 Database: ${mongoose.connection.name}`);
-    console.log(`🌐 Host: ${mongoose.connection.host}`);
+// Connect to MongoDB with proper error handling & retry options
+const connectWithRetry = () => {
+  mongoose.connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    family: 4 // Use IPv4, skip IPv6 resolver delays on Windows
   })
-  .catch((err) => {
-    console.error('❌ MongoDB Connection Failed:');
-    console.error(`Error: ${err.message}`);
-    console.error('Please check your MONGODB_URI in .env file');
-    process.exit(1);
-  });
+    .then(() => {
+      console.log('✅ MongoDB Connected Successfully');
+      console.log(`📍 Database: ${mongoose.connection.name}`);
+      console.log(`🌐 Host: ${mongoose.connection.host}`);
+    })
+    .catch((err) => {
+      console.error('❌ MongoDB Connection Failed:');
+      console.error(`Error: ${err.message}`);
+      console.error('Retrying MongoDB connection in 5 seconds...');
+      setTimeout(connectWithRetry, 5000);
+    });
+};
+
+connectWithRetry();
 
 // Handle connection events
 mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
+  console.error('⚠️ MongoDB connection event error:', err.message || err);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+  console.log('⚠️ MongoDB disconnected - attempting reconnect...');
 });
 
 mongoose.connection.on('reconnected', () => {
-  console.log('MongoDB reconnected');
+  console.log('✅ MongoDB reconnected successfully');
 });
 
 module.exports = mongoose;

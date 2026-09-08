@@ -56,18 +56,35 @@ const hydrateUser = (doc) => {
   if (user.avatar && user.avatar.startsWith('/')) {
     user.avatar = `${backendUrl}${user.avatar}`;
   }
-  // ✅ Graceful fallback: if subscription.plan was hard-deleted in the past,
-  // inject a safe placeholder so frontend never renders 'undefined'
+  // ✅ Graceful fallback: resolve plan details with lifetime detection first
   if (
     user.subscription &&
-    user.subscription.isActive &&
-    user.subscription.plan === null
+    user.subscription.isActive
   ) {
-    user.subscription.plan = {
-      name: 'Legacy Plan (Archived)',
-      price: 0,
-      duration: 'unknown'
-    };
+    const endYr = user.subscription.endDate ? new Date(user.subscription.endDate).getFullYear() : 0;
+    const isLifetime = endYr >= 2090 ||
+                       user.subscription.price >= 999 ||
+                       (user.subscription.plan && user.subscription.plan.name && user.subscription.plan.name.toLowerCase().includes('lifetime'));
+
+    if (isLifetime) {
+      user.subscription.plan = {
+        name: 'Lifetime Plan',
+        price: user.subscription.price || 999,
+        duration: 'lifetime'
+      };
+    } else if (!user.subscription.plan || !user.subscription.plan.name) {
+      const price = user.subscription.price || 0;
+      let name = `Legacy Plan (₹${price})`;
+      if (price === 69 || price === 99) name = 'Monthly Plan';
+      else if (price === 249 || price === 299) name = 'Quarterly Plan';
+      else if (price === 549 || price === 599) name = 'Yearly Plan';
+
+      user.subscription.plan = {
+        name: name,
+        price: price,
+        duration: 'unknown'
+      };
+    }
   }
   return user;
 };

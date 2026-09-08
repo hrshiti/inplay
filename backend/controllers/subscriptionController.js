@@ -520,6 +520,14 @@ exports.deletePlan = async (req, res) => {
 exports.getActiveSubscriptions = async (req, res) => {
   try {
     const CustomerSubscription = require('../models/CustomerSubscription');
+    const SubscriptionPlan = require('../models/SubscriptionPlan');
+
+    // Fetch active plans to match by price if referenced plan document was deleted in the past
+    const activePlans = await SubscriptionPlan.find({}).lean();
+    const planByPriceMap = {};
+    activePlans.forEach(p => {
+      if (p.price) planByPriceMap[p.price] = p;
+    });
 
     // Query directly from CustomerSubscription — the ground truth for all real paid subscriptions
     const subs = await CustomerSubscription.find({
@@ -535,8 +543,30 @@ exports.getActiveSubscriptions = async (req, res) => {
     const result = subs
       .filter(s => s.user) // skip orphaned records where user doc is missing
       .map(s => {
-        const isLifetime = s.price >= 999 || (s.razorpaySubscriptionId && s.razorpaySubscriptionId.includes('LIFETIME'));
+        const endYr = s.endDate ? new Date(s.endDate).getFullYear() : 0;
+        const isLifetime = endYr >= 2090 ||
+                           s.price >= 999 ||
+                           (s.razorpaySubscriptionId && s.razorpaySubscriptionId.includes('LIFETIME')) ||
+                           (s.plan && s.plan.name && s.plan.name.toLowerCase().includes('lifetime'));
+
         const endDate = isLifetime ? new Date('2099-12-31T23:59:59.000Z') : (s.endDate || null);
+
+        let planDetails = null;
+        if (isLifetime) {
+          planDetails = { _id: s.plan?._id, name: 'Lifetime Plan', price: s.price || 999, duration: 'lifetime' };
+        } else if (s.plan && s.plan.name) {
+          planDetails = { _id: s.plan._id, name: s.plan.name, price: s.plan.price, duration: s.plan.duration };
+        } else if (planByPriceMap[s.price]) {
+          const matched = planByPriceMap[s.price];
+          planDetails = { _id: matched._id, name: matched.name, price: matched.price || s.price, duration: matched.duration };
+        } else {
+          let fallbackName = `Legacy Plan (₹${s.price || 0})`;
+          if (s.price === 69 || s.price === 99) fallbackName = 'Monthly Plan';
+          else if (s.price === 249 || s.price === 299) fallbackName = 'Quarterly Plan';
+          else if (s.price === 549 || s.price === 599) fallbackName = 'Yearly Plan';
+
+          planDetails = { name: fallbackName, price: s.price || 0, duration: 'unknown' };
+        }
 
         return {
           _id: s.user._id,
@@ -548,9 +578,7 @@ exports.getActiveSubscriptions = async (req, res) => {
             status: s.status,
             startDate: s.startDate || s.createdAt,
             endDate: endDate,
-            plan: s.plan
-              ? { _id: s.plan._id, name: s.plan.name, price: s.plan.price, duration: s.plan.duration }
-              : { name: 'Legacy Plan (Archived)', price: s.price, duration: 'unknown' },
+            plan: planDetails,
             razorpaySubscriptionId: s.razorpaySubscriptionId
           },
           createdAt: s.user.createdAt
