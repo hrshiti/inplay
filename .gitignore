@@ -7,3 +7,4 @@ uploads/
 node_modules/
 backend/scratch_hls_temp/
 backend/scratch_test_direct_hls/
+config.bat
