@@ -573,7 +573,7 @@ const startServer = async () => {
   startContentPublishCron();
 
   // Port is defined globally at the top
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     console.log('Scheduled tasks started');
   });
