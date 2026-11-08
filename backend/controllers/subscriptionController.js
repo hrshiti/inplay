@@ -342,8 +342,8 @@ exports.verifySubscription = async (req, res) => {
       user.subscription.plan = sub.notes?.planId || reqPlanId || user.subscription.plan;
       user.subscription.startDate = new Date();
       user.subscription.status = 'active';
-      // End date: 14, 15, 16, 17 (Total 4 days). Ends on 17th.
-      user.subscription.endDate = new Date(Date.now() + ((trialDays - 1) * 24 * 60 * 60 * 1000));
+      // End date: trialDays full days from now
+      user.subscription.endDate = new Date(Date.now() + (trialDays * 24 * 60 * 60 * 1000));
       await user.save();
 
       // Record in CustomerTrial
@@ -667,8 +667,8 @@ exports.handleWebhook = async (req, res) => {
         const trialDays = parseInt(notes.trialDays) || 4;
         user.subscription.isTrialUsed = true;
         user.subscription.plan = notes.planId || user.subscription.plan;
-        // End date: 14, 15, 16, 17 (Total 4 days). Ends on 17th.
-        user.subscription.endDate = new Date(Date.now() + ((trialDays - 1) * 24 * 60 * 60 * 1000));
+        // End date: trialDays full days from now
+        user.subscription.endDate = new Date(Date.now() + (trialDays * 24 * 60 * 60 * 1000));
         await user.save();
         
         // Record in customertrialdays

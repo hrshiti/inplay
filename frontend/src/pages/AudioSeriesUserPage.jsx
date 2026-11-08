@@ -48,7 +48,7 @@ export default function AudioSeriesUserPage({ onBack, promotions }) {
                 if (found) {
                     // console.log("🔔 [AudioSeries] Auto-selecting series from URL:", seriesId);
                     setSelectedSeries(found);
-                    
+                    //ssdf this is mike edajsdjksf
                     // Clean up URL query parameters to look sleek
                     const newSearch = new URLSearchParams(window.location.search);
                     newSearch.delete('seriesId');

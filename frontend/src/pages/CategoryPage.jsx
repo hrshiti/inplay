@@ -15,6 +15,7 @@ const formatTitle = (slug) => {
         .join(' ');
 };
 
+
 const slugToApiParams = (slug) => {
     switch (slug) {
         case 'hindi-series': return { type: 'hindi_series' };
