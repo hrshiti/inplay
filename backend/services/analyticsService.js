@@ -110,11 +110,28 @@ const getUserAnalytics = async (startDate, endDate) => {
   ]);
 
   const stats = userStats[0];
+
+  // Fetch trial subscription metrics
+  let totalTrials = 0;
+  let activeTrials = 0;
+  try {
+    const CustomerTrial = require('../models/CustomerTrial');
+    const now = new Date();
+    [totalTrials, activeTrials] = await Promise.all([
+      CustomerTrial.countDocuments({ paymentStatus: 'Success' }),
+      CustomerTrial.countDocuments({ paymentStatus: 'Success', endDate: { $gt: now } })
+    ]);
+  } catch (err) {
+    console.error('Error fetching trial metrics in analytics:', err.message);
+  }
+
   return {
     totalUsers: stats.totalStats[0]?.totalUsers || 0,
     activeUsers: stats.totalStats[0]?.activeUsers || 0,
     newUsers: stats.newUsers[0]?.count || 0,
-    topGenres: stats.topGenres || []
+    topGenres: stats.topGenres || [],
+    totalTrials,
+    activeTrials
   };
 };
 
