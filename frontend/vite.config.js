@@ -23,4 +23,4 @@ export default defineConfig({
     target: 'es2015',
     cssTarget: 'chrome61'
   }
-});   
+});

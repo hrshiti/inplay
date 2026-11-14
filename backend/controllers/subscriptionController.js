@@ -520,6 +520,7 @@ exports.deletePlan = async (req, res) => {
 exports.getActiveSubscriptions = async (req, res) => {
   try {
     const CustomerSubscription = require('../models/CustomerSubscription');
+    const CustomerTrial = require('../models/CustomerTrial');
     const SubscriptionPlan = require('../models/SubscriptionPlan');
 
     // Fetch active plans to match by price if referenced plan document was deleted in the past
@@ -529,18 +530,27 @@ exports.getActiveSubscriptions = async (req, res) => {
       if (p.price) planByPriceMap[p.price] = p;
     });
 
-    // Query directly from CustomerSubscription — the ground truth for all real paid subscriptions
-    const subs = await CustomerSubscription.find({
-      status: { $in: ['active', 'authenticated', 'created'] }
-    })
-      .populate('user', 'name email phone createdAt')
-      .populate('plan', 'name price duration')
-      .sort({ createdAt: -1 })
-      .limit(2000)
-      .lean();
+    // Query both paid CustomerSubscriptions and CustomerTrials
+    const [subs, trials] = await Promise.all([
+      CustomerSubscription.find({
+        status: { $in: ['active', 'authenticated', 'created'] }
+      })
+        .populate('user', 'name email phone createdAt')
+        .populate('plan', 'name price duration')
+        .sort({ createdAt: -1 })
+        .limit(2000)
+        .lean(),
+      CustomerTrial.find({
+        paymentStatus: 'Success'
+      })
+        .populate('user', 'name email phone createdAt')
+        .sort({ createdAt: -1 })
+        .limit(2000)
+        .lean()
+    ]);
 
-    // Map to a clean structure matching what the frontend expects
-    const result = subs
+    // Map paid subscriptions
+    const mappedSubs = subs
       .filter(s => s.user) // skip orphaned records where user doc is missing
       .map(s => {
         const endYr = s.endDate ? new Date(s.endDate).getFullYear() : 0;
@@ -568,13 +578,17 @@ exports.getActiveSubscriptions = async (req, res) => {
           planDetails = { name: fallbackName, price: s.price || 0, duration: 'unknown' };
         }
 
+        const isCurrentlyActive = s.status === 'active' && (!endDate || new Date(endDate) > new Date());
+
         return {
           _id: s.user._id,
+          subscriptionRecordId: s._id,
           name: s.user.name || 'Unknown',
           email: s.user.email || 'N/A',
           phone: s.user.phone || 'N/A',
+          isTrial: false,
           subscription: {
-            isActive: true,
+            isActive: isCurrentlyActive,
             status: s.status,
             startDate: s.startDate || s.createdAt,
             endDate: endDate,
@@ -585,7 +599,50 @@ exports.getActiveSubscriptions = async (req, res) => {
         };
       });
 
-    res.status(200).json({ success: true, count: result.length, data: result });
+    // Map trial subscriptions
+    const mappedTrials = trials
+      .filter(t => t.user)
+      .map(t => {
+        const isCurrentlyActive = t.endDate && new Date(t.endDate) > new Date();
+        const durationDays = t.trialDaysCount || 1;
+        return {
+          _id: t.user._id,
+          subscriptionRecordId: t._id,
+          name: t.user.name || 'Unknown',
+          email: t.user.email || 'N/A',
+          phone: t.user.phone || 'N/A',
+          isTrial: true,
+          subscription: {
+            isActive: isCurrentlyActive,
+            status: isCurrentlyActive ? 'active' : 'expired',
+            startDate: t.startDate || t.createdAt,
+            endDate: t.endDate,
+            plan: {
+              name: `Trial (${durationDays} ${durationDays === 1 ? 'Day' : 'Days'} - ₹${t.trialPrice || 1})`,
+              price: t.trialPrice || 1,
+              duration: `${durationDays}d trial`
+            },
+            razorpaySubscriptionId: t.razorpaySubscriptionId
+          },
+          createdAt: t.createdAt || t.user.createdAt
+        };
+      });
+
+    // Merge both and sort by most recent start/created date
+    const allResults = [...mappedSubs, ...mappedTrials].sort((a, b) => {
+      const dateA = new Date(a.subscription?.startDate || a.createdAt);
+      const dateB = new Date(b.subscription?.startDate || b.createdAt);
+      return dateB - dateA;
+    });
+
+    res.status(200).json({
+      success: true,
+      count: allResults.length,
+      paidCount: mappedSubs.length,
+      trialCount: mappedTrials.length,
+      activeTrialCount: mappedTrials.filter(t => t.subscription?.isActive).length,
+      data: allResults
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

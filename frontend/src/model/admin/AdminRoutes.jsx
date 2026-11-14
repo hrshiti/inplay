@@ -133,6 +133,14 @@ const Dashboard = () => {
           bgColor="#dcfce7"
         />
         <StatCard
+          title="Trial Subscriptions"
+          value={users.activeTrials !== undefined ? users.activeTrials.toLocaleString() : (users.totalTrials || 0).toLocaleString()}
+          subtext={`${users.totalTrials || 0} total trial claims`}
+          icon={Zap}
+          color="#d97706"
+          bgColor="#fef3c7"
+        />
+        <StatCard
           title="Total Content"
           value={content.overview.totalContent}
           subtext={`${movieCount} movies, ${seriesCount} series`}
@@ -148,7 +156,6 @@ const Dashboard = () => {
           color="#7c3aed"
           bgColor="#ede9fe"
         />
-
       </div>
 
       {/* Secondary Stats Row - Module Breakdowns */}
@@ -788,20 +795,27 @@ const Users = () => {
       const data = await adminUserService.getAllUsers();
 
       // Map backend data to table format
-      const mappedUsers = data.map(user => ({
-        id: user._id,
-        avatar: getImageUrl(user.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
-        name: user.name,
-        email: user.email,
-        phone: user.phone || 'N/A',
-        plan: user.subscription?.plan?.name || 'Free',
-        status: user.isActive ? 'active' : 'inactive',
-        totalWatchTime: ((user.watchHistory?.reduce((acc, entry) => acc + (entry.watchedSeconds || 0), 0) || 0) / 3600).toFixed(1),
-        fullData: user,
-        favoriteGenre: user.preferences?.favoriteGenres?.[0] || 'N/A',
-        joinDate: new Date(user.createdAt || Date.now()).toLocaleDateString(),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'
-      }));
+      const mappedUsers = data.map(user => {
+        let planLabel = user.subscription?.plan?.name || 'Free';
+        if (user.subscription?.isTrialUsed) {
+          const isTrialActive = user.subscription?.isActive && (!user.subscription?.endDate || new Date(user.subscription.endDate) > new Date());
+          planLabel = isTrialActive ? '⚡ Trial (Active)' : 'Trial (Expired)';
+        }
+        return {
+          id: user._id,
+          avatar: getImageUrl(user.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || 'N/A',
+          plan: planLabel,
+          status: user.isActive ? 'active' : 'inactive',
+          totalWatchTime: ((user.watchHistory?.reduce((acc, entry) => acc + (entry.watchedSeconds || 0), 0) || 0) / 3600).toFixed(1),
+          fullData: user,
+          favoriteGenre: user.preferences?.favoriteGenres?.[0] || 'N/A',
+          joinDate: new Date(user.createdAt || Date.now()).toLocaleDateString(),
+          lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'
+        };
+      });
 
       setUsers(mappedUsers);
       setError(null);
@@ -1653,6 +1667,7 @@ const Monetization = () => {
 
 const Subscriptions = () => {
   const [subscriptions, setSubscriptions] = useState([]);
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'paid' | 'trial'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1671,45 +1686,145 @@ const Subscriptions = () => {
     }
   };
 
+  const paidCount = subscriptions.filter(s => !s.isTrial).length;
+  const trialCount = subscriptions.filter(s => s.isTrial).length;
+  const activeTrialCount = subscriptions.filter(s => s.isTrial && s.subscription?.isActive).length;
+
+  const filteredData = subscriptions.filter(s => {
+    if (filterType === 'paid') return !s.isTrial;
+    if (filterType === 'trial') return s.isTrial;
+    return true;
+  });
+
   const columns = [
     { key: 'name', label: 'User Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
     { key: 'phone', label: 'Phone', sortable: true, render: (_, row) => row.phone || 'N/A' },
-    { key: 'subscription_plan', label: 'Plan', sortable: true, render: (_, row) => row.subscription?.plan?.name || 'Unknown' },
+    {
+      key: 'subscription_plan',
+      label: 'Plan',
+      sortable: true,
+      render: (_, row) => {
+        if (row.isTrial) {
+          return (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              background: '#fef3c7',
+              color: '#92400e',
+              fontWeight: '600',
+              fontSize: '0.8rem',
+              border: '1px solid #fde68a'
+            }}>
+              ⚡ {row.subscription?.plan?.name || 'Trial'}
+            </span>
+          );
+        }
+        return (
+          <span style={{ fontWeight: '500', color: '#111827' }}>
+            {row.subscription?.plan?.name || 'Unknown'}
+          </span>
+        );
+      }
+    },
     { key: 'subscription_start', label: 'Starts', sortable: true, render: (_, row) => row.subscription?.startDate ? new Date(row.subscription.startDate).toLocaleDateString() : 'N/A' },
     { key: 'subscription_end', label: 'Expires', sortable: true, render: (_, row) => row.subscription?.endDate ? new Date(row.subscription.endDate).toLocaleDateString() : 'N/A' },
     {
       key: 'subscription_status',
       label: 'Status',
       sortable: true,
-      render: (_, row) => (
-        <span style={{
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '0.75rem',
-          fontWeight: '600',
-          background: row.subscription?.isActive ? '#dcfce7' : '#fee2e2',
-          color: row.subscription?.isActive ? '#166534' : '#991b1b'
-        }}>
-          {row.subscription?.isActive ? 'Active' : 'Expired'}
-        </span>
-      )
+      render: (_, row) => {
+        const isActive = row.subscription?.isActive;
+        const statusLabel = row.isTrial
+          ? (isActive ? 'Active Trial' : 'Expired Trial')
+          : (isActive ? 'Active' : 'Expired');
+
+        return (
+          <span style={{
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            background: isActive ? '#dcfce7' : '#fee2e2',
+            color: isActive ? '#166534' : '#991b1b'
+          }}>
+            {statusLabel}
+          </span>
+        );
+      }
     }
   ];
 
   return (
     <div style={{ padding: '12px' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>Active Subscriptions</h1>
-        <p style={{ color: '#4b5563', fontSize: '0.85rem', margin: '4px 0 0' }}>Monitor and manage active user subscriptions</p>
+      <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: '#111827' }}>Active Subscriptions & Trials</h1>
+          <p style={{ color: '#4b5563', fontSize: '0.85rem', margin: '4px 0 0' }}>Monitor and manage active user subscriptions and trial claims</p>
+        </div>
+
+        {/* Filter Buttons & Counters */}
+        <div style={{ display: 'flex', gap: '8px', background: '#f3f4f6', padding: '4px', borderRadius: '10px' }}>
+          <button
+            onClick={() => setFilterType('all')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              border: 'none',
+              cursor: 'pointer',
+              background: filterType === 'all' ? '#111827' : 'transparent',
+              color: filterType === 'all' ? '#fff' : '#4b5563',
+              transition: 'all 0.2s'
+            }}
+          >
+            All ({subscriptions.length})
+          </button>
+          <button
+            onClick={() => setFilterType('paid')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              border: 'none',
+              cursor: 'pointer',
+              background: filterType === 'paid' ? '#16a34a' : 'transparent',
+              color: filterType === 'paid' ? '#fff' : '#4b5563',
+              transition: 'all 0.2s'
+            }}
+          >
+            Paid Plans ({paidCount})
+          </button>
+          <button
+            onClick={() => setFilterType('trial')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              border: 'none',
+              cursor: 'pointer',
+              background: filterType === 'trial' ? '#d97706' : 'transparent',
+              color: filterType === 'trial' ? '#fff' : '#4b5563',
+              transition: 'all 0.2s'
+            }}
+          >
+            Trials ({trialCount} • {activeTrialCount} Active)
+          </button>
+        </div>
       </div>
 
       <DataTable
-        data={subscriptions}
+        data={filteredData}
         columns={columns}
-        title="Active Subscriptions"
+        title={filterType === 'trial' ? 'Trial Subscriptions' : filterType === 'paid' ? 'Paid Subscriptions' : 'All Subscriptions'}
         loading={loading}
-        emptyMessage="No active subscriptions found."
+        emptyMessage="No subscriptions found."
         onView={(row) => alert(`Please navigate to the "Users" tab to view or manage the user: ${row.name}`)}
       />
     </div>
